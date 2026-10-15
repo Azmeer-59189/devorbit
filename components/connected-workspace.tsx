@@ -18,7 +18,7 @@ import LiveReporting from '@/components/live-reporting';
 import LiveWebsite from '@/components/live-website';
 import LiveDashboard from '@/components/live-dashboard';
 import {taskMatches,TaskFilters} from '@/lib/task-management';
-import {workspaceDate} from '@/lib/timesheets';
+import {workspaceDate} from '@/lib/dates';
 
 const pageLabels:Record<string,string>={'Overview':'Home','Team tasks':'Tasks','Team & roles':'Team','SEO reports':'Reports'};
 const pageLabel=(page:string)=>pageLabels[page]||page;

@@ -1,6 +1,6 @@
 # DevOrbit
 
-A developer operations workspace for the International Desk, based on the supplied PROJECT_SRS.md. Includes a custom orbit logo, a responsive light dashboard, and clearly labeled sample data.
+A developer operations workspace for the International Desk: websites, team tasks, SEO reporting and team onboarding in one place. Built with Next.js and Supabase (Postgres with row-level security). Requirements are in [docs/PROJECT_SRS.md](docs/PROJECT_SRS.md).
 
 ## Run locally
 
@@ -8,58 +8,53 @@ Requires Node.js 20.9 or later (Node 24 used during development).
 
 ```sh
 npm install
+cp .env.example .env.local   # then fill in the Supabase URL and publishable key
 npm run dev
 ```
 
-Open http://127.0.0.1:3000. The home page redirects to the live workspace at `/workspace`; sign in at `/login`. The browser-only demo workspace has been removed.
+Open http://127.0.0.1:3000. The home page redirects to the workspace at `/workspace`; sign in at `/login`. New members join through an invitation link at `/join`.
+
+`npm run dev` reloads on every save. `npm start` serves the last `npm run build` and must be rebuilt after changes.
 
 ```sh
 npm run lint
 npm run typecheck
-npm test
+npm test              # unit tests plus migration/RLS tests on an embedded PostgreSQL
 npm run build
+npm run check:supabase   # credential-safe connection check
 ```
 
-## Implemented preview
+## Features
 
-- DevOrbit SVG logo/favicon and responsive sidebar/dashboard.
-- Overview with record-derived KPIs, time chart, task breakdown, activity, and website pulse.
-- Task creation, pending request accept/decline with reason, separate assignment/progress states, Kanban drag/drop and table, task drawer, comments, handover requests, collaborators, blocked reason and independent review checks.
-- Manual work log creation, standalone/multi-website entries, 12-hour warning, team totals and filtered CSV/XLSX exports.
-- Website directory, addition, archive, detail tabs and linked tasks/reports.
-- Sample weekly SEO submissions, explicit revisions with original history.
-- Template draft fields, preview and immutable version snapshots.
-- Notification read states, demo team directory and setup settings.
+- **Home**: task status, workload, website and SEO charts with date, member and website filters.
+- **Websites**: registry with add, edit, archive and restore; detail view with linked tasks and reports.
+- **Tasks**: creation, assignment requests the recipient accepts or declines, handover, progress with blocker and reopen reasons, independent review, comments with mentions, collaborators, filters and editing with conflict detection.
+- **SEO reports and form builder**: administrator-defined templates with versioned, immutable published schemas; weekly submissions with append-only revisions; CSV export.
+- **Team**: email invitations (resend, cancel, expiry), roles and deactivation, with at least one administrator always kept.
+- **Notifications** for assignments, reviews and mentions.
 
-The preview uses browser state and a fixed October 12â€“18, 2026 fixture week. It is **not production-ready and is not a multi-user backend**. UI workflow checks are for the demo and do not replace server authorization. No in-app invitation, role editing, mentions, attachment uploads, work-log editing, server persistence, automated schedule coverage, or production RLS acceptance is claimed. The form builder is a partial preview, not wired into arbitrary report submission. SEO report entry currently uses the fixed v1 template. No source Excel workbook was modified or imported.
+Time tracking was removed in migration 010. Historical work-log rows are retained in the database, and the `/api/work-logs` routes return `410 Gone`.
 
-## Production phases
+## Security model
 
-The local environment now connects to Supabase Auth. See [Supabase setup](docs/SUPABASE_SETUP.md) for the remaining migration and administrator steps. `/login` supports email/password sign-in and `/workspace` is a separate live workspace with website/task creation and assignment responses: the server validates the access token and requires an active workspace profile, then uses user-scoped RLS queries. `/` redirects to `/workspace`. Run `npm run check:supabase` for a credential-safe connection check. Website and task creation requires migration 002 after the foundation. Task status/reviews/comments/collaborators/handover, notifications and team administration require migration 003 (`supabase/migrations/202610150003_task_workflows_and_team.sql`). See the Supabase setup guide for the one-time step.
+- Row-level security on every table; users read only their own workspace.
+- No direct table writes. Every change goes through a database function that checks the caller's role and validates input, with retry-safe request IDs, revision checks against concurrent edits and an audit event per change.
+- API routes verify the Supabase session and an active workspace profile before calling the database as that user.
+- `SUPABASE_SECRET_KEY` is used only server-side for sending invitation emails. Never expose it to the browser.
 
-See [architecture, data model, RLS matrix, phased plan](docs/IMPLEMENTATION.md). The initial SQL migration is a deny-by-default **foundation**, not the complete production schema. All normal writes are deliberately revoked until transactional, authorized mutations and cross-role/workspace integration tests are implemented. Do not enable broad write policies to make the preview live.
+See [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) for the architecture, data model and RLS matrix.
 
-1. Create a Supabase development project and copy `.env.example` to `.env.local` with the project URL and publishable key. Never expose a service-role key in browser code.
-2. Apply `supabase/migrations/202610150001_foundation.sql` with the Supabase migration runner to a fresh project. Migration has not been applied or verified against a live database here.
-3. Complete invitation-only auth, server sessions, active-profile enforcement, checked mutation RPCs, optimistic concurrency, audit and recipient notifications. Connect services one vertical slice at a time. Add rate limits and real workspace data only after security tests pass.
-4. Finish the deferred SRS features and run UAT-01â€“20, including server/RLS denial cases. Choose private attachment policies and explicit website reporting schedules.
-5. Import this Next.js repository into Vercel, configure environment values, and use `npm run build`. Provision a tested backup/recovery plan for the selected Supabase tier. Live deployment and external resource provisioning have not been performed.
+## Database setup
 
-This delivery includes Phase 0 design/foundation and a locally usable UI preview of subsequent phases; those phases remain gated on server implementations.
+Apply the migrations in `supabase/migrations/` in order (001–010) to the Supabase project, then bootstrap the first administrator. [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) has the step-by-step guide, including SMTP and invitation configuration.
+
+## Not yet verified
+
+- Visual and mobile QA in a real browser.
+- End-to-end runs against the hosted Supabase project; the database tests run against an embedded PostgreSQL.
+- Production deployment (Vercel is the intended host), monitoring and a tested backup restore.
+- Import of the website source snapshot in `data/imports/`, which has not been written to Supabase.
 
 ## Branding
 
-`public/logo.svg` contains the DevOrbit mark: two white orbital paths, a central node, and a green satellite on a violet tile. It also serves as the favicon. The UI uses DM Sans and Manrope with system fallbacks.
-
-## Verification notes
-
-Production build, TypeScript, lint, 46 domain/auth/validation/PostgreSQL/export tests, HTTP page/health checks pass. Production dependency audit reports zero known advisories. The Next.js lint toolchain currently reports five development-only advisories in its glob/braces chain; do not blindly downgrade the framework to satisfy the audit suggestion. Browser visual/mobile QA remains unverified because no browser is connected. Real migration/RLS/transaction tests pass in isolated PostgreSQL; the new migration has not been applied to the hosted project here. Hosted end-to-end creation remains to be verified after the user applies it.
-
-
-## Task workflows and team members
-
-Open a live task drawer for progress, blocker/completion/reopen notes, independent reviews, comments/mentions, collaborators, reviewer changes and handovers. Apply migration 003 first. Admins use Team & roles to add an existing Supabase Auth account by email, name and role. First create the login under Supabase Authentication, then add its workspace membership in DevOrbit. No password or service-role key is collected by the app, and no email invitation is sent. See docs/SUPABASE_SETUP.md for the full onboarding steps and current limitations.
-
-## Live timesheets and readability theme
-
-Apply migration 004 (supabase/migrations/202610150004_work_logs_and_timesheets.sql) after 001-003, then open Timesheets in the live workspace. This enables daily/weekly views, manual entries, contributor/site filters, audited own edits, reasoned admin corrections, warning confirmation, history and CSV/XLSX export across pages. Full setup details, limits and verification boundaries are in docs/SUPABASE_SETUP.md. The updated app/theme.css adds an ink sidebar, warm tinted surfaces and violet/teal/amber accents while retaining readable text and prior typography changes. Actual browser screenshots/mobile QA and hosted end-to-end work-log verification remain pending.
+`public/logo.svg` is the DevOrbit mark and favicon. The UI uses DM Sans and Manrope with system fallbacks.

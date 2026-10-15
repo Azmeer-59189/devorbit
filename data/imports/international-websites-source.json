@@ -1,0 +1,3415 @@
+{
+  "source_url": "https://docs.google.com/spreadsheets/d/1kxbHqHrzCJW9ArZyRuTze96mpCMzdTKjbBEXb_6aRxQ/edit",
+  "title": "International Website's Dashboard",
+  "timezone": "Asia/Karachi",
+  "status": "analysis snapshot; not imported into Supabase",
+  "fields": [
+    {
+      "category": "🌐 WEBSITE INFORMATION",
+      "label": "Website URL",
+      "row": 5
+    },
+    {
+      "category": "🌐 WEBSITE INFORMATION",
+      "label": "CMS Platform",
+      "row": 6
+    },
+    {
+      "category": "📈 SEO & PERFORMANCE",
+      "label": "SEO Implementation",
+      "row": 8
+    },
+    {
+      "category": "📈 SEO & PERFORMANCE",
+      "label": "SEO Rating",
+      "row": 9
+    },
+    {
+      "category": "📈 SEO & PERFORMANCE",
+      "label": "Last SEO Audit Date",
+      "row": 10
+    },
+    {
+      "category": "📈 SEO & PERFORMANCE",
+      "label": "Google Analytics",
+      "row": 11
+    },
+    {
+      "category": "📈 SEO & PERFORMANCE",
+      "label": "Page Speed Score",
+      "row": 12
+    },
+    {
+      "category": "💳 DONATION & CRM",
+      "label": "Donation CRM",
+      "row": 14
+    },
+    {
+      "category": "💳 DONATION & CRM",
+      "label": "Donation Checkout",
+      "row": 15
+    },
+    {
+      "category": "💳 DONATION & CRM",
+      "label": "Recurring Donations",
+      "row": 16
+    },
+    {
+      "category": "💳 DONATION & CRM",
+      "label": "Currency Supported",
+      "row": 17
+    },
+    {
+      "category": "🎟️ EVENTS & TICKETING",
+      "label": "Event Ticketing Platform",
+      "row": 19
+    },
+    {
+      "category": "📊 EMAIL MARKETING",
+      "label": "Mailchimp Embedded",
+      "row": 21
+    },
+    {
+      "category": "📝 CONTENT",
+      "label": "Blogs",
+      "row": 23
+    },
+    {
+      "category": "📝 CONTENT",
+      "label": "News Articles",
+      "row": 24
+    },
+    {
+      "category": "📝 CONTENT",
+      "label": "Financial Reports",
+      "row": 25
+    },
+    {
+      "category": "📝 CONTENT",
+      "label": "Impact Reports",
+      "row": 26
+    },
+    {
+      "category": "📝 CONTENT",
+      "label": "Directors Information",
+      "row": 27
+    },
+    {
+      "category": "📝 CONTENT",
+      "label": "Newsletter/Email Signup",
+      "row": 28
+    },
+    {
+      "category": "📝 CONTENT",
+      "label": "Video Content",
+      "row": 29
+    },
+    {
+      "category": "🔒 SECURITY & COMPLIANCE",
+      "label": "Security Plugins Installed",
+      "row": 31
+    },
+    {
+      "category": "🔒 SECURITY & COMPLIANCE",
+      "label": "SSL Certificate",
+      "row": 32
+    },
+    {
+      "category": "🔒 SECURITY & COMPLIANCE",
+      "label": "GDPR / Privacy Policy",
+      "row": 33
+    },
+    {
+      "category": "🔒 SECURITY & COMPLIANCE",
+      "label": "Chatbot / Captcha in Forms",
+      "row": 34
+    },
+    {
+      "category": "🛠️ MAINTENANCE & QA",
+      "label": "Website QA",
+      "row": 36
+    },
+    {
+      "category": "🛠️ MAINTENANCE & QA",
+      "label": "Last Plugin Update",
+      "row": 37
+    },
+    {
+      "category": "🛠️ MAINTENANCE & QA",
+      "label": "Backup Status (Server)",
+      "row": 38
+    },
+    {
+      "category": "📊 SOCIAL MEDIA LINKS",
+      "label": "Facebook",
+      "row": 40
+    },
+    {
+      "category": "📊 SOCIAL MEDIA LINKS",
+      "label": "Instagram",
+      "row": 41
+    },
+    {
+      "category": "📊 SOCIAL MEDIA LINKS",
+      "label": "LinkedIn",
+      "row": 42
+    },
+    {
+      "category": "📊 SOCIAL MEDIA LINKS",
+      "label": "Twitter / X",
+      "row": 43
+    },
+    {
+      "category": "📊 SOCIAL MEDIA LINKS",
+      "label": "YouTube",
+      "row": 44
+    },
+    {
+      "category": "📝 NOTES",
+      "label": "General Notes / Remarks",
+      "row": 46
+    }
+  ],
+  "websites": [
+    {
+      "name": "FOIH US",
+      "canonical_url": "https://foihus.org",
+      "source_column": "C",
+      "fields": {
+        "Website URL": {
+          "raw": "https://foihus.org/",
+          "cell": "C5"
+        },
+        "CMS Platform": {
+          "raw": "WordPress",
+          "cell": "C6"
+        },
+        "SEO Implementation": {
+          "raw": "Yes",
+          "cell": "C8"
+        },
+        "SEO Rating": {
+          "raw": "82/100",
+          "cell": "C9"
+        },
+        "Last SEO Audit Date": {
+          "raw": "October 15, 2026",
+          "cell": "C10"
+        },
+        "Google Analytics": {
+          "raw": "Yes",
+          "cell": "C11"
+        },
+        "Page Speed Score": {
+          "raw": "5.94 s",
+          "cell": "C12"
+        },
+        "Donation CRM": {
+          "raw": "Bloomerang CRM",
+          "cell": "C14"
+        },
+        "Donation Checkout": {
+          "raw": "Fundraise Up",
+          "cell": "C15"
+        },
+        "Recurring Donations": {
+          "raw": "Yes",
+          "cell": "C16"
+        },
+        "Currency Supported": {
+          "raw": "USD",
+          "cell": "C17"
+        },
+        "Event Ticketing Platform": {
+          "raw": "Qgive",
+          "cell": "C19"
+        },
+        "Mailchimp Embedded": {
+          "raw": "Yes",
+          "cell": "C21"
+        },
+        "Blogs": {
+          "raw": "Yes",
+          "cell": "C23"
+        },
+        "News Articles": {
+          "raw": "Yes",
+          "cell": "C24"
+        },
+        "Financial Reports": {
+          "raw": "Yes",
+          "cell": "C25"
+        },
+        "Impact Reports": {
+          "raw": "Yes",
+          "cell": "C26"
+        },
+        "Directors Information": {
+          "raw": "Yes",
+          "cell": "C27"
+        },
+        "Newsletter/Email Signup": {
+          "raw": "Yes",
+          "cell": "C28"
+        },
+        "Video Content": {
+          "raw": "Yes",
+          "cell": "C29"
+        },
+        "Security Plugins Installed": {
+          "raw": "Yes",
+          "cell": "C31"
+        },
+        "SSL Certificate": {
+          "raw": "Yes",
+          "cell": "C32"
+        },
+        "GDPR / Privacy Policy": {
+          "raw": "Yes",
+          "cell": "C33"
+        },
+        "Chatbot / Captcha in Forms": {
+          "raw": "—",
+          "cell": "C34"
+        },
+        "Website QA": {
+          "raw": "Monthly Basis (content updated till 7/23/2026)",
+          "cell": "C36"
+        },
+        "Last Plugin Update": {
+          "raw": "Sep-1",
+          "cell": "C37"
+        },
+        "Backup Status (Server)": {
+          "raw": "Sep-18",
+          "cell": "C38"
+        },
+        "Facebook": {
+          "raw": "Yes",
+          "cell": "C40"
+        },
+        "Instagram": {
+          "raw": "Yes",
+          "cell": "C41"
+        },
+        "LinkedIn": {
+          "raw": "—",
+          "cell": "C42"
+        },
+        "Twitter / X": {
+          "raw": "Yes",
+          "cell": "C43"
+        },
+        "YouTube": {
+          "raw": "Yes",
+          "cell": "C44"
+        },
+        "General Notes / Remarks": {
+          "raw": "Strong overall setup. Bloomerang CRM & Fundraise Up donation system fully active with recurring donations. Qgive handles event ticketing. All content sections (blogs, news, impact reports, financial reports, directors info, newsletter, video) are live. Google Analytics connected. Page speed is reasonable at 3.43s. No LinkedIn presence. Backups current. Strong and well-maintained site.",
+          "cell": "C46"
+        }
+      },
+      "page_duration": {
+        "seconds": 5.94,
+        "raw": "5.94 s",
+        "metric_definition": "unspecified page-load measurement",
+        "measurement_date": null
+      },
+      "maintenance_dates": {
+        "plugin_updated": "2026-09-01",
+        "backup_date": "2026-09-18",
+        "basis": "Underlying Google Sheets date serials 46266 and 46283; display hides year"
+      }
+    },
+    {
+      "name": "Indus Canada",
+      "canonical_url": "https://indushospital.ca",
+      "source_column": "D",
+      "fields": {
+        "Website URL": {
+          "raw": "https://indushospital.ca/",
+          "cell": "D5"
+        },
+        "CMS Platform": {
+          "raw": "WordPress",
+          "cell": "D6"
+        },
+        "SEO Implementation": {
+          "raw": "Yes",
+          "cell": "D8"
+        },
+        "SEO Rating": {
+          "raw": "79/100",
+          "cell": "D9"
+        },
+        "Last SEO Audit Date": {
+          "raw": "October 15, 2026",
+          "cell": "D10"
+        },
+        "Google Analytics": {
+          "raw": "Yes",
+          "cell": "D11"
+        },
+        "Page Speed Score": {
+          "raw": "3.87 s",
+          "cell": "D12"
+        },
+        "Donation CRM": {
+          "raw": "Bloomerang CRM",
+          "cell": "D14"
+        },
+        "Donation Checkout": {
+          "raw": "Fundraise Up",
+          "cell": "D15"
+        },
+        "Recurring Donations": {
+          "raw": "Yes",
+          "cell": "D16"
+        },
+        "Currency Supported": {
+          "raw": "CAD",
+          "cell": "D17"
+        },
+        "Event Ticketing Platform": {
+          "raw": "Qgive",
+          "cell": "D19"
+        },
+        "Mailchimp Embedded": {
+          "raw": "Yes",
+          "cell": "D21"
+        },
+        "Blogs": {
+          "raw": "Yes",
+          "cell": "D23"
+        },
+        "News Articles": {
+          "raw": "Yes",
+          "cell": "D24"
+        },
+        "Financial Reports": {
+          "raw": "Yes",
+          "cell": "D25"
+        },
+        "Impact Reports": {
+          "raw": "Yes",
+          "cell": "D26"
+        },
+        "Directors Information": {
+          "raw": "Yes",
+          "cell": "D27"
+        },
+        "Newsletter/Email Signup": {
+          "raw": "Yes",
+          "cell": "D28"
+        },
+        "Video Content": {
+          "raw": "Yes",
+          "cell": "D29"
+        },
+        "Security Plugins Installed": {
+          "raw": "Yes",
+          "cell": "D31"
+        },
+        "SSL Certificate": {
+          "raw": "Yes",
+          "cell": "D32"
+        },
+        "GDPR / Privacy Policy": {
+          "raw": "Yes",
+          "cell": "D33"
+        },
+        "Chatbot / Captcha in Forms": {
+          "raw": "—",
+          "cell": "D34"
+        },
+        "Website QA": {
+          "raw": "Monthly Basis (content updated till 7/23/2026)",
+          "cell": "D36"
+        },
+        "Last Plugin Update": {
+          "raw": "Sep-1",
+          "cell": "D37"
+        },
+        "Backup Status (Server)": {
+          "raw": "Sep-18",
+          "cell": "D38"
+        },
+        "Facebook": {
+          "raw": "Yes",
+          "cell": "D40"
+        },
+        "Instagram": {
+          "raw": "Yes",
+          "cell": "D41"
+        },
+        "LinkedIn": {
+          "raw": "Yes",
+          "cell": "D42"
+        },
+        "Twitter / X": {
+          "raw": "—",
+          "cell": "D43"
+        },
+        "YouTube": {
+          "raw": "Yes",
+          "cell": "D44"
+        },
+        "General Notes / Remarks": {
+          "raw": "One of the most complete websites in the network. Bloomerang CRM + Fundraise Up active with recurring donations. Qgive for ticketing. All content sections fully live including financial reports and directors info. Google Analytics connected. Fastest page speed (2.94s). Active on Facebook, Instagram, LinkedIn & YouTube. Backups current. Strong and well-maintained site.",
+          "cell": "D46"
+        }
+      },
+      "page_duration": {
+        "seconds": 3.87,
+        "raw": "3.87 s",
+        "metric_definition": "unspecified page-load measurement",
+        "measurement_date": null
+      },
+      "maintenance_dates": {
+        "plugin_updated": "2026-09-01",
+        "backup_date": "2026-09-18",
+        "basis": "Underlying Google Sheets date serials 46266 and 46283; display hides year"
+      }
+    },
+    {
+      "name": "UAE",
+      "canonical_url": "https://indushospital.org.ae",
+      "source_column": "E",
+      "fields": {
+        "Website URL": {
+          "raw": "https://indushospital.org.ae/",
+          "cell": "E5"
+        },
+        "CMS Platform": {
+          "raw": "WordPress",
+          "cell": "E6"
+        },
+        "SEO Implementation": {
+          "raw": "Yes",
+          "cell": "E8"
+        },
+        "SEO Rating": {
+          "raw": "81/100",
+          "cell": "E9"
+        },
+        "Last SEO Audit Date": {
+          "raw": "October 15, 2026",
+          "cell": "E10"
+        },
+        "Google Analytics": {
+          "raw": "Yes",
+          "cell": "E11"
+        },
+        "Page Speed Score": {
+          "raw": "7.72 s",
+          "cell": "E12"
+        },
+        "Donation CRM": {
+          "raw": "No",
+          "cell": "E14"
+        },
+        "Donation Checkout": {
+          "raw": "No",
+          "cell": "E15"
+        },
+        "Recurring Donations": {
+          "raw": "No",
+          "cell": "E16"
+        },
+        "Currency Supported": {
+          "raw": "AED",
+          "cell": "E17"
+        },
+        "Event Ticketing Platform": {
+          "raw": "Ticket Hunter",
+          "cell": "E19"
+        },
+        "Mailchimp Embedded": {
+          "raw": "Yes",
+          "cell": "E21"
+        },
+        "Blogs": {
+          "raw": "Yes",
+          "cell": "E23"
+        },
+        "News Articles": {
+          "raw": "Yes",
+          "cell": "E24"
+        },
+        "Financial Reports": {
+          "raw": "—",
+          "cell": "E25"
+        },
+        "Impact Reports": {
+          "raw": "Yes",
+          "cell": "E26"
+        },
+        "Directors Information": {
+          "raw": "Yes",
+          "cell": "E27"
+        },
+        "Newsletter/Email Signup": {
+          "raw": "Yes",
+          "cell": "E28"
+        },
+        "Video Content": {
+          "raw": "Yes",
+          "cell": "E29"
+        },
+        "Security Plugins Installed": {
+          "raw": "Yes",
+          "cell": "E31"
+        },
+        "SSL Certificate": {
+          "raw": "Yes",
+          "cell": "E32"
+        },
+        "GDPR / Privacy Policy": {
+          "raw": "Yes",
+          "cell": "E33"
+        },
+        "Chatbot / Captcha in Forms": {
+          "raw": "—",
+          "cell": "E34"
+        },
+        "Website QA": {
+          "raw": "Monthly Basis (content updated till 7/23/2026)",
+          "cell": "E36"
+        },
+        "Last Plugin Update": {
+          "raw": "Sep-1",
+          "cell": "E37"
+        },
+        "Backup Status (Server)": {
+          "raw": "Sep-18",
+          "cell": "E38"
+        },
+        "Facebook": {
+          "raw": "Yes",
+          "cell": "E40"
+        },
+        "Instagram": {
+          "raw": "Yes",
+          "cell": "E41"
+        },
+        "LinkedIn": {
+          "raw": "Yes",
+          "cell": "E42"
+        },
+        "Twitter / X": {
+          "raw": "—",
+          "cell": "E43"
+        },
+        "YouTube": {
+          "raw": "Yes",
+          "cell": "E44"
+        },
+        "General Notes / Remarks": {
+          "raw": "Ticket Hunter is in place for events. All content (blogs, news, impact reports, directors info, newsletter, video) is available. Google Analytics connected. SSL and security plugins in place. Not on LinkedIn, Twitter/X, or YouTube. Page speed 4.17s — acceptable.",
+          "cell": "E46"
+        }
+      },
+      "page_duration": {
+        "seconds": 7.72,
+        "raw": "7.72 s",
+        "metric_definition": "unspecified page-load measurement",
+        "measurement_date": null
+      },
+      "maintenance_dates": {
+        "plugin_updated": "2026-09-01",
+        "backup_date": "2026-09-18",
+        "basis": "Underlying Google Sheets date serials 46266 and 46283; display hides year"
+      }
+    },
+    {
+      "name": "UK",
+      "canonical_url": "https://indushospital.org.uk",
+      "source_column": "F",
+      "fields": {
+        "Website URL": {
+          "raw": "https://indushospital.org.uk/",
+          "cell": "F5"
+        },
+        "CMS Platform": {
+          "raw": "WordPress",
+          "cell": "F6"
+        },
+        "SEO Implementation": {
+          "raw": "Yes",
+          "cell": "F8"
+        },
+        "SEO Rating": {
+          "raw": "79/100",
+          "cell": "F9"
+        },
+        "Last SEO Audit Date": {
+          "raw": "October 15, 2026",
+          "cell": "F10"
+        },
+        "Google Analytics": {
+          "raw": "Yes",
+          "cell": "F11"
+        },
+        "Page Speed Score": {
+          "raw": "3.06 s",
+          "cell": "F12"
+        },
+        "Donation CRM": {
+          "raw": "Pillar CRM",
+          "cell": "F14"
+        },
+        "Donation Checkout": {
+          "raw": "Custom",
+          "cell": "F15"
+        },
+        "Recurring Donations": {
+          "raw": "Yes",
+          "cell": "F16"
+        },
+        "Currency Supported": {
+          "raw": "GBP",
+          "cell": "F17"
+        },
+        "Event Ticketing Platform": {
+          "raw": "Enthuse",
+          "cell": "F19"
+        },
+        "Mailchimp Embedded": {
+          "raw": "Yes",
+          "cell": "F21"
+        },
+        "Blogs": {
+          "raw": "Yes",
+          "cell": "F23"
+        },
+        "News Articles": {
+          "raw": "Yes",
+          "cell": "F24"
+        },
+        "Financial Reports": {
+          "raw": "—",
+          "cell": "F25"
+        },
+        "Impact Reports": {
+          "raw": "Yes",
+          "cell": "F26"
+        },
+        "Directors Information": {
+          "raw": "Yes",
+          "cell": "F27"
+        },
+        "Newsletter/Email Signup": {
+          "raw": "Yes",
+          "cell": "F28"
+        },
+        "Video Content": {
+          "raw": "Yes",
+          "cell": "F29"
+        },
+        "Security Plugins Installed": {
+          "raw": "Yes",
+          "cell": "F31"
+        },
+        "SSL Certificate": {
+          "raw": "Yes",
+          "cell": "F32"
+        },
+        "GDPR / Privacy Policy": {
+          "raw": "Yes",
+          "cell": "F33"
+        },
+        "Chatbot / Captcha in Forms": {
+          "raw": "—",
+          "cell": "F34"
+        },
+        "Website QA": {
+          "raw": "Monthly Basis (content updated till 7/23/2026)",
+          "cell": "F36"
+        },
+        "Last Plugin Update": {
+          "raw": "Sep-1",
+          "cell": "F37"
+        },
+        "Backup Status (Server)": {
+          "raw": "Sep-18",
+          "cell": "F38"
+        },
+        "Facebook": {
+          "raw": "Yes",
+          "cell": "F40"
+        },
+        "Instagram": {
+          "raw": "Yes",
+          "cell": "F41"
+        },
+        "LinkedIn": {
+          "raw": "—",
+          "cell": "F42"
+        },
+        "Twitter / X": {
+          "raw": "Yes",
+          "cell": "F43"
+        },
+        "YouTube": {
+          "raw": "Yes",
+          "cell": "F44"
+        },
+        "General Notes / Remarks": {
+          "raw": "Pillar CRM and custom donation checkout active with recurring donations. Enthuse platform for event ticketing. All content sections present including directors info. Google Analytics connected. Page speed at 6.21s is slow — optimization needed. Active on Facebook, Instagram, Twitter/X but no LinkedIn or YouTube. Backups current.",
+          "cell": "F46"
+        }
+      },
+      "page_duration": {
+        "seconds": 3.06,
+        "raw": "3.06 s",
+        "metric_definition": "unspecified page-load measurement",
+        "measurement_date": null
+      },
+      "maintenance_dates": {
+        "plugin_updated": "2026-09-01",
+        "backup_date": "2026-09-18",
+        "basis": "Underlying Google Sheets date serials 46266 and 46283; display hides year"
+      }
+    },
+    {
+      "name": "Germany",
+      "canonical_url": "https://foih.de",
+      "source_column": "G",
+      "fields": {
+        "Website URL": {
+          "raw": "https://foih.de/",
+          "cell": "G5"
+        },
+        "CMS Platform": {
+          "raw": "WordPress",
+          "cell": "G6"
+        },
+        "SEO Implementation": {
+          "raw": "Yes",
+          "cell": "G8"
+        },
+        "SEO Rating": {
+          "raw": "69/100",
+          "cell": "G9"
+        },
+        "Last SEO Audit Date": {
+          "raw": "October 15, 2026",
+          "cell": "G10"
+        },
+        "Google Analytics": {
+          "raw": "Yes",
+          "cell": "G11"
+        },
+        "Page Speed Score": {
+          "raw": "5.15 s",
+          "cell": "G12"
+        },
+        "Donation CRM": {
+          "raw": "Kindful CRM",
+          "cell": "G14"
+        },
+        "Donation Checkout": {
+          "raw": "Fundraise Up",
+          "cell": "G15"
+        },
+        "Recurring Donations": {
+          "raw": "Yes",
+          "cell": "G16"
+        },
+        "Currency Supported": {
+          "raw": "EUR",
+          "cell": "G17"
+        },
+        "Event Ticketing Platform": {
+          "raw": "Custom/PayPal",
+          "cell": "G19"
+        },
+        "Mailchimp Embedded": {
+          "raw": "Yes",
+          "cell": "G21"
+        },
+        "Blogs": {
+          "raw": "Yes",
+          "cell": "G23"
+        },
+        "News Articles": {
+          "raw": "Yes",
+          "cell": "G24"
+        },
+        "Financial Reports": {
+          "raw": "—",
+          "cell": "G25"
+        },
+        "Impact Reports": {
+          "raw": "Yes",
+          "cell": "G26"
+        },
+        "Directors Information": {
+          "raw": "No",
+          "cell": "G27"
+        },
+        "Newsletter/Email Signup": {
+          "raw": "Yes",
+          "cell": "G28"
+        },
+        "Video Content": {
+          "raw": "Yes",
+          "cell": "G29"
+        },
+        "Security Plugins Installed": {
+          "raw": "Yes",
+          "cell": "G31"
+        },
+        "SSL Certificate": {
+          "raw": "Yes",
+          "cell": "G32"
+        },
+        "GDPR / Privacy Policy": {
+          "raw": "Yes",
+          "cell": "G33"
+        },
+        "Chatbot / Captcha in Forms": {
+          "raw": "Yes",
+          "cell": "G34"
+        },
+        "Website QA": {
+          "raw": "Monthly Basis (content updated till 7/23/2026)",
+          "cell": "G36"
+        },
+        "Last Plugin Update": {
+          "raw": "Sep-1",
+          "cell": "G37"
+        },
+        "Backup Status (Server)": {
+          "raw": "Sep-18",
+          "cell": "G38"
+        },
+        "Facebook": {
+          "raw": "Yes",
+          "cell": "G40"
+        },
+        "Instagram": {
+          "raw": "Yes",
+          "cell": "G41"
+        },
+        "LinkedIn": {
+          "raw": "Yes",
+          "cell": "G42"
+        },
+        "Twitter / X": {
+          "raw": "—",
+          "cell": "G43"
+        },
+        "YouTube": {
+          "raw": "Yes",
+          "cell": "G44"
+        },
+        "General Notes / Remarks": {
+          "raw": "Kindful CRM + Fundraise Up donation system active with recurring donations. Custom PayPal event ticketing in place. All content live. Google Analytics connected. CAPTCHA is configured — good security practice. Directors information missing from website. No Twitter/X. Page speed 3.86s is good. Backups current. One of the more secure and complete setups.",
+          "cell": "G46"
+        }
+      },
+      "page_duration": {
+        "seconds": 5.15,
+        "raw": "5.15 s",
+        "metric_definition": "unspecified page-load measurement",
+        "measurement_date": null
+      },
+      "maintenance_dates": {
+        "plugin_updated": "2026-09-01",
+        "backup_date": "2026-09-18",
+        "basis": "Underlying Google Sheets date serials 46266 and 46283; display hides year"
+      }
+    },
+    {
+      "name": "Australia",
+      "canonical_url": "https://foih.org.au",
+      "source_column": "H",
+      "fields": {
+        "Website URL": {
+          "raw": "https://foih.org.au/",
+          "cell": "H5"
+        },
+        "CMS Platform": {
+          "raw": "WordPress",
+          "cell": "H6"
+        },
+        "SEO Implementation": {
+          "raw": "Yes",
+          "cell": "H8"
+        },
+        "SEO Rating": {
+          "raw": "69/100",
+          "cell": "H9"
+        },
+        "Last SEO Audit Date": {
+          "raw": "October 15, 2026",
+          "cell": "H10"
+        },
+        "Google Analytics": {
+          "raw": "Yes",
+          "cell": "H11"
+        },
+        "Page Speed Score": {
+          "raw": "4.81 s",
+          "cell": "H12"
+        },
+        "Donation CRM": {
+          "raw": "Kindful CRM",
+          "cell": "H14"
+        },
+        "Donation Checkout": {
+          "raw": "Fundraise Up",
+          "cell": "H15"
+        },
+        "Recurring Donations": {
+          "raw": "Yes",
+          "cell": "H16"
+        },
+        "Currency Supported": {
+          "raw": "AUD",
+          "cell": "H17"
+        },
+        "Event Ticketing Platform": {
+          "raw": "Kindful Ticketing",
+          "cell": "H19"
+        },
+        "Mailchimp Embedded": {
+          "raw": "Yes",
+          "cell": "H21"
+        },
+        "Blogs": {
+          "raw": "Yes",
+          "cell": "H23"
+        },
+        "News Articles": {
+          "raw": "Yes",
+          "cell": "H24"
+        },
+        "Financial Reports": {
+          "raw": "Yes",
+          "cell": "H25"
+        },
+        "Impact Reports": {
+          "raw": "Yes",
+          "cell": "H26"
+        },
+        "Directors Information": {
+          "raw": "Yes",
+          "cell": "H27"
+        },
+        "Newsletter/Email Signup": {
+          "raw": "Yes",
+          "cell": "H28"
+        },
+        "Video Content": {
+          "raw": "Yes",
+          "cell": "H29"
+        },
+        "Security Plugins Installed": {
+          "raw": "Yes",
+          "cell": "H31"
+        },
+        "SSL Certificate": {
+          "raw": "Yes",
+          "cell": "H32"
+        },
+        "GDPR / Privacy Policy": {
+          "raw": "Yes",
+          "cell": "H33"
+        },
+        "Chatbot / Captcha in Forms": {
+          "raw": "Yes",
+          "cell": "H34"
+        },
+        "Website QA": {
+          "raw": "Monthly Basis (content updated till 7/23/2026)",
+          "cell": "H36"
+        },
+        "Last Plugin Update": {
+          "raw": "Sep-1",
+          "cell": "H37"
+        },
+        "Backup Status (Server)": {
+          "raw": "Sep-18",
+          "cell": "H38"
+        },
+        "Facebook": {
+          "raw": "Yes",
+          "cell": "H40"
+        },
+        "Instagram": {
+          "raw": "—",
+          "cell": "H41"
+        },
+        "LinkedIn": {
+          "raw": "Yes",
+          "cell": "H42"
+        },
+        "Twitter / X": {
+          "raw": "Yes",
+          "cell": "H43"
+        },
+        "YouTube": {
+          "raw": "Yes",
+          "cell": "H44"
+        },
+        "General Notes / Remarks": {
+          "raw": "Kindful CRM + Fundraise Up active with recurring donations. Kindful ticketing for events. All content sections live including financial reports and directors info. Google Analytics connected. CAPTCHA configured. Page speed 5.48s — could be improved. No Instagram linked. Active on Facebook, LinkedIn, Twitter/X & YouTube. Backups current. Strong and well-maintained site.",
+          "cell": "H46"
+        }
+      },
+      "page_duration": {
+        "seconds": 4.81,
+        "raw": "4.81 s",
+        "metric_definition": "unspecified page-load measurement",
+        "measurement_date": null
+      },
+      "maintenance_dates": {
+        "plugin_updated": "2026-09-01",
+        "backup_date": "2026-09-18",
+        "basis": "Underlying Google Sheets date serials 46266 and 46283; display hides year"
+      }
+    },
+    {
+      "name": "Switzerland",
+      "canonical_url": "https://foih.ch",
+      "source_column": "I",
+      "fields": {
+        "Website URL": {
+          "raw": "https://foih.ch/",
+          "cell": "I5"
+        },
+        "CMS Platform": {
+          "raw": "WordPress",
+          "cell": "I6"
+        },
+        "SEO Implementation": {
+          "raw": "Yes",
+          "cell": "I8"
+        },
+        "SEO Rating": {
+          "raw": "69/100",
+          "cell": "I9"
+        },
+        "Last SEO Audit Date": {
+          "raw": "October 15, 2026",
+          "cell": "I10"
+        },
+        "Google Analytics": {
+          "raw": "Yes, but free version. ",
+          "cell": "I11"
+        },
+        "Page Speed Score": {
+          "raw": "1.80 s",
+          "cell": "I12"
+        },
+        "Donation CRM": {
+          "raw": "No",
+          "cell": "I14"
+        },
+        "Donation Checkout": {
+          "raw": "GiveWP",
+          "cell": "I15"
+        },
+        "Recurring Donations": {
+          "raw": "Yes",
+          "cell": "I16"
+        },
+        "Currency Supported": {
+          "raw": "CHF",
+          "cell": "I17"
+        },
+        "Event Ticketing Platform": {
+          "raw": "GiveWP",
+          "cell": "I19"
+        },
+        "Mailchimp Embedded": {
+          "raw": "Yes",
+          "cell": "I21"
+        },
+        "Blogs": {
+          "raw": "Yes",
+          "cell": "I23"
+        },
+        "News Articles": {
+          "raw": "Yes",
+          "cell": "I24"
+        },
+        "Financial Reports": {
+          "raw": "—",
+          "cell": "I25"
+        },
+        "Impact Reports": {
+          "raw": "Yes",
+          "cell": "I26"
+        },
+        "Directors Information": {
+          "raw": "No",
+          "cell": "I27"
+        },
+        "Newsletter/Email Signup": {
+          "raw": "Yes",
+          "cell": "I28"
+        },
+        "Video Content": {
+          "raw": "Yes",
+          "cell": "I29"
+        },
+        "Security Plugins Installed": {
+          "raw": "Yes",
+          "cell": "I31"
+        },
+        "SSL Certificate": {
+          "raw": "Yes",
+          "cell": "I32"
+        },
+        "GDPR / Privacy Policy": {
+          "raw": "Yes",
+          "cell": "I33"
+        },
+        "Chatbot / Captcha in Forms": {
+          "raw": "No",
+          "cell": "I34"
+        },
+        "Website QA": {
+          "raw": "Monthly Basis (content updated till 7/23/2026)",
+          "cell": "I36"
+        },
+        "Last Plugin Update": {
+          "raw": "Sep-1",
+          "cell": "I37"
+        },
+        "Backup Status (Server)": {
+          "raw": "Sep-18",
+          "cell": "I38"
+        },
+        "Facebook": {
+          "raw": "Yes",
+          "cell": "I40"
+        },
+        "Instagram": {
+          "raw": "Yes",
+          "cell": "I41"
+        },
+        "LinkedIn": {
+          "raw": "—",
+          "cell": "I42"
+        },
+        "Twitter / X": {
+          "raw": "—",
+          "cell": "I43"
+        },
+        "YouTube": {
+          "raw": "Yes",
+          "cell": "I44"
+        },
+        "General Notes / Remarks": {
+          "raw": "No Donation CRM. GiveWP active for checkout, recurring donations & ticketing. Google Analytics connected. Directors info not present. Page speed 5.05s . No LinkedIn or Twitter/X. Active on Facebook, Instagram & YouTube. Backups current. All core content live. Adding CRM, CAPTCHA and social media presence would strengthen this site.",
+          "cell": "I46"
+        }
+      },
+      "page_duration": {
+        "seconds": 1.8,
+        "raw": "1.80 s",
+        "metric_definition": "unspecified page-load measurement",
+        "measurement_date": null
+      },
+      "maintenance_dates": {
+        "plugin_updated": "2026-09-01",
+        "backup_date": "2026-09-18",
+        "basis": "Underlying Google Sheets date serials 46266 and 46283; display hides year"
+      }
+    },
+    {
+      "name": "France",
+      "canonical_url": "https://indushealth.fr",
+      "source_column": "J",
+      "fields": {
+        "Website URL": {
+          "raw": "https://indushealth.fr/",
+          "cell": "J5"
+        },
+        "CMS Platform": {
+          "raw": "WordPress",
+          "cell": "J6"
+        },
+        "SEO Implementation": {
+          "raw": "Yes",
+          "cell": "J8"
+        },
+        "SEO Rating": {
+          "raw": "79/100",
+          "cell": "J9"
+        },
+        "Last SEO Audit Date": {
+          "raw": "October 15, 2026",
+          "cell": "J10"
+        },
+        "Google Analytics": {
+          "raw": "No",
+          "cell": "J11"
+        },
+        "Page Speed Score": {
+          "raw": "8.72 s",
+          "cell": "J12"
+        },
+        "Donation CRM": {
+          "raw": "No",
+          "cell": "J14"
+        },
+        "Donation Checkout": {
+          "raw": "GiveWP",
+          "cell": "J15"
+        },
+        "Recurring Donations": {
+          "raw": "Yes",
+          "cell": "J16"
+        },
+        "Currency Supported": {
+          "raw": "EUR",
+          "cell": "J17"
+        },
+        "Event Ticketing Platform": {
+          "raw": "GiveWP",
+          "cell": "J19"
+        },
+        "Mailchimp Embedded": {
+          "raw": "No",
+          "cell": "J21"
+        },
+        "Blogs": {
+          "raw": "Yes",
+          "cell": "J23"
+        },
+        "News Articles": {
+          "raw": "Yes",
+          "cell": "J24"
+        },
+        "Financial Reports": {
+          "raw": "—",
+          "cell": "J25"
+        },
+        "Impact Reports": {
+          "raw": "Yes",
+          "cell": "J26"
+        },
+        "Directors Information": {
+          "raw": "No",
+          "cell": "J27"
+        },
+        "Newsletter/Email Signup": {
+          "raw": "Yes",
+          "cell": "J28"
+        },
+        "Video Content": {
+          "raw": "Yes",
+          "cell": "J29"
+        },
+        "Security Plugins Installed": {
+          "raw": "Yes",
+          "cell": "J31"
+        },
+        "SSL Certificate": {
+          "raw": "Yes",
+          "cell": "J32"
+        },
+        "GDPR / Privacy Policy": {
+          "raw": "Yes",
+          "cell": "J33"
+        },
+        "Chatbot / Captcha in Forms": {
+          "raw": "No",
+          "cell": "J34"
+        },
+        "Website QA": {
+          "raw": "Monthly Basis (content updated till 7/23/2026)",
+          "cell": "J36"
+        },
+        "Last Plugin Update": {
+          "raw": "Sep-1",
+          "cell": "J37"
+        },
+        "Backup Status (Server)": {
+          "raw": "Sep-18",
+          "cell": "J38"
+        },
+        "Facebook": {
+          "raw": "Yes",
+          "cell": "J40"
+        },
+        "Instagram": {
+          "raw": "—",
+          "cell": "J41"
+        },
+        "LinkedIn": {
+          "raw": "Yes",
+          "cell": "J42"
+        },
+        "Twitter / X": {
+          "raw": "—",
+          "cell": "J43"
+        },
+        "YouTube": {
+          "raw": "Yes",
+          "cell": "J44"
+        },
+        "General Notes / Remarks": {
+          "raw": "No Donation CRM configured. GiveWP handles checkout, recurring donations & ticketing. Directors info not present. Page speed 10.35s is slow — needs optimization. Active on Facebook, LinkedIn & YouTube Instagram but no Twitter/X. Backups current. Priority actions: fix page speed, add Analytics.",
+          "cell": "J46"
+        }
+      },
+      "page_duration": {
+        "seconds": 8.72,
+        "raw": "8.72 s",
+        "metric_definition": "unspecified page-load measurement",
+        "measurement_date": null
+      },
+      "maintenance_dates": {
+        "plugin_updated": "2026-09-01",
+        "backup_date": "2026-09-18",
+        "basis": "Underlying Google Sheets date serials 46266 and 46283; display hides year"
+      }
+    },
+    {
+      "name": "Denmark",
+      "canonical_url": "https://foih.dk",
+      "source_column": "K",
+      "fields": {
+        "Website URL": {
+          "raw": "https://foih.dk",
+          "cell": "K5"
+        },
+        "CMS Platform": {
+          "raw": "WordPress",
+          "cell": "K6"
+        },
+        "SEO Implementation": {
+          "raw": "Yes",
+          "cell": "K8"
+        },
+        "SEO Rating": {
+          "raw": "74/100",
+          "cell": "K9"
+        },
+        "Last SEO Audit Date": {
+          "raw": "October 15, 2026",
+          "cell": "K10"
+        },
+        "Google Analytics": {
+          "raw": "No",
+          "cell": "K11"
+        },
+        "Page Speed Score": {
+          "raw": "10.63 s",
+          "cell": "K12"
+        },
+        "Donation CRM": {
+          "raw": "No",
+          "cell": "K14"
+        },
+        "Donation Checkout": {
+          "raw": "GiveWP",
+          "cell": "K15"
+        },
+        "Recurring Donations": {
+          "raw": "Yes",
+          "cell": "K16"
+        },
+        "Currency Supported": {
+          "raw": "DKK",
+          "cell": "K17"
+        },
+        "Event Ticketing Platform": {
+          "raw": "GiveWP",
+          "cell": "K19"
+        },
+        "Mailchimp Embedded": {
+          "raw": "No",
+          "cell": "K21"
+        },
+        "Blogs": {
+          "raw": "Yes",
+          "cell": "K23"
+        },
+        "News Articles": {
+          "raw": "Yes",
+          "cell": "K24"
+        },
+        "Financial Reports": {
+          "raw": "—",
+          "cell": "K25"
+        },
+        "Impact Reports": {
+          "raw": "Yes",
+          "cell": "K26"
+        },
+        "Directors Information": {
+          "raw": "No",
+          "cell": "K27"
+        },
+        "Newsletter/Email Signup": {
+          "raw": "Yes",
+          "cell": "K28"
+        },
+        "Video Content": {
+          "raw": "Yes",
+          "cell": "K29"
+        },
+        "Security Plugins Installed": {
+          "raw": "Yes",
+          "cell": "K31"
+        },
+        "SSL Certificate": {
+          "raw": "Yes",
+          "cell": "K32"
+        },
+        "GDPR / Privacy Policy": {
+          "raw": "Yes",
+          "cell": "K33"
+        },
+        "Chatbot / Captcha in Forms": {
+          "raw": "No",
+          "cell": "K34"
+        },
+        "Website QA": {
+          "raw": "Monthly Basis (content updated till 7/23/2026)",
+          "cell": "K36"
+        },
+        "Last Plugin Update": {
+          "raw": "Sep-1",
+          "cell": "K37"
+        },
+        "Backup Status (Server)": {
+          "raw": "Sep-18",
+          "cell": "K38"
+        },
+        "Facebook": {
+          "raw": "Yes",
+          "cell": "K40"
+        },
+        "Instagram": {
+          "raw": "Yes",
+          "cell": "K41"
+        },
+        "LinkedIn": {
+          "raw": "Yes",
+          "cell": "K42"
+        },
+        "Twitter / X": {
+          "raw": "—",
+          "cell": "K43"
+        },
+        "YouTube": {
+          "raw": "Yes",
+          "cell": "K44"
+        },
+        "General Notes / Remarks": {
+          "raw": "No Donation CRM. GiveWP handles checkout, recurring donations & ticketing. No Google Analytics. Directors info not present. Page speed 6.87s — needs improvement. Active on Facebook, Instagram, LinkedIn & YouTube. No Twitter/X. Backups current. Core content (blogs, news, newsletter, video) is all live. Mid-tier setup — analytics and CRM are key gaps.",
+          "cell": "K46"
+        }
+      },
+      "page_duration": {
+        "seconds": 10.63,
+        "raw": "10.63 s",
+        "metric_definition": "unspecified page-load measurement",
+        "measurement_date": null
+      },
+      "maintenance_dates": {
+        "plugin_updated": "2026-09-01",
+        "backup_date": "2026-09-18",
+        "basis": "Underlying Google Sheets date serials 46266 and 46283; display hides year"
+      }
+    },
+    {
+      "name": "Norway",
+      "canonical_url": "https://foih.no",
+      "source_column": "L",
+      "fields": {
+        "Website URL": {
+          "raw": "https://foih.no",
+          "cell": "L5"
+        },
+        "CMS Platform": {
+          "raw": "WordPress",
+          "cell": "L6"
+        },
+        "SEO Implementation": {
+          "raw": "Yes",
+          "cell": "L8"
+        },
+        "SEO Rating": {
+          "raw": "72/100",
+          "cell": "L9"
+        },
+        "Last SEO Audit Date": {
+          "raw": "October 15, 2026",
+          "cell": "L10"
+        },
+        "Google Analytics": {
+          "raw": "Yes",
+          "cell": "L11"
+        },
+        "Page Speed Score": {
+          "raw": "5.80 s",
+          "cell": "L12"
+        },
+        "Donation CRM": {
+          "raw": "No",
+          "cell": "L14"
+        },
+        "Donation Checkout": {
+          "raw": "GiveWP",
+          "cell": "L15"
+        },
+        "Recurring Donations": {
+          "raw": "Yes",
+          "cell": "L16"
+        },
+        "Currency Supported": {
+          "raw": "NOK",
+          "cell": "L17"
+        },
+        "Event Ticketing Platform": {
+          "raw": "GiveWP",
+          "cell": "L19"
+        },
+        "Mailchimp Embedded": {
+          "raw": "No",
+          "cell": "L21"
+        },
+        "Blogs": {
+          "raw": "Yes",
+          "cell": "L23"
+        },
+        "News Articles": {
+          "raw": "Yes",
+          "cell": "L24"
+        },
+        "Financial Reports": {
+          "raw": "—",
+          "cell": "L25"
+        },
+        "Impact Reports": {
+          "raw": "Yes",
+          "cell": "L26"
+        },
+        "Directors Information": {
+          "raw": "No",
+          "cell": "L27"
+        },
+        "Newsletter/Email Signup": {
+          "raw": "Yes",
+          "cell": "L28"
+        },
+        "Video Content": {
+          "raw": "Yes",
+          "cell": "L29"
+        },
+        "Security Plugins Installed": {
+          "raw": "Yes",
+          "cell": "L31"
+        },
+        "SSL Certificate": {
+          "raw": "Yes",
+          "cell": "L32"
+        },
+        "GDPR / Privacy Policy": {
+          "raw": "Yes",
+          "cell": "L33"
+        },
+        "Chatbot / Captcha in Forms": {
+          "raw": "No",
+          "cell": "L34"
+        },
+        "Website QA": {
+          "raw": "Monthly Basis (content updated till 7/23/2026)",
+          "cell": "L36"
+        },
+        "Last Plugin Update": {
+          "raw": "Sep-1",
+          "cell": "L37"
+        },
+        "Backup Status (Server)": {
+          "raw": "Sep-18",
+          "cell": "L38"
+        },
+        "Facebook": {
+          "raw": "Yes",
+          "cell": "L40"
+        },
+        "Instagram": {
+          "raw": "Yes",
+          "cell": "L41"
+        },
+        "LinkedIn": {
+          "raw": "—",
+          "cell": "L42"
+        },
+        "Twitter / X": {
+          "raw": "—",
+          "cell": "L43"
+        },
+        "YouTube": {
+          "raw": "Yes",
+          "cell": "L44"
+        },
+        "General Notes / Remarks": {
+          "raw": "No Donation CRM. GiveWP for checkout, recurring donations & ticketing. No Google Analytics. CAPTCHA missing. Directors info not present. Page speed 7.75s — needs improvement. No LinkedIn or Twitter/X. Active on Facebook, Instagram & YouTube. Backups current. All content sections live. Analytics setup and CRM integration are top priorities.",
+          "cell": "L46"
+        }
+      },
+      "page_duration": {
+        "seconds": 5.8,
+        "raw": "5.80 s",
+        "metric_definition": "unspecified page-load measurement",
+        "measurement_date": null
+      },
+      "maintenance_dates": {
+        "plugin_updated": "2026-09-01",
+        "backup_date": "2026-09-18",
+        "basis": "Underlying Google Sheets date serials 46266 and 46283; display hides year"
+      }
+    },
+    {
+      "name": "Spain",
+      "canonical_url": "https://foih.org.es",
+      "source_column": "M",
+      "fields": {
+        "Website URL": {
+          "raw": "https://foih.org.es/",
+          "cell": "M5"
+        },
+        "CMS Platform": {
+          "raw": "WordPress",
+          "cell": "M6"
+        },
+        "SEO Implementation": {
+          "raw": "Yes",
+          "cell": "M8"
+        },
+        "SEO Rating": {
+          "raw": "67/100",
+          "cell": "M9"
+        },
+        "Last SEO Audit Date": {
+          "raw": "October 15, 2026",
+          "cell": "M10"
+        },
+        "Google Analytics": {
+          "raw": "No",
+          "cell": "M11"
+        },
+        "Page Speed Score": {
+          "raw": "8.62 s",
+          "cell": "M12"
+        },
+        "Donation CRM": {
+          "raw": "No",
+          "cell": "M14"
+        },
+        "Donation Checkout": {
+          "raw": "GiveWP",
+          "cell": "M15"
+        },
+        "Recurring Donations": {
+          "raw": "Yes",
+          "cell": "M16"
+        },
+        "Currency Supported": {
+          "raw": "EUR",
+          "cell": "M17"
+        },
+        "Event Ticketing Platform": {
+          "raw": "GiveWP",
+          "cell": "M19"
+        },
+        "Mailchimp Embedded": {
+          "raw": "No",
+          "cell": "M21"
+        },
+        "Blogs": {
+          "raw": "Yes",
+          "cell": "M23"
+        },
+        "News Articles": {
+          "raw": "Yes",
+          "cell": "M24"
+        },
+        "Financial Reports": {
+          "raw": "—",
+          "cell": "M25"
+        },
+        "Impact Reports": {
+          "raw": "Yes",
+          "cell": "M26"
+        },
+        "Directors Information": {
+          "raw": "No",
+          "cell": "M27"
+        },
+        "Newsletter/Email Signup": {
+          "raw": "Yes",
+          "cell": "M28"
+        },
+        "Video Content": {
+          "raw": "Yes",
+          "cell": "M29"
+        },
+        "Security Plugins Installed": {
+          "raw": "Yes",
+          "cell": "M31"
+        },
+        "SSL Certificate": {
+          "raw": "Yes",
+          "cell": "M32"
+        },
+        "GDPR / Privacy Policy": {
+          "raw": "Yes",
+          "cell": "M33"
+        },
+        "Chatbot / Captcha in Forms": {
+          "raw": "No",
+          "cell": "M34"
+        },
+        "Website QA": {
+          "raw": "Monthly Basis (content updated till 7/23/2026)",
+          "cell": "M36"
+        },
+        "Last Plugin Update": {
+          "raw": "Sep-1",
+          "cell": "M37"
+        },
+        "Backup Status (Server)": {
+          "raw": "Sep-18",
+          "cell": "M38"
+        },
+        "Facebook": {
+          "raw": "Yes",
+          "cell": "M40"
+        },
+        "Instagram": {
+          "raw": "Yes",
+          "cell": "M41"
+        },
+        "LinkedIn": {
+          "raw": "—",
+          "cell": "M42"
+        },
+        "Twitter / X": {
+          "raw": "—",
+          "cell": "M43"
+        },
+        "YouTube": {
+          "raw": "Yes",
+          "cell": "M44"
+        },
+        "General Notes / Remarks": {
+          "raw": "No Donation CRM. GiveWP active for checkout, recurring donations & ticketing. No Google Analytics. CAPTCHA missing. Directors info not present. Page speed 10.46s — critically slow, requires urgent attention. No LinkedIn or Twitter/X. Active on Facebook, Instagram & YouTube. Backups current. Page speed and analytics are the most pressing issues.",
+          "cell": "M46"
+        }
+      },
+      "page_duration": {
+        "seconds": 8.62,
+        "raw": "8.62 s",
+        "metric_definition": "unspecified page-load measurement",
+        "measurement_date": null
+      },
+      "maintenance_dates": {
+        "plugin_updated": "2026-09-01",
+        "backup_date": "2026-09-18",
+        "basis": "Underlying Google Sheets date serials 46266 and 46283; display hides year"
+      }
+    },
+    {
+      "name": "Ireland",
+      "canonical_url": "https://indushospital.ie",
+      "source_column": "N",
+      "fields": {
+        "Website URL": {
+          "raw": "https://indushospital.ie/",
+          "cell": "N5"
+        },
+        "CMS Platform": {
+          "raw": "WordPress",
+          "cell": "N6"
+        },
+        "SEO Implementation": {
+          "raw": "Yes",
+          "cell": "N8"
+        },
+        "SEO Rating": {
+          "raw": "56/100",
+          "cell": "N9"
+        },
+        "Last SEO Audit Date": {
+          "raw": "October 15, 2026",
+          "cell": "N10"
+        },
+        "Google Analytics": {
+          "raw": "No",
+          "cell": "N11"
+        },
+        "Page Speed Score": {
+          "raw": "6.66 s",
+          "cell": "N12"
+        },
+        "Donation CRM": {
+          "raw": "No",
+          "cell": "N14"
+        },
+        "Donation Checkout": {
+          "raw": "GiveWP",
+          "cell": "N15"
+        },
+        "Recurring Donations": {
+          "raw": "Yes",
+          "cell": "N16"
+        },
+        "Currency Supported": {
+          "raw": "EUR",
+          "cell": "N17"
+        },
+        "Event Ticketing Platform": {
+          "raw": "GiveWP",
+          "cell": "N19"
+        },
+        "Mailchimp Embedded": {
+          "raw": "No",
+          "cell": "N21"
+        },
+        "Blogs": {
+          "raw": "Yes",
+          "cell": "N23"
+        },
+        "News Articles": {
+          "raw": "Yes",
+          "cell": "N24"
+        },
+        "Financial Reports": {
+          "raw": "—",
+          "cell": "N25"
+        },
+        "Impact Reports": {
+          "raw": "Yes",
+          "cell": "N26"
+        },
+        "Directors Information": {
+          "raw": "No",
+          "cell": "N27"
+        },
+        "Newsletter/Email Signup": {
+          "raw": "Yes",
+          "cell": "N28"
+        },
+        "Video Content": {
+          "raw": "Yes",
+          "cell": "N29"
+        },
+        "Security Plugins Installed": {
+          "raw": "Yes",
+          "cell": "N31"
+        },
+        "SSL Certificate": {
+          "raw": "Yes",
+          "cell": "N32"
+        },
+        "GDPR / Privacy Policy": {
+          "raw": "Yes",
+          "cell": "N33"
+        },
+        "Chatbot / Captcha in Forms": {
+          "raw": "No",
+          "cell": "N34"
+        },
+        "Website QA": {
+          "raw": "Monthly Basis (content updated till 7/23/2026)",
+          "cell": "N36"
+        },
+        "Last Plugin Update": {
+          "raw": "Sep-1",
+          "cell": "N37"
+        },
+        "Backup Status (Server)": {
+          "raw": "Sep-18",
+          "cell": "N38"
+        },
+        "Facebook": {
+          "raw": "Yes",
+          "cell": "N40"
+        },
+        "Instagram": {
+          "raw": "Yes",
+          "cell": "N41"
+        },
+        "LinkedIn": {
+          "raw": "Yes",
+          "cell": "N42"
+        },
+        "Twitter / X": {
+          "raw": "—",
+          "cell": "N43"
+        },
+        "YouTube": {
+          "raw": "Yes",
+          "cell": "N44"
+        },
+        "General Notes / Remarks": {
+          "raw": "No Donation CRM. GiveWP for checkout, recurring donations & ticketing. No Google Analytics. CAPTCHA missing. Directors info not present. Page speed 4.90s — acceptable. Active on Facebook, Instagram, LinkedIn & YouTube. No Twitter/X. Backups current. All content sections live. Key gaps: no Analytics tracking and no CRM for donor management.",
+          "cell": "N46"
+        }
+      },
+      "page_duration": {
+        "seconds": 6.66,
+        "raw": "6.66 s",
+        "metric_definition": "unspecified page-load measurement",
+        "measurement_date": null
+      },
+      "maintenance_dates": {
+        "plugin_updated": "2026-09-01",
+        "backup_date": "2026-09-18",
+        "basis": "Underlying Google Sheets date serials 46266 and 46283; display hides year"
+      }
+    },
+    {
+      "name": "Netherlands",
+      "canonical_url": "https://indushealth.nl",
+      "source_column": "O",
+      "fields": {
+        "Website URL": {
+          "raw": "https://indushealth.nl/",
+          "cell": "O5"
+        },
+        "CMS Platform": {
+          "raw": "WordPress",
+          "cell": "O6"
+        },
+        "SEO Implementation": {
+          "raw": "Yes",
+          "cell": "O8"
+        },
+        "SEO Rating": {
+          "raw": "68/100",
+          "cell": "O9"
+        },
+        "Last SEO Audit Date": {
+          "raw": "October 15, 2026",
+          "cell": "O10"
+        },
+        "Google Analytics": {
+          "raw": "No",
+          "cell": "O11"
+        },
+        "Page Speed Score": {
+          "raw": "953 ms",
+          "cell": "O12"
+        },
+        "Donation CRM": {
+          "raw": "No",
+          "cell": "O14"
+        },
+        "Donation Checkout": {
+          "raw": "Not yet",
+          "cell": "O15"
+        },
+        "Recurring Donations": {
+          "raw": "No (Bank account not open)",
+          "cell": "O16"
+        },
+        "Currency Supported": {
+          "raw": "EUR",
+          "cell": "O17"
+        },
+        "Event Ticketing Platform": {
+          "raw": "No",
+          "cell": "O19"
+        },
+        "Mailchimp Embedded": {
+          "raw": "No",
+          "cell": "O21"
+        },
+        "Blogs": {
+          "raw": "Yes",
+          "cell": "O23"
+        },
+        "News Articles": {
+          "raw": "Yes",
+          "cell": "O24"
+        },
+        "Financial Reports": {
+          "raw": "—",
+          "cell": "O25"
+        },
+        "Impact Reports": {
+          "raw": "Yes",
+          "cell": "O26"
+        },
+        "Directors Information": {
+          "raw": "No",
+          "cell": "O27"
+        },
+        "Newsletter/Email Signup": {
+          "raw": "Yes",
+          "cell": "O28"
+        },
+        "Video Content": {
+          "raw": "Yes",
+          "cell": "O29"
+        },
+        "Security Plugins Installed": {
+          "raw": "Yes",
+          "cell": "O31"
+        },
+        "SSL Certificate": {
+          "raw": "Yes",
+          "cell": "O32"
+        },
+        "GDPR / Privacy Policy": {
+          "raw": "Yes",
+          "cell": "O33"
+        },
+        "Chatbot / Captcha in Forms": {
+          "raw": "No",
+          "cell": "O34"
+        },
+        "Website QA": {
+          "raw": "Monthly Basis (content updated till 7/23/2026)",
+          "cell": "O36"
+        },
+        "Last Plugin Update": {
+          "raw": "Sep-1",
+          "cell": "O37"
+        },
+        "Backup Status (Server)": {
+          "raw": "Sep-18",
+          "cell": "O38"
+        },
+        "Facebook": {
+          "raw": "Yes",
+          "cell": "O40"
+        },
+        "Instagram": {
+          "raw": "Yes",
+          "cell": "O41"
+        },
+        "LinkedIn": {
+          "raw": "—",
+          "cell": "O42"
+        },
+        "Twitter / X": {
+          "raw": "—",
+          "cell": "O43"
+        },
+        "YouTube": {
+          "raw": "Yes",
+          "cell": "O44"
+        },
+        "General Notes / Remarks": {
+          "raw": "Donation checkout not yet configured ('Not yet'). No recurring donations setup. No event ticketing platform. No Google Analytics. Directors info missing. Page speed excellent at 741ms — fastest in the network. Active on Facebook, Instagram & YouTube. No LinkedIn or Twitter/X. Backups current. Needs significant setup work on donations and ticketing.",
+          "cell": "O46"
+        }
+      },
+      "page_duration": {
+        "seconds": 0.953,
+        "raw": "953 ms",
+        "metric_definition": "unspecified page-load measurement",
+        "measurement_date": null
+      },
+      "maintenance_dates": {
+        "plugin_updated": "2026-09-01",
+        "backup_date": "2026-09-18",
+        "basis": "Underlying Google Sheets date serials 46266 and 46283; display hides year"
+      }
+    },
+    {
+      "name": "Finland",
+      "canonical_url": "https://foihfinland.org",
+      "source_column": "P",
+      "fields": {
+        "Website URL": {
+          "raw": "https://foihfinland.org/",
+          "cell": "P5"
+        },
+        "CMS Platform": {
+          "raw": "WordPress",
+          "cell": "P6"
+        },
+        "SEO Implementation": {
+          "raw": "Yes",
+          "cell": "P8"
+        },
+        "SEO Rating": {
+          "raw": "68/100",
+          "cell": "P9"
+        },
+        "Last SEO Audit Date": {
+          "raw": "October 15, 2026",
+          "cell": "P10"
+        },
+        "Google Analytics": {
+          "raw": "No",
+          "cell": "P11"
+        },
+        "Page Speed Score": {
+          "raw": "2.15 s",
+          "cell": "P12"
+        },
+        "Donation CRM": {
+          "raw": "No",
+          "cell": "P14"
+        },
+        "Donation Checkout": {
+          "raw": "GiveWP",
+          "cell": "P15"
+        },
+        "Recurring Donations": {
+          "raw": "Yes",
+          "cell": "P16"
+        },
+        "Currency Supported": {
+          "raw": "EUR",
+          "cell": "P17"
+        },
+        "Event Ticketing Platform": {
+          "raw": "GiveWP",
+          "cell": "P19"
+        },
+        "Mailchimp Embedded": {
+          "raw": "No",
+          "cell": "P21"
+        },
+        "Blogs": {
+          "raw": "Yes",
+          "cell": "P23"
+        },
+        "News Articles": {
+          "raw": "Yes",
+          "cell": "P24"
+        },
+        "Financial Reports": {
+          "raw": "—",
+          "cell": "P25"
+        },
+        "Impact Reports": {
+          "raw": "Work in progress",
+          "cell": "P26"
+        },
+        "Directors Information": {
+          "raw": "No",
+          "cell": "P27"
+        },
+        "Newsletter/Email Signup": {
+          "raw": "Yes",
+          "cell": "P28"
+        },
+        "Video Content": {
+          "raw": "Work in progress",
+          "cell": "P29"
+        },
+        "Security Plugins Installed": {
+          "raw": "Yes",
+          "cell": "P31"
+        },
+        "SSL Certificate": {
+          "raw": "Yes",
+          "cell": "P32"
+        },
+        "GDPR / Privacy Policy": {
+          "raw": "Yes",
+          "cell": "P33"
+        },
+        "Chatbot / Captcha in Forms": {
+          "raw": "No",
+          "cell": "P34"
+        },
+        "Website QA": {
+          "raw": "Monthly Basis (content updated till 7/23/2026)",
+          "cell": "P36"
+        },
+        "Last Plugin Update": {
+          "raw": "Sep-1",
+          "cell": "P37"
+        },
+        "Backup Status (Server)": {
+          "raw": "Sep-18",
+          "cell": "P38"
+        },
+        "Facebook": {
+          "raw": "Work in progress",
+          "cell": "P40"
+        },
+        "Instagram": {
+          "raw": "Work in progress",
+          "cell": "P41"
+        },
+        "LinkedIn": {
+          "raw": "Work in progress",
+          "cell": "P42"
+        },
+        "Twitter / X": {
+          "raw": "Work in progress",
+          "cell": "P43"
+        },
+        "YouTube": {
+          "raw": "Yes",
+          "cell": "P44"
+        },
+        "General Notes / Remarks": {
+          "raw": null,
+          "cell": "P46"
+        }
+      },
+      "page_duration": {
+        "seconds": 2.15,
+        "raw": "2.15 s",
+        "metric_definition": "unspecified page-load measurement",
+        "measurement_date": null
+      },
+      "maintenance_dates": {
+        "plugin_updated": "2026-09-01",
+        "backup_date": "2026-09-18",
+        "basis": "Underlying Google Sheets date serials 46266 and 46283; display hides year"
+      }
+    }
+  ],
+  "audits": [
+    {
+      "website_url": "https://foihus.org",
+      "score": 82,
+      "scale": 100,
+      "measurement_date": "2026-10-15",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "International Websites Dashbaord",
+      "source_cell": "C9"
+    },
+    {
+      "website_url": "https://indushospital.ca",
+      "score": 79,
+      "scale": 100,
+      "measurement_date": "2026-10-15",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "International Websites Dashbaord",
+      "source_cell": "D9"
+    },
+    {
+      "website_url": "https://indushospital.org.ae",
+      "score": 81,
+      "scale": 100,
+      "measurement_date": "2026-10-15",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "International Websites Dashbaord",
+      "source_cell": "E9"
+    },
+    {
+      "website_url": "https://indushospital.org.uk",
+      "score": 79,
+      "scale": 100,
+      "measurement_date": "2026-10-15",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "International Websites Dashbaord",
+      "source_cell": "F9"
+    },
+    {
+      "website_url": "https://foih.de",
+      "score": 69,
+      "scale": 100,
+      "measurement_date": "2026-10-15",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "International Websites Dashbaord",
+      "source_cell": "G9"
+    },
+    {
+      "website_url": "https://foih.org.au",
+      "score": 69,
+      "scale": 100,
+      "measurement_date": "2026-10-15",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "International Websites Dashbaord",
+      "source_cell": "H9"
+    },
+    {
+      "website_url": "https://foih.ch",
+      "score": 69,
+      "scale": 100,
+      "measurement_date": "2026-10-15",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "International Websites Dashbaord",
+      "source_cell": "I9"
+    },
+    {
+      "website_url": "https://indushealth.fr",
+      "score": 79,
+      "scale": 100,
+      "measurement_date": "2026-10-15",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "International Websites Dashbaord",
+      "source_cell": "J9"
+    },
+    {
+      "website_url": "https://foih.dk",
+      "score": 74,
+      "scale": 100,
+      "measurement_date": "2026-10-15",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "International Websites Dashbaord",
+      "source_cell": "K9"
+    },
+    {
+      "website_url": "https://foih.no",
+      "score": 72,
+      "scale": 100,
+      "measurement_date": "2026-10-15",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "International Websites Dashbaord",
+      "source_cell": "L9"
+    },
+    {
+      "website_url": "https://foih.org.es",
+      "score": 67,
+      "scale": 100,
+      "measurement_date": "2026-10-15",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "International Websites Dashbaord",
+      "source_cell": "M9"
+    },
+    {
+      "website_url": "https://indushospital.ie",
+      "score": 56,
+      "scale": 100,
+      "measurement_date": "2026-10-15",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "International Websites Dashbaord",
+      "source_cell": "N9"
+    },
+    {
+      "website_url": "https://indushealth.nl",
+      "score": 68,
+      "scale": 100,
+      "measurement_date": "2026-10-15",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "International Websites Dashbaord",
+      "source_cell": "O9"
+    },
+    {
+      "website_url": "https://foihfinland.org",
+      "score": 68,
+      "scale": 100,
+      "measurement_date": "2026-10-15",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "International Websites Dashbaord",
+      "source_cell": "P9"
+    },
+    {
+      "website_url": "https://foihus.org",
+      "score": 76,
+      "scale": 100,
+      "measurement_date": "2026-07-23",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "SEO Summary",
+      "source_cell": "C3"
+    },
+    {
+      "website_url": "https://indushospital.ca",
+      "score": 75,
+      "scale": 100,
+      "measurement_date": "2026-07-23",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "SEO Summary",
+      "source_cell": "C4"
+    },
+    {
+      "website_url": "https://indushospital.org.ae",
+      "score": 74,
+      "scale": 100,
+      "measurement_date": "2026-07-23",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "SEO Summary",
+      "source_cell": "C5"
+    },
+    {
+      "website_url": "https://indushospital.org.uk",
+      "score": 79,
+      "scale": 100,
+      "measurement_date": "2026-07-23",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "SEO Summary",
+      "source_cell": "C6"
+    },
+    {
+      "website_url": "https://foih.de",
+      "score": 74,
+      "scale": 100,
+      "measurement_date": "2026-07-23",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "SEO Summary",
+      "source_cell": "C7"
+    },
+    {
+      "website_url": "https://foih.org.au",
+      "score": 78,
+      "scale": 100,
+      "measurement_date": "2026-07-23",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "SEO Summary",
+      "source_cell": "C8"
+    },
+    {
+      "website_url": "https://indushealth.fr",
+      "score": 74,
+      "scale": 100,
+      "measurement_date": "2026-07-23",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "SEO Summary",
+      "source_cell": "C9"
+    },
+    {
+      "website_url": "https://foih.dk",
+      "score": 74,
+      "scale": 100,
+      "measurement_date": "2026-07-23",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "SEO Summary",
+      "source_cell": "C10"
+    },
+    {
+      "website_url": "https://foih.no",
+      "score": 82,
+      "scale": 100,
+      "measurement_date": "2026-07-23",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "SEO Summary",
+      "source_cell": "C11"
+    },
+    {
+      "website_url": "https://foih.org.es",
+      "score": 76,
+      "scale": 100,
+      "measurement_date": "2026-07-23",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "SEO Summary",
+      "source_cell": "C12"
+    },
+    {
+      "website_url": "https://indushospital.ie",
+      "score": 61,
+      "scale": 100,
+      "measurement_date": "2026-07-23",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "SEO Summary",
+      "source_cell": "C13"
+    },
+    {
+      "website_url": "https://indushealth.nl",
+      "score": 68,
+      "scale": 100,
+      "measurement_date": "2026-07-23",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "SEO Summary",
+      "source_cell": "C14"
+    },
+    {
+      "website_url": "https://foih.ch",
+      "score": 74,
+      "scale": 100,
+      "measurement_date": "2026-07-23",
+      "source": {
+        "name": "Rank Math SEO Analyzer",
+        "url": "https://rankmath.com/tools/seo-analyzer/",
+        "device": null,
+        "method_version": null
+      },
+      "source_tab": "SEO Summary",
+      "source_cell": "C15"
+    }
+  ],
+  "source_rows": {
+    "main": [
+      [
+        null,
+        null,
+        "🌍 NDUS INTERNATIONAL WEBSITE DASHBOARD"
+      ],
+      [
+        null,
+        null,
+        "Indus Hospital & Health Network | Digital Presence Tracker"
+      ],
+      [
+        "Category",
+        "Field",
+        "FOIH US",
+        "Indus Canada",
+        "UAE",
+        "UK",
+        "Germany",
+        "Australia",
+        "Switzerland",
+        "France",
+        "Denmark",
+        "Norway",
+        "Spain",
+        "Ireland",
+        "Netherlands",
+        "Finland"
+      ],
+      [
+        "🌐 WEBSITE INFORMATION"
+      ],
+      [
+        null,
+        "Website URL",
+        "https://foihus.org/",
+        "https://indushospital.ca/",
+        "https://indushospital.org.ae/",
+        "https://indushospital.org.uk/",
+        "https://foih.de/",
+        "https://foih.org.au/",
+        "https://foih.ch/",
+        "https://indushealth.fr/",
+        "https://foih.dk",
+        "https://foih.no",
+        "https://foih.org.es/",
+        "https://indushospital.ie/",
+        "https://indushealth.nl/",
+        "https://foihfinland.org/"
+      ],
+      [
+        null,
+        "CMS Platform",
+        "WordPress",
+        "WordPress",
+        "WordPress",
+        "WordPress",
+        "WordPress",
+        "WordPress",
+        "WordPress",
+        "WordPress",
+        "WordPress",
+        "WordPress",
+        "WordPress",
+        "WordPress",
+        "WordPress",
+        "WordPress"
+      ],
+      [
+        "📈 SEO & PERFORMANCE"
+      ],
+      [
+        null,
+        "SEO Implementation",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes"
+      ],
+      [
+        null,
+        "SEO Rating",
+        "82/100",
+        "79/100",
+        "81/100",
+        "79/100",
+        "69/100",
+        "69/100",
+        "69/100",
+        "79/100",
+        "74/100",
+        "72/100",
+        "67/100",
+        "56/100",
+        "68/100",
+        "68/100"
+      ],
+      [
+        null,
+        "Last SEO Audit Date",
+        "October 15, 2026",
+        "October 15, 2026",
+        "October 15, 2026",
+        "October 15, 2026",
+        "October 15, 2026",
+        "October 15, 2026",
+        "October 15, 2026",
+        "October 15, 2026",
+        "October 15, 2026",
+        "October 15, 2026",
+        "October 15, 2026",
+        "October 15, 2026",
+        "October 15, 2026",
+        "October 15, 2026"
+      ],
+      [
+        null,
+        "Google Analytics",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes, but free version. ",
+        "No",
+        "No",
+        "Yes",
+        "No",
+        "No",
+        "No",
+        "No"
+      ],
+      [
+        null,
+        "Page Speed Score",
+        "5.94 s",
+        "3.87 s",
+        "7.72 s",
+        "3.06 s",
+        "5.15 s",
+        "4.81 s",
+        "1.80 s",
+        "8.72 s",
+        "10.63 s",
+        "5.80 s",
+        "8.62 s",
+        "6.66 s",
+        "953 ms",
+        "2.15 s"
+      ],
+      [
+        "💳 DONATION & CRM"
+      ],
+      [
+        null,
+        "Donation CRM",
+        "Bloomerang CRM",
+        "Bloomerang CRM",
+        "No",
+        "Pillar CRM",
+        "Kindful CRM",
+        "Kindful CRM",
+        "No",
+        "No",
+        "No",
+        "No",
+        "No",
+        "No",
+        "No",
+        "No"
+      ],
+      [
+        null,
+        "Donation Checkout",
+        "Fundraise Up",
+        "Fundraise Up",
+        "No",
+        "Custom",
+        "Fundraise Up",
+        "Fundraise Up",
+        "GiveWP",
+        "GiveWP",
+        "GiveWP",
+        "GiveWP",
+        "GiveWP",
+        "GiveWP",
+        "Not yet",
+        "GiveWP"
+      ],
+      [
+        null,
+        "Recurring Donations",
+        "Yes",
+        "Yes",
+        "No",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "No (Bank account not open)",
+        "Yes"
+      ],
+      [
+        null,
+        "Currency Supported",
+        "USD",
+        "CAD",
+        "AED",
+        "GBP",
+        "EUR",
+        "AUD",
+        "CHF",
+        "EUR",
+        "DKK",
+        "NOK",
+        "EUR",
+        "EUR",
+        "EUR",
+        "EUR"
+      ],
+      [
+        "🎟️ EVENTS & TICKETING"
+      ],
+      [
+        null,
+        "Event Ticketing Platform",
+        "Qgive",
+        "Qgive",
+        "Ticket Hunter",
+        "Enthuse",
+        "Custom/PayPal",
+        "Kindful Ticketing",
+        "GiveWP",
+        "GiveWP",
+        "GiveWP",
+        "GiveWP",
+        "GiveWP",
+        "GiveWP",
+        "No",
+        "GiveWP"
+      ],
+      [
+        "📊 EMAIL MARKETING"
+      ],
+      [
+        null,
+        "Mailchimp Embedded",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "No",
+        "No",
+        "No",
+        "No",
+        "No",
+        "No",
+        "No"
+      ],
+      [
+        "📝 CONTENT"
+      ],
+      [
+        null,
+        "Blogs",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes"
+      ],
+      [
+        null,
+        "News Articles",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes"
+      ],
+      [
+        null,
+        "Financial Reports",
+        "Yes",
+        "Yes",
+        "—",
+        "—",
+        "—",
+        "Yes",
+        "—",
+        "—",
+        "—",
+        "—",
+        "—",
+        "—",
+        "—",
+        "—"
+      ],
+      [
+        null,
+        "Impact Reports",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Work in progress"
+      ],
+      [
+        null,
+        "Directors Information",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "No",
+        "Yes",
+        "No",
+        "No",
+        "No",
+        "No",
+        "No",
+        "No",
+        "No",
+        "No"
+      ],
+      [
+        null,
+        "Newsletter/Email Signup",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes"
+      ],
+      [
+        null,
+        "Video Content",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Work in progress"
+      ],
+      [
+        "🔒 SECURITY & COMPLIANCE"
+      ],
+      [
+        null,
+        "Security Plugins Installed",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes"
+      ],
+      [
+        null,
+        "SSL Certificate",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes"
+      ],
+      [
+        null,
+        "GDPR / Privacy Policy",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes"
+      ],
+      [
+        null,
+        "Chatbot / Captcha in Forms",
+        "—",
+        "—",
+        "—",
+        "—",
+        "Yes",
+        "Yes",
+        "No",
+        "No",
+        "No",
+        "No",
+        "No",
+        "No",
+        "No",
+        "No"
+      ],
+      [
+        "🛠️ MAINTENANCE & QA"
+      ],
+      [
+        null,
+        "Website QA",
+        "Monthly Basis (content updated till 7/23/2026)",
+        "Monthly Basis (content updated till 7/23/2026)",
+        "Monthly Basis (content updated till 7/23/2026)",
+        "Monthly Basis (content updated till 7/23/2026)",
+        "Monthly Basis (content updated till 7/23/2026)",
+        "Monthly Basis (content updated till 7/23/2026)",
+        "Monthly Basis (content updated till 7/23/2026)",
+        "Monthly Basis (content updated till 7/23/2026)",
+        "Monthly Basis (content updated till 7/23/2026)",
+        "Monthly Basis (content updated till 7/23/2026)",
+        "Monthly Basis (content updated till 7/23/2026)",
+        "Monthly Basis (content updated till 7/23/2026)",
+        "Monthly Basis (content updated till 7/23/2026)",
+        "Monthly Basis (content updated till 7/23/2026)"
+      ],
+      [
+        null,
+        "Last Plugin Update",
+        "Sep-1",
+        "Sep-1",
+        "Sep-1",
+        "Sep-1",
+        "Sep-1",
+        "Sep-1",
+        "Sep-1",
+        "Sep-1",
+        "Sep-1",
+        "Sep-1",
+        "Sep-1",
+        "Sep-1",
+        "Sep-1",
+        "Sep-1"
+      ],
+      [
+        null,
+        "Backup Status (Server)",
+        "Sep-18",
+        "Sep-18",
+        "Sep-18",
+        "Sep-18",
+        "Sep-18",
+        "Sep-18",
+        "Sep-18",
+        "Sep-18",
+        "Sep-18",
+        "Sep-18",
+        "Sep-18",
+        "Sep-18",
+        "Sep-18",
+        "Sep-18"
+      ],
+      [
+        "📊 SOCIAL MEDIA LINKS"
+      ],
+      [
+        null,
+        "Facebook",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Work in progress"
+      ],
+      [
+        null,
+        "Instagram",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "—",
+        "Yes",
+        "—",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Work in progress"
+      ],
+      [
+        null,
+        "LinkedIn",
+        "—",
+        "Yes",
+        "Yes",
+        "—",
+        "Yes",
+        "Yes",
+        "—",
+        "Yes",
+        "Yes",
+        "—",
+        "—",
+        "Yes",
+        "—",
+        "Work in progress"
+      ],
+      [
+        null,
+        "Twitter / X",
+        "Yes",
+        "—",
+        "—",
+        "Yes",
+        "—",
+        "Yes",
+        "—",
+        "—",
+        "—",
+        "—",
+        "—",
+        "—",
+        "—",
+        "Work in progress"
+      ],
+      [
+        null,
+        "YouTube",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes",
+        "Yes"
+      ],
+      [
+        "📝 NOTES"
+      ],
+      [
+        null,
+        "General Notes / Remarks",
+        "Strong overall setup. Bloomerang CRM & Fundraise Up donation system fully active with recurring donations. Qgive handles event ticketing. All content sections (blogs, news, impact reports, financial reports, directors info, newsletter, video) are live. Google Analytics connected. Page speed is reasonable at 3.43s. No LinkedIn presence. Backups current. Strong and well-maintained site.",
+        "One of the most complete websites in the network. Bloomerang CRM + Fundraise Up active with recurring donations. Qgive for ticketing. All content sections fully live including financial reports and directors info. Google Analytics connected. Fastest page speed (2.94s). Active on Facebook, Instagram, LinkedIn & YouTube. Backups current. Strong and well-maintained site.",
+        "Ticket Hunter is in place for events. All content (blogs, news, impact reports, directors info, newsletter, video) is available. Google Analytics connected. SSL and security plugins in place. Not on LinkedIn, Twitter/X, or YouTube. Page speed 4.17s — acceptable.",
+        "Pillar CRM and custom donation checkout active with recurring donations. Enthuse platform for event ticketing. All content sections present including directors info. Google Analytics connected. Page speed at 6.21s is slow — optimization needed. Active on Facebook, Instagram, Twitter/X but no LinkedIn or YouTube. Backups current.",
+        "Kindful CRM + Fundraise Up donation system active with recurring donations. Custom PayPal event ticketing in place. All content live. Google Analytics connected. CAPTCHA is configured — good security practice. Directors information missing from website. No Twitter/X. Page speed 3.86s is good. Backups current. One of the more secure and complete setups.",
+        "Kindful CRM + Fundraise Up active with recurring donations. Kindful ticketing for events. All content sections live including financial reports and directors info. Google Analytics connected. CAPTCHA configured. Page speed 5.48s — could be improved. No Instagram linked. Active on Facebook, LinkedIn, Twitter/X & YouTube. Backups current. Strong and well-maintained site.",
+        "No Donation CRM. GiveWP active for checkout, recurring donations & ticketing. Google Analytics connected. Directors info not present. Page speed 5.05s . No LinkedIn or Twitter/X. Active on Facebook, Instagram & YouTube. Backups current. All core content live. Adding CRM, CAPTCHA and social media presence would strengthen this site.",
+        "No Donation CRM configured. GiveWP handles checkout, recurring donations & ticketing. Directors info not present. Page speed 10.35s is slow — needs optimization. Active on Facebook, LinkedIn & YouTube Instagram but no Twitter/X. Backups current. Priority actions: fix page speed, add Analytics.",
+        "No Donation CRM. GiveWP handles checkout, recurring donations & ticketing. No Google Analytics. Directors info not present. Page speed 6.87s — needs improvement. Active on Facebook, Instagram, LinkedIn & YouTube. No Twitter/X. Backups current. Core content (blogs, news, newsletter, video) is all live. Mid-tier setup — analytics and CRM are key gaps.",
+        "No Donation CRM. GiveWP for checkout, recurring donations & ticketing. No Google Analytics. CAPTCHA missing. Directors info not present. Page speed 7.75s — needs improvement. No LinkedIn or Twitter/X. Active on Facebook, Instagram & YouTube. Backups current. All content sections live. Analytics setup and CRM integration are top priorities.",
+        "No Donation CRM. GiveWP active for checkout, recurring donations & ticketing. No Google Analytics. CAPTCHA missing. Directors info not present. Page speed 10.46s — critically slow, requires urgent attention. No LinkedIn or Twitter/X. Active on Facebook, Instagram & YouTube. Backups current. Page speed and analytics are the most pressing issues.",
+        "No Donation CRM. GiveWP for checkout, recurring donations & ticketing. No Google Analytics. CAPTCHA missing. Directors info not present. Page speed 4.90s — acceptable. Active on Facebook, Instagram, LinkedIn & YouTube. No Twitter/X. Backups current. All content sections live. Key gaps: no Analytics tracking and no CRM for donor management.",
+        "Donation checkout not yet configured ('Not yet'). No recurring donations setup. No event ticketing platform. No Google Analytics. Directors info missing. Page speed excellent at 741ms — fastest in the network. Active on Facebook, Instagram & YouTube. No LinkedIn or Twitter/X. Backups current. Needs significant setup work on donations and ticketing."
+      ],
+      [],
+      [
+        null,
+        null,
+        "We are implementing Google Analytics in Europen sites."
+      ],
+      [
+        null,
+        null,
+        "We obtained this data from the Rank Math SEO website: https://rankmath.com/tools/seo-analyzer/"
+      ]
+    ],
+    "summary": [
+      [
+        "SEO Rating Summary"
+      ],
+      [
+        "Country",
+        "Website URL",
+        "SEO Rating",
+        "SEO Audit Date"
+      ],
+      [
+        "FOIH US",
+        "https://foihus.org/",
+        "76/100",
+        "July 23, 2026"
+      ],
+      [
+        "Indus Canada",
+        "https://indushospital.ca/",
+        "75/100",
+        "July 23, 2026"
+      ],
+      [
+        "UAE",
+        "https://indushospital.org.ae/",
+        "74/100",
+        "July 23, 2026"
+      ],
+      [
+        "UK",
+        "https://indushospital.org.uk/",
+        "79/100",
+        "July 23, 2026"
+      ],
+      [
+        "Germany",
+        "https://foih.de/",
+        "74/100",
+        "July 23, 2026"
+      ],
+      [
+        "Australia",
+        "https://foih.org.au/",
+        "78/100",
+        "July 23, 2026"
+      ],
+      [
+        "France",
+        "https://indushealth.fr/",
+        "74/100",
+        "July 23, 2026"
+      ],
+      [
+        "Denmark",
+        "https://foih.dk",
+        "74/100",
+        "July 23, 2026"
+      ],
+      [
+        "Norway",
+        "https://foih.no",
+        "82/100",
+        "July 23, 2026"
+      ],
+      [
+        "Spain",
+        "https://foih.org.es/",
+        "76/100",
+        "July 23, 2026"
+      ],
+      [
+        "Ireland",
+        "https://indushospital.ie/",
+        "61/100",
+        "July 23, 2026"
+      ],
+      [
+        "Netherlands",
+        "https://indushealth.nl/",
+        "68/100",
+        "July 23, 2026"
+      ],
+      [
+        "Switzerland",
+        "https://foih.ch/",
+        "74/100",
+        "July 23, 2026"
+      ],
+      [],
+      [],
+      [
+        "We obtained this data from the Rank Math SEO website: https://rankmath.com/tools/seo-analyzer/"
+      ]
+    ]
+  }
+}

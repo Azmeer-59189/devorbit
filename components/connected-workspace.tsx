@@ -3,7 +3,7 @@
 import {FormEvent, useCallback, useEffect, useRef, useState} from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import {useRouter} from 'next/navigation';
+import {usePathname, useRouter, useSearchParams} from 'next/navigation';
 import {
   ArrowRight,
   Check,
@@ -37,6 +37,7 @@ import LiveWebsite from '@/components/live-website';
 import LiveDashboard from '@/components/live-dashboard';
 import {taskMatches, TaskFilters} from '@/lib/task-management';
 import {workspaceDate} from '@/lib/dates';
+import {adminPages, parseWorkspacePath, workspacePath, type Page} from '@/lib/workspace-routes';
 
 const pageLabels: Record<string, string> = {
   Overview: 'Home',
@@ -45,23 +46,21 @@ const pageLabels: Record<string, string> = {
   'SEO reports': 'Reports',
 };
 const pageLabel = (page: string) => pageLabels[page] || page;
-type Page =
-  | 'Form builder'
-  | 'SEO reports'
-  | 'Overview'
-  | 'Websites'
-  | 'Team tasks'
-  | 'My tasks'
-  | 'Team & roles'
-  | 'Notifications'
-  | 'Account';
+// Shallow navigation: updates the URL and history without reloading the workspace.
+const go = (path: string) => window.history.pushState(null, '', path);
 export default function ConnectedWorkspace() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<Workspace | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [page, setPage] = useState<Page>('Overview');
+  const route = parseWorkspacePath(pathname);
+  const page: Page =
+    data && adminPages.includes(route.page) && data.profile.role !== 'administrator' ? 'Overview' : route.page;
+  const selectedWebsite = page === 'Websites' ? route.websiteId : null;
+  const taskParam = searchParams.get('task');
   const [query, setQuery] = useState('');
   const [websiteFilter, setWebsiteFilter] = useState('all');
   const [taskFilters, setTaskFilters] = useState<TaskFilters>({
@@ -71,9 +70,8 @@ export default function ConnectedWorkspace() {
     overdue: false,
   });
   const [websiteView, setWebsiteView] = useState('active');
-  const [selectedWebsite, setSelectedWebsite] = useState<string | null>(null);
   const [dialog, setDialog] = useState<'website' | 'task' | null>(null);
-  const [selected, setSelected] = useState<Task | null>(null);
+  const [fetchedTask, setFetchedTask] = useState<Task | null>(null);
   const [mobile, setMobile] = useState(false);
   const [responding, setResponding] = useState(false);
   const load = useCallback(async () => {
@@ -116,13 +114,46 @@ export default function ConnectedWorkspace() {
       setError('Unable to sign out. Please retry.');
     }
   }
+  // The open task lives in the URL (?task=<id>) so it can be shared and closed with Back.
+  // Tasks outside the loaded list (e.g. from a notification) are fetched once and cached.
+  const selected = taskParam
+    ? data?.tasks.find(t => t.id === taskParam) || (fetchedTask?.id === taskParam ? fetchedTask : null)
+    : null;
+  const needsFetch = Boolean(data && taskParam && !selected);
+  useEffect(() => {
+    if (!needsFetch || !taskParam) return;
+    let cancelled = false;
+    workspaceFetch(`/api/tasks/${encodeURIComponent(taskParam)}`)
+      .then(result => {
+        if (!cancelled) setFetchedTask(result.task);
+      })
+      .catch(e => {
+        if (!cancelled) setError(e.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [needsFetch, taskParam]);
+  const withTask = (path: string, taskId: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (taskId) params.set('task', taskId);
+    else params.delete('task');
+    const search = params.toString();
+    return search ? `${path}?${search}` : path;
+  };
+  const openTask = (task: Task) => {
+    if (!data?.tasks.some(t => t.id === task.id)) setFetchedTask(task);
+    go(withTask(pathname, task.id));
+  };
+  const openTaskId = (id: string) => go(withTask(pathname, id));
+  const closeTask = () => go(withTask(pathname, null));
+  const openWebsite = (id: string | null) => go(workspacePath('Websites', id));
   const navigate = (next: Page) => {
-    if (next === page) {
+    if (next === page && !selectedWebsite) {
       setMobile(false);
       return;
     }
-    setPage(next);
-    setSelectedWebsite(null);
+    go(workspacePath(next));
     setQuery('');
     setWebsiteFilter('all');
     setMobile(false);
@@ -241,7 +272,7 @@ export default function ConnectedWorkspace() {
               return (
                 <tr key={task.id}>
                   <td>
-                    <button className="live-task-name" onClick={() => setSelected(task)}>
+                    <button className="live-task-name" onClick={() => openTask(task)}>
                       <span className="task-check" />
                       <span>
                         <strong>{task.title}</strong>
@@ -286,7 +317,7 @@ export default function ConnectedWorkspace() {
                     {task.due_date || '—'}
                   </td>
                   <td>
-                    <button className="icon-button" aria-label={`Open ${task.title}`} onClick={() => setSelected(task)}>
+                    <button className="icon-button" aria-label={`Open ${task.title}`} onClick={() => openTask(task)}>
                       <ChevronRight size={16} />
                     </button>
                   </td>
@@ -315,7 +346,14 @@ export default function ConnectedWorkspace() {
   return (
     <div className="app-shell connected-app">
       <aside className={`sidebar ${mobile ? 'mobile-open' : ''}`}>
-        <Link className="brand" href="/workspace">
+        <Link
+          className="brand"
+          href="/workspace"
+          onClick={event => {
+            event.preventDefault();
+            navigate('Overview');
+          }}
+        >
           <Image src="/logo.svg" width={35} height={35} alt="" />
           <span>
             DevOrbit<span className="brand-dot">.</span>
@@ -503,18 +541,7 @@ export default function ConnectedWorkspace() {
                   </button>
                 </section>
               )}
-              <LiveDashboard
-                data={data}
-                onTask={id => {
-                  const task = data.tasks.find(t => t.id === id);
-                  if (task) setSelected(task);
-                  else
-                    workspaceFetch(`/api/tasks/${id}`)
-                      .then(d => setSelected(d.task))
-                      .catch(e => setError(e.message));
-                }}
-                onReports={() => navigate('SEO reports')}
-              />
+              <LiveDashboard data={data} onTask={openTaskId} onReports={() => navigate('SEO reports')} />
               <section className="card">
                 <div className="card-heading">
                   <div>
@@ -535,9 +562,9 @@ export default function ConnectedWorkspace() {
               key={selectedWebsite}
               id={selectedWebsite}
               data={data}
-              onBack={() => setSelectedWebsite(null)}
+              onBack={() => openWebsite(null)}
               onChanged={load}
-              onTask={setSelected}
+              onTask={openTask}
               onReports={() => navigate('SEO reports')}
             />
           )}
@@ -577,7 +604,7 @@ export default function ConnectedWorkspace() {
                         <span className="badge healthy">{statusName(site.status)}</span>
                       </div>
                       <h2>
-                        <button className="website-name-button" onClick={() => setSelectedWebsite(site.id)}>
+                        <button className="website-name-button" onClick={() => openWebsite(site.id)}>
                           {site.name}
                         </button>
                       </h2>
@@ -602,7 +629,7 @@ export default function ConnectedWorkspace() {
                         </span>
                       </div>
                       <footer>
-                        <button className="text-button" onClick={() => setSelectedWebsite(site.id)}>
+                        <button className="text-button" onClick={() => openWebsite(site.id)}>
                           Manage website
                           <ArrowRight size={14} />
                         </button>
@@ -647,14 +674,14 @@ export default function ConnectedWorkspace() {
                 <button
                   className="button secondary"
                   aria-pressed={page === 'Team tasks'}
-                  onClick={() => setPage('Team tasks')}
+                  onClick={() => go(workspacePath('Team tasks'))}
                 >
                   All tasks
                 </button>
                 <button
                   className="button secondary"
                   aria-pressed={page === 'My tasks'}
-                  onClick={() => setPage('My tasks')}
+                  onClick={() => go(workspacePath('My tasks'))}
                 >
                   My tasks{myPending.length > 0 ? ` (${myPending.length} awaiting response)` : ''}
                 </button>
@@ -782,18 +809,7 @@ export default function ConnectedWorkspace() {
           {page === 'Team & roles' && data.profile.role === 'administrator' && (
             <LiveTeam data={data} onChanged={load} />
           )}
-          {page === 'Notifications' && (
-            <LiveNotifications
-              onOpenTask={id => {
-                const task = data.tasks.find(task => task.id === id);
-                if (task) setSelected(task);
-                else
-                  workspaceFetch(`/api/tasks/${id}`)
-                    .then(result => setSelected(result.task))
-                    .catch(error => setError(error.message));
-              }}
-            />
-          )}
+          {page === 'Notifications' && <LiveNotifications onOpenTask={openTaskId} />}
           {page === 'Account' && (
             <div className="settings-grid">
               <section className="card padded">
@@ -863,14 +879,7 @@ export default function ConnectedWorkspace() {
           }}
         />
       )}
-      {selected && (
-        <LiveTaskPanel
-          task={data.tasks.find(t => t.id === selected.id) || selected}
-          data={data}
-          onClose={() => setSelected(null)}
-          onChanged={load}
-        />
-      )}
+      {selected && <LiveTaskPanel task={selected} data={data} onClose={() => closeTask()} onChanged={load} />}
       {message && (
         <div role="status" className="toast">
           <Check size={17} />

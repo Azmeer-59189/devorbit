@@ -1,1 +1,10 @@
-export function GET(){return Response.json({application:'DevOrbit',status:'ok',mode:'connected-workspace',supabaseConfigured:Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL&&process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)})}
+export function GET() {
+  return Response.json({
+    application: 'DevOrbit',
+    status: 'ok',
+    mode: 'connected-workspace',
+    supabaseConfigured: Boolean(
+      process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    ),
+  });
+}

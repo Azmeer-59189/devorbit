@@ -1,12 +1,216 @@
 'use client';
-import {useEffect,useState} from 'react';
+import {useEffect, useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {createBrowserSupabase} from '@/lib/supabase';
 import {workspaceFetch} from '@/lib/workspace-client';
-type Invite={id:string;workspace:string;display_name:string;role:string;email:string;state:string};
-export default function JoinWorkspace(){const router=useRouter();const [id,setId]=useState('');const [invite,setInvite]=useState<Invite|null>(null);const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [loading,setLoading]=useState(true);const [signedIn,setSignedIn]=useState(false);
- async function load(invitation:string){const {data,error}=await createBrowserSupabase().auth.getSession();if(error)throw error;if(!data.session){setSignedIn(false);return}setSignedIn(true);setInvite(await workspaceFetch(`/api/invitations/accept?id=${encodeURIComponent(invitation)}`))}
- useEffect(()=>{let cancelled=false;const invitation=new URLSearchParams(window.location.search).get('invitation')||'';createBrowserSupabase().auth.getSession().then(async({data,error})=>{if(error)throw error;if(cancelled)return;setId(invitation);if(!/^[a-f0-9-]{36}$/i.test(invitation))throw new Error('This invitation link is incomplete. Ask your administrator to resend it.');if(data.session){setSignedIn(true);const result=await workspaceFetch(`/api/invitations/accept?id=${encodeURIComponent(invitation)}`);if(!cancelled){setSignedIn(true);setInvite(result)}}else if(window.location.hash.includes('error'))throw new Error('This email link has expired or is invalid. Ask your administrator to resend the invitation.');}).catch(e=>{if(!cancelled)setError(e.message)}).finally(()=>{if(!cancelled)setLoading(false)});return()=>{cancelled=true}},[]);
- return <div className="join-shell"><section className="card padded join-card"><Link className="brand" href="/login">DevOrbit.</Link><h1>Join your team</h1>{loading?<p>Checking your invitation…</p>:invite?<><p>{invite.display_name}, you are invited to <strong>{invite.workspace}</strong> as {invite.role}.</p><p className="muted">Signed in as {invite.email}</p>{invite.state==='pending'?<form onSubmit={async e=>{e.preventDefault();if(busy)return;const form=new FormData(e.currentTarget);const password=String(form.get('password'));if(password!==form.get('confirm')){setError('Passwords do not match.');return}setBusy(true);setError('');try{const {error}=await createBrowserSupabase().auth.updateUser({password});if(error)throw new Error('Unable to set this password. Use at least 12 characters and follow your organization’s password policy.');await workspaceFetch('/api/invitations/accept',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({invitation_id:id})});router.replace('/workspace')}catch(e){setError((e as Error).message)}finally{setBusy(false)}}}><fieldset className="live-form-fieldset" disabled={busy}><label className="field">Choose a password<input name="password" type="password" required minLength={12} maxLength={128} autoComplete="new-password"/></label><label className="field">Confirm password<input name="confirm" type="password" required minLength={12} maxLength={128} autoComplete="new-password"/></label><button className="button primary">{busy?'Joining…':'Set password and join'}</button></fieldset></form>:invite.state==='accepted'?<Link className="button primary" href="/workspace">Open workspace</Link>:<p className="form-error">This invitation is {invite.state}. Ask your administrator for a new invitation.</p>}</>:<><p>Open the link in your invitation email. If you already have an account, sign in here with the email that received the invitation.</p><form onSubmit={async e=>{e.preventDefault();if(busy)return;setBusy(true);setError('');const form=new FormData(e.currentTarget);try{const {error}=await createBrowserSupabase().auth.signInWithPassword({email:String(form.get('email')),password:String(form.get('password'))});if(error)throw new Error('Unable to sign in. Check your email and password, or use the invitation email link.');await load(id)}catch(e){setError((e as Error).message)}finally{setBusy(false)}}}><fieldset className="live-form-fieldset" disabled={busy||!id}><label className="field">Invited email<input name="email" type="email" required autoComplete="username"/></label><label className="field">Existing password<input name="password" type="password" required autoComplete="current-password"/></label><button className="button primary">Sign in to continue</button></fieldset></form></>}{error&&<p role="alert" className="form-error">{error}</p>}{signedIn&&<button className="text-button" disabled={busy} onClick={async()=>{setBusy(true);try{await createBrowserSupabase().auth.signOut({scope:'local'});setInvite(null);setSignedIn(false);setError('')}finally{setBusy(false)}}}>Use a different account</button>}<Link href="/login" className="text-button">Back to sign in</Link></section></div>
+type Invite = {id: string; workspace: string; display_name: string; role: string; email: string; state: string};
+export default function JoinWorkspace() {
+  const router = useRouter();
+  const [id, setId] = useState('');
+  const [invite, setInvite] = useState<Invite | null>(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [signedIn, setSignedIn] = useState(false);
+  async function load(invitation: string) {
+    const {data, error} = await createBrowserSupabase().auth.getSession();
+    if (error) throw error;
+    if (!data.session) {
+      setSignedIn(false);
+      return;
+    }
+    setSignedIn(true);
+    setInvite(await workspaceFetch(`/api/invitations/accept?id=${encodeURIComponent(invitation)}`));
+  }
+  useEffect(() => {
+    let cancelled = false;
+    const invitation = new URLSearchParams(window.location.search).get('invitation') || '';
+    createBrowserSupabase()
+      .auth.getSession()
+      .then(async ({data, error}) => {
+        if (error) throw error;
+        if (cancelled) return;
+        setId(invitation);
+        if (!/^[a-f0-9-]{36}$/i.test(invitation))
+          throw new Error('This invitation link is incomplete. Ask your administrator to resend it.');
+        if (data.session) {
+          setSignedIn(true);
+          const result = await workspaceFetch(`/api/invitations/accept?id=${encodeURIComponent(invitation)}`);
+          if (!cancelled) {
+            setSignedIn(true);
+            setInvite(result);
+          }
+        } else if (window.location.hash.includes('error'))
+          throw new Error(
+            'This email link has expired or is invalid. Ask your administrator to resend the invitation.',
+          );
+      })
+      .catch(e => {
+        if (!cancelled) setError(e.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return (
+    <div className="join-shell">
+      <section className="card padded join-card">
+        <Link className="brand" href="/login">
+          DevOrbit.
+        </Link>
+        <h1>Join your team</h1>
+        {loading ? (
+          <p>Checking your invitation…</p>
+        ) : invite ? (
+          <>
+            <p>
+              {invite.display_name}, you are invited to <strong>{invite.workspace}</strong> as {invite.role}.
+            </p>
+            <p className="muted">Signed in as {invite.email}</p>
+            {invite.state === 'pending' ? (
+              <form
+                onSubmit={async e => {
+                  e.preventDefault();
+                  if (busy) return;
+                  const form = new FormData(e.currentTarget);
+                  const password = String(form.get('password'));
+                  if (password !== form.get('confirm')) {
+                    setError('Passwords do not match.');
+                    return;
+                  }
+                  setBusy(true);
+                  setError('');
+                  try {
+                    const {error} = await createBrowserSupabase().auth.updateUser({password});
+                    if (error)
+                      throw new Error(
+                        'Unable to set this password. Use at least 12 characters and follow your organization’s password policy.',
+                      );
+                    await workspaceFetch('/api/invitations/accept', {
+                      method: 'POST',
+                      headers: {'Content-Type': 'application/json'},
+                      body: JSON.stringify({invitation_id: id}),
+                    });
+                    router.replace('/workspace');
+                  } catch (e) {
+                    setError((e as Error).message);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                <fieldset className="live-form-fieldset" disabled={busy}>
+                  <label className="field">
+                    Choose a password
+                    <input
+                      name="password"
+                      type="password"
+                      required
+                      minLength={12}
+                      maxLength={128}
+                      autoComplete="new-password"
+                    />
+                  </label>
+                  <label className="field">
+                    Confirm password
+                    <input
+                      name="confirm"
+                      type="password"
+                      required
+                      minLength={12}
+                      maxLength={128}
+                      autoComplete="new-password"
+                    />
+                  </label>
+                  <button className="button primary">{busy ? 'Joining…' : 'Set password and join'}</button>
+                </fieldset>
+              </form>
+            ) : invite.state === 'accepted' ? (
+              <Link className="button primary" href="/workspace">
+                Open workspace
+              </Link>
+            ) : (
+              <p className="form-error">
+                This invitation is {invite.state}. Ask your administrator for a new invitation.
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <p>
+              Open the link in your invitation email. If you already have an account, sign in here with the email that
+              received the invitation.
+            </p>
+            <form
+              onSubmit={async e => {
+                e.preventDefault();
+                if (busy) return;
+                setBusy(true);
+                setError('');
+                const form = new FormData(e.currentTarget);
+                try {
+                  const {error} = await createBrowserSupabase().auth.signInWithPassword({
+                    email: String(form.get('email')),
+                    password: String(form.get('password')),
+                  });
+                  if (error)
+                    throw new Error(
+                      'Unable to sign in. Check your email and password, or use the invitation email link.',
+                    );
+                  await load(id);
+                } catch (e) {
+                  setError((e as Error).message);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              <fieldset className="live-form-fieldset" disabled={busy || !id}>
+                <label className="field">
+                  Invited email
+                  <input name="email" type="email" required autoComplete="username" />
+                </label>
+                <label className="field">
+                  Existing password
+                  <input name="password" type="password" required autoComplete="current-password" />
+                </label>
+                <button className="button primary">Sign in to continue</button>
+              </fieldset>
+            </form>
+          </>
+        )}
+        {error && (
+          <p role="alert" className="form-error">
+            {error}
+          </p>
+        )}
+        {signedIn && (
+          <button
+            className="text-button"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await createBrowserSupabase().auth.signOut({scope: 'local'});
+                setInvite(null);
+                setSignedIn(false);
+                setError('');
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Use a different account
+          </button>
+        )}
+        <Link href="/login" className="text-button">
+          Back to sign in
+        </Link>
+      </section>
+    </div>
+  );
 }

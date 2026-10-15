@@ -1,101 +1,2406 @@
 ﻿'use client';
 import Image from 'next/image';
-import {useEffect,useState, type FormEvent, type ReactNode} from 'react';
-import {Activity,ArrowDownToLine,ArrowLeft,ArrowRight,ArrowUpRight,BarChart3,Bell,Blocks,CalendarDays,Check,CheckCheck,ChevronRight,ChevronsUpDown,CircleHelp,Clock3,Ellipsis,ExternalLink,FileChartColumn,FileText,Globe2,Grip,LayoutDashboard,ListTodo,Menu,MessageSquare,Plus,Search,Settings2,ShieldCheck,SlidersHorizontal,Sparkles,Target,Users,X} from 'lucide-react';
-import {ResponsiveContainer,BarChart,Bar,XAxis,YAxis,CartesianGrid,Tooltip} from 'recharts';
-import {acceptAssignment,activeTasks,CURRENT,csv,Data,declineAssignment,demoDate,duration,Field,people,Report,seed,Status,Task,totalMinutes,requestHandover,transition,validateLog} from '@/lib/domain';
-const nav=[{group:'WORKSPACE',items:[['Overview',LayoutDashboard],['My Tasks',ListTodo],['Team Task Board',Blocks],['Timesheets',Clock3],['Notifications',Bell]]},{group:'WEBSITES & REPORTING',items:[['Websites',Globe2],['SEO Reports',FileChartColumn],['Analytics & Exports',BarChart3]]},{group:'ADMINISTRATION',items:[['Form Builder',SlidersHorizontal],['Team & Roles',Users],['Settings',Settings2]]}] as const;
-type Modal='task'|'log'|'site'|'report'|'template'|null;
-const statuses:Status[]=['To Do','In Progress','Blocked','In Review','Completed'];
-const person=(id:string|null)=>people.find(p=>p.id===id);
-function Avatar({id,small=false}:{id:string|null;small?:boolean}){const p=person(id);return <span title={p?.name||'Unassigned'} className={`avatar ${p?.color||'gray'} ${small?'small':''}`}>{p?.initials||'â€”'}</span>}
-function Badge({children,type=''}:{children:ReactNode;type?:string}){return <span className={`badge ${type.toLowerCase().replaceAll(' ','-')}`}>{children}</span>}
-function Empty({text='No records match your filters.'}:{text?:string}){return <div className="empty"><Search size={25}/><h3>Nothing here yet</h3><p>{text}</p></div>}
-function saveDownload(rows:Record<string,unknown>[],name:string){const url=URL.createObjectURL(new Blob([csv(rows)],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download=name+'.csv';a.click();URL.revokeObjectURL(url)}
-export default function Workspace(){
-const [data,setData]=useState<Data>(seed);const [ready,setReady]=useState(false);const [page,setPage]=useState('Overview');const [query,setQuery]=useState('');const [siteFilter,setSiteFilter]=useState('all');const [member,setMember]=useState('all');const [period,setPeriod]=useState('week');const [modal,setModal]=useState<Modal>(null);const [selected,setSelected]=useState<string|null>(null);const [siteDetail,setSiteDetail]=useState<string|null>(null);const [detailTab,setDetailTab]=useState('Overview');const [taskTab,setTaskTab]=useState('Assigned');const [boardTable,setBoardTable]=useState(false);const [mobile,setMobile]=useState(false);const [toast,setToast]=useState('');const [error,setError]=useState('');const [comment,setComment]=useState('');const [revision,setRevision]=useState<Report|null>(null);const [templateId,setTemplateId]=useState('seo');const [preview,setPreview]=useState(false);const [handover,setHandover]=useState('');
-useEffect(()=>{try{const saved=localStorage.getItem('devorbit-demo-v1');if(saved)setData(JSON.parse(saved))}catch{setToast('Could not restore local demo data.')}setReady(true)},[]);
-useEffect(()=>{if(ready){try{localStorage.setItem('devorbit-demo-v1',JSON.stringify(data))}catch{/* demo remains usable without storage */}}},[data,ready]);
-useEffect(()=>{if(!toast)return;const t=setTimeout(()=>setToast(''),4200);return()=>clearTimeout(t)},[toast]);
-useEffect(()=>{
- const previous=document.activeElement as HTMLElement|null;
- const dialog=document.querySelector<HTMLElement>('[role="dialog"]');
- const onKey=(event:KeyboardEvent)=>{
-  if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();document.querySelector<HTMLInputElement>('.global-search input')?.focus()}
-  if(event.key==='Escape'){setModal(null);setSelected(null);setMobile(false)}
-  if(event.key==='Tab'&&dialog){const nodes=Array.from(dialog.querySelectorAll<HTMLElement>('button,input,select,textarea,a[href],[tabindex="0"]')).filter(el=>!el.hasAttribute('disabled'));const first=nodes[0],last=nodes[nodes.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus()}}
- };
- document.addEventListener('keydown',onKey);
- const frame=dialog?requestAnimationFrame(()=>dialog.querySelector<HTMLElement>('input,button,select,textarea')?.focus()):0;
- const oldOverflow=document.body.style.overflow;
- if(dialog)document.body.style.overflow='hidden';
- return()=>{document.removeEventListener('keydown',onKey);cancelAnimationFrame(frame);document.body.style.overflow=oldOverflow;if(dialog)previous?.focus()};
-},[modal,selected]);
-const update=(fn:(d:Data)=>Data)=>setData(d=>fn(structuredClone(d)));
-const notify=(message:string)=>setToast(message);
-const audit=(d:Data,text:string,task?:string)=>{d.activity.unshift({id:crypto.randomUUID(),actor:CURRENT,text,time:new Date().toISOString(),task})};
-const go=(next:string)=>{setPage(next);setQuery('');setSiteDetail(null);setMobile(false)};
-const open=(m:Modal)=>{setError('');setModal(m)};
-const rangeStart=period==='week'?'2026-10-12':'2026-10-01';
-const tasks=data.tasks.filter(t=>(siteFilter==='all'||t.sites.includes(siteFilter))&&(member==='all'||t.assignee===member||t.pending===member)&&(`${t.title} ${t.id} ${t.category}`.toLowerCase().includes(query.toLowerCase())));
-const logs=data.logs.filter(l=>(siteFilter==='all'||l.sites.includes(siteFilter))&&(member==='all'||l.user===member)&&l.date>=rangeStart&&l.date<='2026-10-18');
-const pending=data.tasks.filter(t=>t.pending===CURRENT);
-const unread=data.notices.filter(n=>!n.read).length;
-const currentTask=data.tasks.find(t=>t.id===selected);
-const breakdownStatuses:Status[]=[...statuses,'Cancelled'];const breakdownColors=['#aaa0f2','#7164e9','#f0b35f','#a8b7df','#8abfa8','#d2d5df'];
-let cumulative=0;
-const taskGradient=tasks.length?breakdownStatuses.map((s,i)=>{const start=cumulative;cumulative+=tasks.filter(t=>t.status===s).length/tasks.length*100;return `${breakdownColors[i]} ${start}% ${cumulative}%`}).join(', '):'#edeaf5 0% 100%';
-const chartData=['12','13','14','15','16','17','18'].map((day,i)=>({day:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i],...Object.fromEntries(people.map(p=>[p.id,logs.filter(l=>l.date===`2026-10-${day}`&&l.user===p.id).reduce((s,l)=>s+l.minutes,0)/60]))}));
-const websiteName=(id:string)=>data.sites.find(s=>s.id===id)?.name||id;
-const exportLogs=()=>saveDownload(logs.map(l=>({Date:l.date,Contributor:person(l.user)?.name,Minutes:l.minutes,Category:l.category,Notes:l.notes,Task:l.task,Websites:l.sites.map(websiteName).join('; ')})),'devorbit-timesheets');
-async function exportXlsx(){const {default:writeXlsxFile}=await import('write-excel-file');const rows=[[{value:'Date',fontWeight:'bold' as const},{value:'Contributor',fontWeight:'bold' as const},{value:'Minutes',fontWeight:'bold' as const},{value:'Notes',fontWeight:'bold' as const},{value:'Task',fontWeight:'bold' as const},{value:'Websites',fontWeight:'bold' as const}],...logs.map(l=>[{value:l.date},{value:person(l.user)?.name||''},{value:l.minutes,type:Number},{value:l.notes},{value:l.task},{value:l.sites.map(websiteName).join('; ')}])];await writeXlsxFile(rows,{fileName:'devorbit-timesheets.xlsx'});notify('Excel export downloaded')}
-function changeStatus(task:Task,status:Status){try{let reason='';if(status==='Blocked'||['Completed','Cancelled'].includes(task.status))reason=window.prompt(status==='Blocked'?'What is blocking this task?':'Reason for reopening this task:')||'';const next=transition(task,status,CURRENT,'Administrator',reason);update(d=>{d.tasks=d.tasks.map(t=>t.id===next.id?next:t);audit(d,`changed ${task.id} to ${status}${reason?`: ${reason}`:''}`,task.id);return d});notify(`Task moved to ${status}`)}catch(e){notify((e as Error).message)}}
-function assignment(task:Task,accept:boolean){try{const reason=accept?'':window.prompt('Please give a reason for declining:')||'';const next=accept?acceptAssignment(task,CURRENT):declineAssignment(task,CURRENT,reason);update(d=>{d.tasks=d.tasks.map(t=>t.id===task.id?next:t);audit(d,`${accept?'accepted':'declined'} ${task.id}${reason?`: ${reason}`:''}`,task.id);d.notices=d.notices.map(n=>n.task===task.id?{...n,read:true}:n);return d});notify(accept?'Assignment accepted. You now own this task.':'Assignment declined; reason saved in history.')}catch(e){notify((e as Error).message)}}
-function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();setError('');const f=new FormData(e.currentTarget);const get=(key:string)=>String(f.get(key)||'').trim();try{const d=structuredClone(data);
-if(modal==='task'){if(!get('title'))throw new Error('Please enter a task title.');const assignee=get('assignee');const review=f.get('review')==='on';const reviewer=get('reviewer');if(review&&reviewer===assignee)throw new Error('Choose a reviewer different from the assignee.');const id=`DEV-${Math.max(...d.tasks.map(t=>Number(t.id.split('-')[1])))+1}`;d.tasks.unshift({id,title:get('title'),description:get('description'),category:get('category'),priority:get('priority') as Task['priority'],status:'To Do',creator:CURRENT,assignee:assignee===CURRENT?CURRENT:null,pending:assignee&&assignee!==CURRENT?assignee:null,sites:f.getAll('sites').map(String),due:get('due'),review,reviewer});audit(d,`created ${id}: ${get('title')}`,id)}
-if(modal==='log'){const minutes=Number(get('minutes'));validateLog(minutes);const day=get('date');if(totalMinutes(d.logs.filter(l=>l.user===CURRENT&&l.date===day))+minutes>720&&!window.confirm('This brings your daily total above 12 hours. Save this entry?'))return;d.logs.unshift({id:crypto.randomUUID(),user:CURRENT,date:day,minutes,category:get('category'),notes:get('notes'),task:get('task'),sites:f.getAll('sites').map(String)});audit(d,`logged ${duration(minutes)}: ${get('notes')}`)}
-if(modal==='site'){const url=new URL(get('url'));if(!['https:','http:'].includes(url.protocol))throw new Error('Enter a valid HTTP or HTTPS website.');if(d.sites.some(s=>s.url.replace(/\/$/,'')===url.href.replace(/\/$/,'')))throw new Error('This website URL already exists.');d.sites.push({id:crypto.randomUUID(),name:get('name'),country:get('country'),url:url.href,cms:get('cms'),status:'Healthy',flag:'ðŸŒ',score:0,previous:0,color:'#6559e8'});audit(d,`added the ${get('name')} website`)}
-if(modal==='report'){const score=Number(get('score'));if(score<0||score>100)throw new Error('SEO score must be between 0 and 100.');const site=get('site');const week=get('period');const existing=d.reports.find(r=>r.site===site&&r.period===week);if(existing&&!revision)throw new Error('This period already has a report. Use Revise to preserve the original.');if(revision&&!get('reason'))throw new Error('Please provide a correction reason.');if(revision&&d.reports.some(r=>r.id===revision.id&&r.revision>revision.revision))throw new Error('A newer revision exists. Revise the latest record instead.');const report:Report={id:revision?.id||crypto.randomUUID(),site,period:week,score,source:get('source'),notes:get('notes'),user:CURRENT,version:1,revision:revision?revision.revision+1:1,created:new Date().toISOString(),reason:get('reason')};d.reports.unshift(report);const profile=d.sites.find(s=>s.id===site);if(profile&&report.source==='Manual technical audit'){profile.previous=profile.score;profile.score=score}audit(d,`${revision?'revised':'submitted'} the ${websiteName(site)} SEO report`)}
-if(modal==='template'){d.templates.push({id:crypto.randomUUID(),title:get('title'),description:get('description'),state:'Draft',version:0,fields:[],versions:[]});audit(d,`created template ${get('title')}`)}
-setData(d);setModal(null);setRevision(null);notify('Saved to your local demo workspace.')}catch(e){setError((e as Error).message)}}
-function table(list:Task[],compact=false){return <div className="table-wrap"><table className="task-table"><thead><tr><th>Task name</th>{!compact&&<th>Website</th>}<th>Status</th><th>Priority</th><th>Assignee</th><th>Due date</th><th/></tr></thead><tbody>{list.map(t=><tr key={t.id} onClick={()=>setSelected(t.id)} tabIndex={0} onKeyDown={e=>e.key==='Enter'&&setSelected(t.id)}><td><div className="task-title"><span className={`task-check ${t.status==='Completed'?'done':''}`}>{t.status==='Completed'&&<Check size={12}/>}</span><span><strong>{t.title}</strong><small>{t.id} <span>Â·</span> {t.category}</small></span></div></td>{!compact&&<td><div className="site-tags">{t.sites.slice(0,1).map(id=><span key={id}>{data.sites.find(s=>s.id===id)?.flag} {websiteName(id)}</span>)}{t.sites.length>1&&<small>+{t.sites.length-1}</small>}</div></td>}<td><Badge type={t.pending?'Pending':t.status}>{t.pending?'Pending':t.status}</Badge></td><td><span className={`priority ${t.priority.toLowerCase()}`}><span>âš‘</span>{t.priority}</span></td><td><Avatar id={t.assignee||t.pending} small/></td><td className={t.due<demoDate&&!['Completed','Cancelled'].includes(t.status)?'overdue':''}>{t.due?new Date(t.due+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}):'â€”'}</td><td><ChevronRight size={15}/></td></tr>)}</tbody></table>{!list.length&&<Empty/>}</div>}
-function workChart(){return <><div className="chart"><ResponsiveContainer width="100%" height={225}><BarChart data={chartData} barSize={24}><CartesianGrid strokeDasharray="3 5" vertical={false} stroke="#eceef4"/><XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#696f85'}} dy={8}/><YAxis axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#696f85'}} tickFormatter={n=>n+'h'}/><Tooltip cursor={{fill:'#f6f5ff'}} contentStyle={{borderRadius:10,border:'1px solid #e7e7ef',fontSize:12}} formatter={(v,name)=>[`${Number(v).toFixed(1)}h`,person(String(name))?.name]}/>{people.map((p,i)=><Bar key={p.id} dataKey={p.id} stackId="time" fill={['#7164e9','#aaa0f2','#c9c2f8','#e3dffb'][i]} radius={i===3?[4,4,0,0]:undefined}/>)}</BarChart></ResponsiveContainer></div><div className="chart-legend">{people.map((p,i)=><button key={p.id} onClick={()=>{setMember(member===p.id?'all':p.id)}}><i style={{background:['#7164e9','#aaa0f2','#c9c2f8','#e3dffb'][i]}}/>{p.name.split(' ')[0]}</button>)}</div></>}
-const filters=<div className="filters"><span className="live-dot"/>Workspace snapshot<span className="filter-spacer"/><label><CalendarDays size={14}/><select aria-label="Date range" value={period} onChange={e=>setPeriod(e.target.value)}><option value="week">Oct 12 â€“ 18, 2026</option><option value="month">October 2026</option></select></label><label><Users size={14}/><select aria-label="Team member" value={member} onChange={e=>setMember(e.target.value)}><option value="all">All members</option>{people.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label><Globe2 size={14}/><select aria-label="Website filter" value={siteFilter} onChange={e=>setSiteFilter(e.target.value)}><option value="all">All websites</option>{data.sites.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label></div>;
-return <div className="app-shell"><aside className={`sidebar ${mobile?'mobile-open':''}`}><a className="brand" href="#" onClick={e=>{e.preventDefault();go('Overview')}}><Image src="/logo.svg" alt="" width={35} height={35} unoptimized/><span>DevOrbit<span className="brand-dot">.</span></span></a><button className="workspace-switch" onClick={()=>notify('You are in the International Desk demo workspace.')}><span className="workspace-icon">ID</span><span><strong>International Desk</strong><small>Team workspace</small></span><ChevronsUpDown size={14}/></button><div className="nav-groups">{nav.map(g=><div className="nav-group" key={g.group}><div className="nav-label">{g.group}</div>{g.items.map(([label,Icon])=><button key={label} className={`nav-item ${page===label?'active':''}`} onClick={()=>go(label)}><Icon size={18}/><span>{label}</span>{label==='My Tasks'&&<em>{pending.length}</em>}{label==='Notifications'&&unread>0&&<i className="nav-unread"/>}</button>)}</div>)}</div><div className="sidebar-bottom"><div className="help-card"><span className="help-icon"><Sparkles size={16}/></span><strong>A little more in sync.</strong><p>Your team. Your websites.<br/>One shared orbit.</p><button onClick={()=>{go('Settings');notify('Demo workspace information is in Settings.')}}>Workspace guide <ArrowUpRight size={14}/></button></div><button className="user-profile" onClick={()=>go('Settings')}><Avatar id={CURRENT}/><span><strong>Azmeer Ahmed</strong><small>Administrator</small></span><ChevronsUpDown size={14}/></button></div></aside>
-<div className="main-shell"><header className="topbar"><div className="breadcrumb"><button className="mobile-toggle" aria-label="Toggle navigation" onClick={()=>setMobile(!mobile)}><Menu size={20}/></button><span>Workspace</span><ChevronRight size={13}/><strong>{page}</strong></div><div className="topbar-actions"><label className="global-search"><Search size={16}/><input placeholder="Search tasks..." value={query} onChange={e=>{setQuery(e.target.value);if(!['Overview','My Tasks','Team Task Board'].includes(page))setPage('Team Task Board')}}/><kbd>âŒ˜ K</kbd></label><button className="icon-button" aria-label="Help" onClick={()=>notify('DevOrbit demo Â· Changes are saved in this browser. Open Settings for setup details.')}><CircleHelp size={19}/></button><button className="icon-button notification-bell" aria-label="Notifications" onClick={()=>go('Notifications')}><Bell size={19}/>{unread>0&&<i/>}</button><span className="topbar-divider"/><Avatar id={CURRENT} small/></div></header>
-<main><div className="page-heading"><div><div className="eyebrow">INTERNATIONAL DESK <span>/</span> {page==='Overview'?'WORKSPACE OVERVIEW':page.toUpperCase()}</div><h1>{page==='Overview'?'Everything in your orbit.':page}<span className="heading-period">{page==='Overview'?'':''}</span></h1><p>{({'Overview':'A clear view of your teamâ€™s work, websites, and what needs your attention.','My Tasks':'Your next steps, incoming assignments, and work in motion.','Team Task Board':'Move work forward, together. Every task has a clear owner.','Timesheets':'Make time visible. Log your work and let the totals take care of themselves.','Websites':'Every website, one connected workspace.','SEO Reports':'A consistent view of website health, week after week.','Analytics & Exports':'Understand the work behind the numbers.','Form Builder':'Build consistent reporting. Preserve every published version.','Team & Roles':'The people keeping everything in orbit.','Notifications':'Your assignments, mentions, and updates in one place.','Settings':'Make DevOrbit feel like your workspace.'} as Record<string,string>)[page]}</p></div><div className="heading-actions">{page==='Overview'&&<button className="button secondary" onClick={exportLogs}><ArrowDownToLine size={15}/>Export</button>}<button className="button primary" onClick={()=>{if(page==='Websites')open('site');else if(page==='Timesheets')open('log');else if(page==='SEO Reports'){setRevision(null);open('report')}else if(page==='Form Builder')open('template');else if(page==='Team & Roles')notify('Live invitations require the Supabase authentication phase. See README for setup.');else open('task')}}><Plus size={17}/>{page==='Websites'?'Add website':page==='Timesheets'?'Log time':page==='SEO Reports'?'Submit report':page==='Form Builder'?'New template':page==='Team & Roles'?'Invite member':'Create task'}</button></div></div>
-<div className="demo-banner"><span><span className="demo-pill">DEMO WORKSPACE</span> Explore DevOrbit with sample data. Changes stay in this browser.</span><a href="/login">Open live workspace →</a></div>
-{['Overview','Team Task Board','Analytics & Exports','Timesheets'].includes(page)&&filters}
-{page==='Overview'&&<><section className="kpi-grid">{[{title:'Active tasks',value:activeTasks(tasks).length,note:`${tasks.filter(t=>t.status==='Completed').length} completed this week`,icon:ListTodo,color:'purple',action:'Team Task Board'},{title:'Pending assignments',value:tasks.filter(t=>t.pending).length,note:'Waiting for acceptance',icon:Clock3,color:'orange',action:'My Tasks'},{title:'Time logged',value:duration(totalMinutes(logs)),note:'Across the whole team',icon:Activity,color:'blue',action:'Timesheets'},{title:'Active websites',value:data.sites.filter(s=>s.status!=='Archived'&&(siteFilter==='all'||s.id===siteFilter)).length,note:`${data.sites.filter(s=>s.status==='Needs attention').length} website needs attention`,icon:Globe2,color:'green',action:'Websites'}].map((k,i)=><button className="kpi card" key={k.title} onClick={()=>{go(k.action);if(i===1)setTaskTab('Pending')}}><div className="kpi-top"><span>{k.title}</span><span className={`kpi-icon ${k.color}`}><k.icon size={17}/></span></div><div className="kpi-value">{k.value}<ArrowUpRight size={18}/></div><div className="kpi-note"><span className={i===0?'positive':''}>{i===0&&<CheckCheck size={13}/>} {k.note}</span></div></button>)}</section>
-<div className="overview-charts"><section className="card"><div className="card-heading"><div><h2>Team activity</h2><p>Time invested, day by day</p></div><button className="text-button" onClick={()=>go('Timesheets')}>View timesheets <ArrowUpRight size={14}/></button></div>{workChart()}</section><section className="card task-breakdown"><div className="card-heading"><div><h2>Task overview</h2><p>A little clarity on whatâ€™s moving</p></div><button className="icon-button" aria-label="Open task board" onClick={()=>go('Team Task Board')}><Ellipsis size={19}/></button></div><div className="donut-area"><div className="donut" style={{background:`conic-gradient(${taskGradient})`}}><div><strong>{tasks.length}</strong><span>Total tasks</span></div></div><div className="donut-legend">{breakdownStatuses.filter(s=>s!=='Cancelled'||tasks.some(t=>t.status===s)).map((s,i)=><button key={s} onClick={()=>{go('Team Task Board');setQuery('')}}><i style={{background:breakdownColors[i]}}/><span>{s}</span><strong>{tasks.filter(t=>t.status===s).length}</strong></button>)}</div></div><div className="breakdown-footer"><span className="tiny-dot"/>Pending requests are separate from accepted workload</div></section></div>
-<div className="attention-strip"><div className="attention-symbol"><Target size={19}/></div><div><strong>A couple of things need you</strong><p>{pending.length} assignment requests Â· {data.tasks.filter(t=>t.status==='In Review'&&t.reviewer===CURRENT).length} task ready for review Â· {data.tasks.filter(t=>t.status==='Blocked').length} blocked task</p></div><button onClick={()=>{go('My Tasks');setTaskTab('Pending')}}>Take a look <ArrowRight size={15}/></button></div>
-<section className="card priority-tasks"><div className="card-heading"><div><h2>Tasks in focus <span className="count-pill">{tasks.filter(t=>t.status!=='Completed').length}</span></h2><p>The work that deserves a closer look</p></div><button className="text-button" onClick={()=>go('Team Task Board')}>View all tasks <ArrowRight size={14}/></button></div>{table(tasks.filter(t=>t.status!=='Completed').slice(0,4))}<div className="table-footer"><span>Showing priority and upcoming tasks</span><button onClick={()=>open('task')}><Plus size={13}/> Add a task</button></div></section>
-<div className="bottom-grid"><section className="card"><div className="card-heading"><div><h2>Website pulse</h2><p>A quick check on your global footprint</p></div><button className="text-button" onClick={()=>go('Websites')}>All websites <ArrowUpRight size={14}/></button></div><div className="website-pulse">{data.sites.slice(0,4).map(s=><button key={s.id} onClick={()=>{go('Websites');setSiteDetail(s.id)}}><span className="flag">{s.flag}</span><div><strong>{s.name}</strong><small>{new URL(s.url).host}</small></div><span className={`health-dot ${s.status==='Healthy'?'healthy':'warning'}`}/><span className="pulse-score">{s.score}<small>/100</small></span></button>)}</div></section><section className="card"><div className="card-heading"><div><h2>Recent activity</h2><p>The latest around your workspace</p></div><span className="live-label"><i/>Live</span></div><div className="activity-feed">{data.activity.slice(0,4).map(a=><button key={a.id} onClick={()=>a.task?setSelected(a.task):go('SEO Reports')}><Avatar id={a.actor} small/><div><p><strong>{person(a.actor)?.name.split(' ')[0]}</strong> {a.text}</p><small>{new Date(a.time).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'Asia/Karachi'})}</small></div></button>)}</div></section></div></>}
-{page==='My Tasks'&&<><div className="tabs">{['Assigned','Pending','Created','Completed'].map(t=><button className={taskTab===t?'active':''} key={t} onClick={()=>setTaskTab(t)}>{t}{t==='Pending'&&<span>{pending.length}</span>}</button>)}</div>{taskTab==='Pending'?<div className="request-grid">{pending.map(t=><div key={t.id} className="card request-card"><div><Badge type="Pending">Awaiting your response</Badge><span>{t.id}</span></div><h2 onClick={()=>setSelected(t.id)}>{t.title}</h2><p>{t.description}</p><div className="request-meta"><Avatar id={t.creator} small/>Assigned by {person(t.creator)?.name}</div><div className="request-actions"><button className="button primary" onClick={()=>assignment(t,true)}><Check size={15}/>Accept assignment</button><button className="button secondary" onClick={()=>assignment(t,false)}>Decline</button></div></div>)}{!pending.length&&<Empty text="You have no pending assignment requests."/>}</div>:<section className="card">{table(tasks.filter(t=>taskTab==='Created'?t.creator===CURRENT:taskTab==='Completed'?t.assignee===CURRENT&&t.status==='Completed':t.assignee===CURRENT&&t.status!=='Completed'))}</section>}</>}
-{page==='Team Task Board'&&<><div className="section-toolbar"><span><strong>{tasks.length} tasks</strong> <span className="muted">across your workspace</span></span><div className="segmented"><button className={!boardTable?'active':''} onClick={()=>setBoardTable(false)}><Blocks size={14}/>Board</button><button className={boardTable?'active':''} onClick={()=>setBoardTable(true)}><ListTodo size={14}/>Table</button></div></div>{tasks.some(t=>t.pending)&&<div className="pending-summary"><Clock3 size={16}/>{tasks.filter(t=>t.pending).length} pending assignment requests <button onClick={()=>{go('My Tasks');setTaskTab('Pending')}}>View requests <ArrowRight size={13}/></button></div>}{boardTable?<section className="card">{table(tasks)}</section>:<div className="kanban">{statuses.map(status=><section key={status} className="kanban-column" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();const task=data.tasks.find(t=>t.id===e.dataTransfer.getData('text/plain'));if(task)changeStatus(task,status)}}><h3><span className={`status-dot ${status.toLowerCase().replaceAll(' ','-')}`}/>{status}<span>{tasks.filter(t=>t.status===status&&t.assignee).length}</span><button aria-label={`Add ${status} task`} onClick={()=>open('task')}><Plus size={14}/></button></h3>{tasks.filter(t=>t.status===status&&t.assignee).map(t=><article draggable onDragStart={e=>e.dataTransfer.setData('text/plain',t.id)} key={t.id} className="kanban-task" onClick={()=>setSelected(t.id)} tabIndex={0} onKeyDown={e=>e.key==='Enter'&&setSelected(t.id)}><div><small>{t.id}</small><Grip size={13}/></div><h4>{t.title}</h4><Badge type={t.category}>{t.category}</Badge><p>{t.sites.map(id=>data.sites.find(s=>s.id===id)?.flag).join(' ')} {t.sites.length?websiteName(t.sites[0]):'General task'}</p><footer><Avatar id={t.assignee} small/><span className={`priority ${t.priority.toLowerCase()}`}>âš‘ {t.priority}</span></footer></article>)}</section>)}</div>}</>}
-{page==='Timesheets'&&<><div className="summary-banner card"><div className="summary-icon"><Clock3 size={23}/></div><div><small>Total logged time</small><strong>{duration(totalMinutes(logs))}</strong></div><div><small>Work entries</small><strong>{logs.length}</strong></div><div><small>Contributors</small><strong>{new Set(logs.map(l=>l.user)).size}</strong></div><button className="button secondary" onClick={exportLogs}><ArrowDownToLine size={15}/>CSV</button><button className="button secondary" onClick={exportXlsx}><FileText size={15}/>Excel</button></div><section className="card"><div className="card-heading"><div><h2>Work log</h2><p>Manual entries Â· durations are counted once across websites</p></div></div><div className="table-wrap"><table><thead><tr><th>Date</th><th>Contributor</th><th>Work description</th><th>Category</th><th>Duration</th><th>Websites</th></tr></thead><tbody>{logs.map(l=><tr key={l.id}><td>{l.date}</td><td><span className="person-cell"><Avatar id={l.user} small/>{person(l.user)?.name}</span></td><td><strong>{l.notes}</strong><small className="block">{l.task||'Standalone work'}</small></td><td><Badge>{l.category}</Badge></td><td><strong>{duration(l.minutes)}</strong></td><td>{l.sites.map(websiteName).join(', ')||'General'}</td></tr>)}</tbody></table>{!logs.length&&<Empty/>}</div></section></>}
-{page==='Websites'&&(!siteDetail?<><div className="section-toolbar"><strong>{data.sites.filter(s=>s.status!=='Archived').length} connected websites</strong><span className="muted">Website profiles contain no credentials</span></div><div className="website-grid">{data.sites.map(s=><article className="card website-card" key={s.id}><div className="website-card-top"><span className="big-flag">{s.flag}</span><Badge type={s.status}>{s.status}</Badge></div><h2>{s.name}</h2><p>{new URL(s.url).host}<ExternalLink size={12}/></p><div className="website-metrics"><span><small>CMS</small><strong>{s.cms}</strong></span><span><small>Active tasks</small><strong>{activeTasks(data.tasks).filter(t=>t.sites.includes(s.id)).length}</strong></span><span><small>SEO score</small><strong>{s.score||'â€”'}<em>/100</em></strong></span></div><footer><div className="avatar-stack">{people.slice(0,3).map(p=><Avatar key={p.id} id={p.id} small/>)}</div><button className="text-button" onClick={()=>{setSiteDetail(s.id);setDetailTab('Overview')}}>View website <ArrowRight size={14}/></button></footer></article>)}</div></>:<><button className="text-button back-button" onClick={()=>setSiteDetail(null)}><ArrowLeft size={14}/>All websites</button>{(()=>{const s=data.sites.find(s=>s.id===siteDetail)!;return <><section className="card website-detail-header"><span className="big-flag">{s.flag}</span><div><h2>{s.name}</h2><p>{s.url}</p></div><Badge type={s.status}>{s.status}</Badge><button className="button secondary" onClick={()=>{if(window.confirm('Archive this website? Historical records will be preserved.'))update(d=>{d.sites=d.sites.map(x=>x.id===s.id?{...x,status:'Archived'}:x);audit(d,`archived ${s.name}`);return d})}}>Archive website</button></section><div className="tabs">{['Overview','Tasks & Updates','SEO History','Maintenance','Integrations','Activity History'].map(t=><button className={detailTab===t?'active':''} key={t} onClick={()=>setDetailTab(t)}>{t}</button>)}</div><section className="card padded">{detailTab==='Overview'?<><h2>Website profile</h2><div className="detail-grid"><div><small>Country / chapter</small><strong>{s.country}</strong></div><div><small>Content management</small><strong>{s.cms}</strong></div><div><small>Canonical URL</small><a href={s.url} target="_blank" rel="noreferrer">{s.url}</a></div><div><small>Current status</small><strong>{s.status}</strong></div></div><p className="muted">Demo website identity. Replace example.org profiles before live use.</p></>:detailTab==='Tasks & Updates'?table(data.tasks.filter(t=>t.sites.includes(s.id))):detailTab==='SEO History'?<>{data.reports.filter(r=>r.site===s.id).map(r=><div className="history-item" key={r.id+'-'+r.revision}><strong>Week of {r.period}</strong><span>{r.score}/100 Â· {r.source} Â· Revision {r.revision}</span></div>)}</>:detailTab==='Maintenance'?table(data.tasks.filter(t=>t.sites.includes(s.id)&&t.category==='Maintenance')):detailTab==='Integrations'?<Empty text="No integrations configured. Automated analytics integrations are outside the MVP."/>:<Empty text="New website configuration changes are recorded in the workspace activity history."/>}</section></>})()}</>)}
-{page==='SEO Reports'&&<><div className="info-callout"><ShieldCheck size={20}/><div><strong>Submit directly. Keep the history.</strong><p>Reports appear immediately. Corrections create a new revision and preserve the original methodology and values.</p></div></div><section className="card"><div className="card-heading"><div><h2>Report history</h2><p>Weekly SEO report Â· Manual technical audit Â· 0â€“100 scale</p></div><button className="button secondary" onClick={()=>saveDownload(data.reports.map(r=>({Website:websiteName(r.site),Period:r.period,Score:r.score,Source:r.source,Revision:r.revision,Notes:r.notes})),'devorbit-reports')}><ArrowDownToLine size={14}/>Export CSV</button></div><div className="table-wrap"><table><thead><tr><th>Website</th><th>Reporting week</th><th>SEO score</th><th>Methodology</th><th>Submitted by</th><th>Revision</th><th/></tr></thead><tbody>{data.reports.map(r=><tr key={r.id+'-'+r.revision}><td><strong>{data.sites.find(s=>s.id===r.site)?.flag} {websiteName(r.site)}</strong></td><td>{r.period}</td><td><span className="score-badge">{r.score}<small>/100</small></span></td><td>{r.source}</td><td><span className="person-cell"><Avatar id={r.user} small/>{person(r.user)?.name.split(' ')[0]}</span></td><td><Badge>v{r.version} Â· rev {r.revision}</Badge></td><td><button className="text-button" onClick={()=>{setRevision(r);open('report')}}>Revise <ArrowUpRight size={13}/></button></td></tr>)}</tbody></table></div></section><p className="footnote">Reporting coverage requires an explicit website schedule. Demo websites have no reporting schedule assigned.</p></>}
-{page==='Analytics & Exports'&&<><div className="overview-charts"><section className="card"><div className="card-heading"><div><h2>Time by contributor</h2><p>Click a legend to filter the source records</p></div></div>{workChart()}</section><section className="card padded"><h2>Work distribution</h2><p className="muted">Time invested, with each work log counted once.</p>{people.map(p=><button className="workload-row" key={p.id} onClick={()=>setMember(member===p.id?'all':p.id)}><Avatar id={p.id} small/><span>{p.name}</span><div className="progress-track"><i style={{width:`${totalMinutes(logs.filter(l=>l.user===p.id))/Math.max(totalMinutes(logs),1)*100}%`}}/></div><strong>{duration(totalMinutes(logs.filter(l=>l.user===p.id)))}</strong></button>)}</section></div><section className="card"><div className="card-heading"><div><h2>Underlying work records</h2><p>{logs.length} entries Â· {duration(totalMinutes(logs))} Â· Current filters</p></div><div className="row"><button className="button secondary" onClick={exportLogs}>Export CSV</button><button className="button secondary" onClick={exportXlsx}>Export Excel</button></div></div><div className="table-wrap"><table><thead><tr><th>Date</th><th>Contributor</th><th>Activity</th><th>Minutes</th></tr></thead><tbody>{logs.map(l=><tr key={l.id}><td>{l.date}</td><td>{person(l.user)?.name}</td><td>{l.notes}</td><td>{l.minutes}</td></tr>)}</tbody></table></div></section></>}
-{page==='Notifications'&&<section className="card"><div className="card-heading"><h2>Inbox <span className="count-pill">{unread} unread</span></h2><button className="text-button" onClick={()=>update(d=>({...d,notices:d.notices.map(n=>({...n,read:true}))}))}><CheckCheck size={15}/>Mark all as read</button></div>{data.notices.map(n=><button key={n.id} className={`notification-row ${n.read?'read':''}`} onClick={()=>{update(d=>({...d,notices:d.notices.map(x=>x.id===n.id?{...x,read:true}:x)}));if(n.task)setSelected(n.task)}}><span className="notification-symbol"><Bell size={18}/></span><div><strong>{n.title}</strong><p>{n.body}</p></div>{!n.read&&<i className="unread-dot"/>}<ChevronRight size={16}/></button>)}</section>}
-{page==='Team & Roles'&&<><div className="info-callout"><Users size={21}/><div><strong>Built for a collaborative team</strong><p>Developers can assign work to each other. Role changes and invitations require live server authorization.</p></div></div><section className="card"><div className="table-wrap"><table><thead><tr><th>Team member</th><th>Email</th><th>Role</th><th>Active tasks</th><th>Status</th></tr></thead><tbody>{people.map(p=><tr key={p.id}><td><span className="person-cell"><Avatar id={p.id}/><strong>{p.name}{p.id===CURRENT?' (you)':''}</strong></span></td><td>{p.email}</td><td><Badge type={p.role}>{p.role}</Badge></td><td>{activeTasks(data.tasks).filter(t=>t.assignee===p.id).length}</td><td><Badge type="Healthy">Active Â· demo</Badge></td></tr>)}</tbody></table></div></section></>}
-{page==='Form Builder'&&<div className="form-builder"><aside className="card template-list"><div className="card-heading"><h2>Templates</h2></div>{data.templates.map(t=><button key={t.id} className={templateId===t.id?'active':''} onClick={()=>setTemplateId(t.id)}><FileText size={18}/><span><strong>{t.title}</strong><small>{t.state} Â· Version {t.version||'draft'}</small></span><ChevronRight size={14}/></button>)}</aside>{(()=>{const template=data.templates.find(t=>t.id===templateId)||data.templates[0];return <section className="card template-editor"><div className="card-heading"><div><h2>{template.title}</h2><p>{template.description}</p></div><Badge type={template.state}>{template.state}</Badge></div><div className="tabs"><button className={!preview?'active':''} onClick={()=>setPreview(false)}>Fields & validation</button><button className={preview?'active':''} onClick={()=>setPreview(true)}>Preview</button></div><div className="padded">{template.fields.map((field,i)=><div key={field.key} className="builder-field">{preview?<label className="field">{field.label}{field.required?' *':''}{field.type==='textarea'?<textarea placeholder={field.label}/>:<input type={field.type} placeholder={field.label}/>}</label>:<><Grip size={17}/><span><strong>{field.label}{field.required?' *':''}</strong><small>{field.type} Â· {field.key}</small></span><button className="icon-button" aria-label={`Remove ${field.label}`} onClick={()=>update(d=>{const t=d.templates.find(t=>t.id===template.id)!;t.fields.splice(i,1);t.state='Draft';return d})}><X size={15}/></button></>}</div>)}{!preview&&<button className="add-field" onClick={()=>{const label=window.prompt('New field label:');if(!label)return;if(/password|secret|token|credential/i.test(label)){notify('Forms must not collect passwords, secrets, or credentials.');return}const type=window.prompt('Field type: text, textarea, number, date, url, checkbox','text')||'text';if(!['text','textarea','number','date','url','checkbox'].includes(type)){notify('Please choose one of the listed field types.');return}update(d=>{const t=d.templates.find(t=>t.id===template.id)!;const key=label.toLowerCase().replace(/[^a-z0-9]+/g,'_')+'_'+t.fields.length;t.fields.push({key,label,type,required:false} as Field);t.state='Draft';return d})}}><Plus size={16}/>Add a field</button>}<div className="template-footer"><p>Publishing creates a new immutable version.<br/>Earlier submissions retain their original field definitions.</p><button className="button primary" onClick={()=>{if(!template.fields.length){notify('Add at least one field before publishing.');return}update(d=>{const t=d.templates.find(t=>t.id===template.id)!;t.version++;t.versions.push({version:t.version,fields:structuredClone(t.fields)});t.state='Published';audit(d,`published ${t.title} version ${t.version}`);return d});notify('New template version published. Previous versions preserved.')}}>Publish version {template.version+1}</button></div><h3 className="version-heading">Published history</h3>{template.versions.map(v=><div className="history-item" key={v.version}><strong>Version {v.version}</strong><span>{v.fields.length} fields Â· Immutable snapshot</span></div>)}</div></section>})()}</div>}
-{page==='Settings'&&<div className="settings-grid"><section className="card padded"><h2>Workspace settings</h2><p className="muted">Your DevOrbit setup at a glance.</p><div className="detail-grid"><div><small>Product</small><strong>DevOrbit</strong></div><div><small>Workspace</small><strong>International Desk</strong></div><div><small>Timezone</small><strong>Asia/Karachi</strong></div><div><small>Reporting week</small><strong>Monday â€“ Sunday</strong></div></div><div className="info-callout"><ShieldCheck size={20}/><div><strong>Local demo mode</strong><p>This demo stores sample records only in this browser. Open /login for the separate Supabase-connected workspace. See docs/SUPABASE_SETUP.md for database and account setup.</p></div></div><button className="button secondary" onClick={()=>{if(window.confirm('Reset all local demo changes?')){setData(seed());notify('Demo workspace reset.')}}}>Reset demo data</button></section><section className="card padded"><div className="profile-big"><Avatar id={CURRENT}/><h2>Azmeer Ahmed</h2><Badge type="Administrator">Administrator Â· demo identity</Badge></div><h3>Production connection</h3><p className="muted">Supabase configuration is read from your local environment. Apply the database migration and provision your invited account, then open /login. The initial connected workspace is read-only while workflow mutations are implemented.</p><p className="muted">Invitation-only onboarding. No public self-registration. Never store service-role keys in the client.</p></section></div>}
-<footer className="page-footer"><span><Image src="/logo.svg" alt="" width={35} height={35} unoptimized/>DevOrbit <span>Â·</span> A shared space for work that matters.</span><span>Asia/Karachi <span className="footer-dot"/> Local demo</span></footer></main></div>
-{toast&&<div className="toast" role="status"><CheckCheck size={18}/>{toast}<button aria-label="Dismiss notification" onClick={()=>setToast('')}><X size={14}/></button></div>}
-{modal&&<div className="overlay" onMouseDown={e=>{if(e.target===e.currentTarget)setModal(null)}}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header><div><span className="eyebrow">DEVORBIT WORKSPACE</span><h2 id="modal-title">{modal==='task'?'Create a task':modal==='log'?'Log your time':modal==='site'?'Add a website':modal==='template'?'Create a template':revision?'Revise SEO report':'Submit SEO report'}</h2></div><button className="icon-button" aria-label="Close dialog" onClick={()=>setModal(null)}><X size={20}/></button></header><form onSubmit={submit}><div className="modal-fields">
-{modal==='task'&&<><label className="field">Task title *<input autoFocus required name="title" placeholder="What needs to be done?"/></label><label className="field">Description<textarea name="description" placeholder="Add a little context, goals, or acceptance criteria..." rows={3}/></label><div className="form-row"><label className="field">Category<select name="category">{['Development','Bug fix','SEO','Content','Maintenance','Meeting','General'].map(s=><option key={s}>{s}</option>)}</select></label><label className="field">Priority<select name="priority" defaultValue="Medium">{['Low','Medium','High','Urgent'].map(s=><option key={s}>{s}</option>)}</select></label></div><div className="form-row"><label className="field">Assign to<select name="assignee" defaultValue={CURRENT}><option value="">Unassigned</option>{people.map(p=><option key={p.id} value={p.id}>{p.name}{p.id===CURRENT?' (you)':''}</option>)}</select></label><label className="field">Due date<input type="date" name="due"/></label></div><p className="form-hint">Assignments to teammates stay pending until they accept.</p><label className="checkbox-field"><input type="checkbox" name="review"/>Require independent review before completion</label><label className="field">Reviewer<select name="reviewer" defaultValue="omar">{people.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>{siteChoices(data)}</>}
-{modal==='log'&&<><div className="form-row"><label className="field">Work date *<input required type="date" name="date" defaultValue={demoDate}/></label><label className="field">Duration (minutes) *<input required type="number" min="1" max="1440" step="1" name="minutes" placeholder="e.g. 90"/></label></div><label className="field">What did you work on? *<textarea required name="notes" placeholder="Describe your work..."/></label><div className="form-row"><label className="field">Category<select name="category">{['Development','SEO','Maintenance','Meeting','Coordination','Training','General'].map(s=><option key={s}>{s}</option>)}</select></label><label className="field">Related task (optional)<select name="task"><option value="">Standalone work</option>{data.tasks.map(t=><option key={t.id} value={t.id}>{t.id} Â· {t.title}</option>)}</select></label></div>{siteChoices(data)}<p className="form-hint">Time is credited to you and counted once, regardless of linked websites.</p></>}
-{modal==='site'&&<><label className="field">Website name *<input required name="name" placeholder="e.g. France"/></label><label className="field">Country / chapter *<input required name="country" placeholder="e.g. France"/></label><label className="field">Canonical URL *<input required type="url" name="url" placeholder="https://fr.example.org"/></label><label className="field">CMS<select name="cms">{['WordPress','Webflow','Drupal','Custom','Other'].map(x=><option key={x}>{x}</option>)}</select></label><p className="form-hint">Never add passwords, API keys, or credentials to website profiles.</p></>}
-{modal==='report'&&<><div className="form-row"><label className="field">Website *<select required name="site" defaultValue={revision?.site}>{data.sites.filter(s=>s.status!=='Archived').map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><label className="field">Reporting week starts *<input required type="date" name="period" defaultValue={revision?.period||'2026-10-12'}/></label></div><label className="field">SEO score (0â€“100) *<input required type="number" min="0" max="100" name="score" defaultValue={revision?.score}/></label><label className="field">Source / methodology *<input required name="source" defaultValue={revision?.source||'Manual technical audit'}/></label><label className="field">Findings and next steps<textarea name="notes" defaultValue={revision?.notes}/></label>{revision&&<label className="field">Correction reason *<input required name="reason" placeholder="Why is this report being revised?"/></label>}<p className="form-hint">Direct submission Â· Template v1 Â· Values use a 0â€“100 scale. Compare only reports using the same methodology.</p></>}
-{modal==='template'&&<><label className="field">Template name *<input required name="title" placeholder="e.g. Monthly maintenance review"/></label><label className="field">Description<textarea name="description" placeholder="What will this template capture?"/></label></>}
-{error&&<div className="form-error" role="alert">{error}</div>}</div><footer><button type="button" className="button secondary" onClick={()=>setModal(null)}>Cancel</button><button className="button primary" type="submit">{modal==='report'?revision?'Save revision':'Submit report':modal==='task'?'Create task':'Save'}<ArrowRight size={15}/></button></footer></form></section></div>}
-{currentTask&&<div className="overlay drawer-overlay" onMouseDown={e=>e.target===e.currentTarget&&setSelected(null)}><section className="drawer" role="dialog" aria-modal="true" aria-label="Task details"><header><span>{currentTask.id} <span className="muted">/ Task details</span></span><button className="icon-button" aria-label="Close task" onClick={()=>setSelected(null)}><X size={20}/></button></header><div className="drawer-body"><div className="row"><Badge type={currentTask.pending?'Pending':currentTask.status}>{currentTask.pending?'Pending assignment':currentTask.status}</Badge><span className={`priority ${currentTask.priority.toLowerCase()}`}>âš‘ {currentTask.priority}</span></div><h2>{currentTask.title}</h2><p className="task-description">{currentTask.description}</p><div className="task-metadata"><span>Assignee</span><strong><Avatar id={currentTask.assignee} small/>{person(currentTask.assignee)?.name||'Unassigned'}</strong><span>Requested assignee</span><strong>{person(currentTask.pending)?.name||'No pending request'}</strong><span>Created by</span><strong>{person(currentTask.creator)?.name}</strong><span>Due date</span><strong>{currentTask.due||'No due date'}</strong><span>Websites</span><strong>{currentTask.sites.map(websiteName).join(', ')||'General task'}</strong><span>Review</span><strong>{currentTask.review?`Required Â· ${person(currentTask.reviewer)?.name}`:'Not required'}</strong></div>{currentTask.blocker&&<div className="form-error">Blocked: {currentTask.blocker}</div>}{currentTask.pending===CURRENT&&<div className="request-actions"><button className="button primary" onClick={()=>assignment(currentTask,true)}>Accept assignment</button><button className="button secondary" onClick={()=>assignment(currentTask,false)}>Decline</button></div>}{currentTask.assignee&&<div className="task-status-control"><label className="field">Update progress<select value={currentTask.status} onChange={e=>changeStatus(currentTask,e.target.value as Status)}>{[...statuses,'Cancelled'].map(s=><option key={s}>{s}</option>)}</select></label><button className="button secondary" onClick={()=>{setSelected(null);open('log')}}><Clock3 size={15}/>Log time</button></div>}<div className="handover-panel"><h3>Ownership & collaboration</h3>{currentTask.pending?<div className="row"><span className="muted">A request is pending with {person(currentTask.pending)?.name}.</span><button className="text-button" onClick={()=>update(d=>{const t=d.tasks.find(t=>t.id===currentTask.id)!;t.pending=null;audit(d,`withdrew the pending assignment for ${t.id}`,t.id);return d})}>Withdraw request</button></div>:<div className="task-status-control"><label className="field">Request handover<select value={handover} onChange={e=>setHandover(e.target.value)}><option value="">Select a teammate</option>{people.filter(p=>p.id!==currentTask.assignee).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><button className="button secondary" onClick={()=>{try{const next=requestHandover(currentTask,handover,CURRENT,'Administrator');update(d=>{d.tasks=d.tasks.map(t=>t.id===next.id?next:t);audit(d,`requested handover of ${next.id} to ${person(handover)?.name}`,next.id);return d});notify('Handover requested. Current ownership stays until acceptance.')}catch(e){notify((e as Error).message)}}}>Request handover</button></div>}<label className="field">Collaborators<select value="" onChange={e=>{const id=e.target.value;if(!id)return;update(d=>{const t=d.tasks.find(t=>t.id===currentTask.id)!;t.collaborators=Array.from(new Set([...(t.collaborators||[]),id]));audit(d,`added ${person(id)?.name} as collaborator on ${t.id}`,t.id);return d})}}><option value="">Add a teammate</option>{people.filter(p=>p.id!==currentTask.assignee&&!(currentTask.collaborators||[]).includes(p.id)).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><div className="collaborator-list">{(currentTask.collaborators||[]).map(id=><button key={id} onClick={()=>update(d=>{const t=d.tasks.find(t=>t.id===currentTask.id)!;t.collaborators=t.collaborators?.filter(p=>p!==id);audit(d,`removed ${person(id)?.name} as collaborator on ${t.id}`,t.id);return d})}><Avatar id={id} small/>{person(id)?.name}<X size={12}/></button>)}</div></div><h3>Comments</h3><div className="comments">{data.comments.filter(c=>c.task===currentTask.id).map(c=><div className="comment" key={c.id}><Avatar id={c.user} small/><div><strong>{person(c.user)?.name}</strong><p>{c.body}</p><small>{new Date(c.time).toLocaleDateString()}</small></div></div>)}</div><form className="comment-form" onSubmit={e=>{e.preventDefault();if(!comment.trim())return;update(d=>{d.comments.push({id:crypto.randomUUID(),task:currentTask.id,user:CURRENT,body:comment.trim(),time:new Date().toISOString()});audit(d,`commented on ${currentTask.id}`,currentTask.id);return d});setComment('')}}><textarea aria-label="Comment" placeholder="Add a comment..." value={comment} onChange={e=>setComment(e.target.value)}/><button className="button primary" type="submit"><MessageSquare size={14}/>Post comment</button></form><h3>Activity history</h3>{data.activity.filter(a=>a.task===currentTask.id).map(a=><div className="history-item" key={a.id}><strong>{person(a.actor)?.name}</strong><span>{a.text}</span></div>)}</div></section></div>}
-</div>
+import {useEffect, useState, type FormEvent, type ReactNode} from 'react';
+import {
+  Activity,
+  ArrowDownToLine,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  BarChart3,
+  Bell,
+  Blocks,
+  CalendarDays,
+  Check,
+  CheckCheck,
+  ChevronRight,
+  ChevronsUpDown,
+  CircleHelp,
+  Clock3,
+  Ellipsis,
+  ExternalLink,
+  FileChartColumn,
+  FileText,
+  Globe2,
+  Grip,
+  LayoutDashboard,
+  ListTodo,
+  Menu,
+  MessageSquare,
+  Plus,
+  Search,
+  Settings2,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  Target,
+  Users,
+  X,
+} from 'lucide-react';
+import {ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip} from 'recharts';
+import {
+  acceptAssignment,
+  activeTasks,
+  CURRENT,
+  csv,
+  Data,
+  declineAssignment,
+  demoDate,
+  duration,
+  Field,
+  people,
+  Report,
+  seed,
+  Status,
+  Task,
+  totalMinutes,
+  requestHandover,
+  transition,
+  validateLog,
+} from '@/lib/domain';
+const nav = [
+  {
+    group: 'WORKSPACE',
+    items: [
+      ['Overview', LayoutDashboard],
+      ['My Tasks', ListTodo],
+      ['Team Task Board', Blocks],
+      ['Timesheets', Clock3],
+      ['Notifications', Bell],
+    ],
+  },
+  {
+    group: 'WEBSITES & REPORTING',
+    items: [
+      ['Websites', Globe2],
+      ['SEO Reports', FileChartColumn],
+      ['Analytics & Exports', BarChart3],
+    ],
+  },
+  {
+    group: 'ADMINISTRATION',
+    items: [
+      ['Form Builder', SlidersHorizontal],
+      ['Team & Roles', Users],
+      ['Settings', Settings2],
+    ],
+  },
+] as const;
+type Modal = 'task' | 'log' | 'site' | 'report' | 'template' | null;
+const statuses: Status[] = ['To Do', 'In Progress', 'Blocked', 'In Review', 'Completed'];
+const person = (id: string | null) => people.find(p => p.id === id);
+function Avatar({id, small = false}: {id: string | null; small?: boolean}) {
+  const p = person(id);
+  return (
+    <span title={p?.name || 'Unassigned'} className={`avatar ${p?.color || 'gray'} ${small ? 'small' : ''}`}>
+      {p?.initials || 'â€”'}
+    </span>
+  );
 }
-function siteChoices(data:Data){return <fieldset className="site-choices"><legend>Linked websites (optional)</legend>{data.sites.filter(s=>s.status!=='Archived').map(s=><label key={s.id}><input type="checkbox" name="sites" value={s.id}/>{s.flag} {s.name}</label>)}</fieldset>}
-
-
-
-
-
+function Badge({children, type = ''}: {children: ReactNode; type?: string}) {
+  return <span className={`badge ${type.toLowerCase().replaceAll(' ', '-')}`}>{children}</span>;
+}
+function Empty({text = 'No records match your filters.'}: {text?: string}) {
+  return (
+    <div className="empty">
+      <Search size={25} />
+      <h3>Nothing here yet</h3>
+      <p>{text}</p>
+    </div>
+  );
+}
+function saveDownload(rows: Record<string, unknown>[], name: string) {
+  const url = URL.createObjectURL(new Blob([csv(rows)], {type: 'text/csv;charset=utf-8;'}));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+export default function Workspace() {
+  const [data, setData] = useState<Data>(seed);
+  const [ready, setReady] = useState(false);
+  const [page, setPage] = useState('Overview');
+  const [query, setQuery] = useState('');
+  const [siteFilter, setSiteFilter] = useState('all');
+  const [member, setMember] = useState('all');
+  const [period, setPeriod] = useState('week');
+  const [modal, setModal] = useState<Modal>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [siteDetail, setSiteDetail] = useState<string | null>(null);
+  const [detailTab, setDetailTab] = useState('Overview');
+  const [taskTab, setTaskTab] = useState('Assigned');
+  const [boardTable, setBoardTable] = useState(false);
+  const [mobile, setMobile] = useState(false);
+  const [toast, setToast] = useState('');
+  const [error, setError] = useState('');
+  const [comment, setComment] = useState('');
+  const [revision, setRevision] = useState<Report | null>(null);
+  const [templateId, setTemplateId] = useState('seo');
+  const [preview, setPreview] = useState(false);
+  const [handover, setHandover] = useState('');
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('devorbit-demo-v1');
+      if (saved) setData(JSON.parse(saved));
+    } catch {
+      setToast('Could not restore local demo data.');
+    }
+    setReady(true);
+  }, []);
+  useEffect(() => {
+    if (ready) {
+      try {
+        localStorage.setItem('devorbit-demo-v1', JSON.stringify(data));
+      } catch {
+        /* demo remains usable without storage */
+      }
+    }
+  }, [data, ready]);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(''), 4200);
+    return () => clearTimeout(t);
+  }, [toast]);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        document.querySelector<HTMLInputElement>('.global-search input')?.focus();
+      }
+      if (event.key === 'Escape') {
+        setModal(null);
+        setSelected(null);
+        setMobile(false);
+      }
+      if (event.key === 'Tab' && dialog) {
+        const nodes = Array.from(
+          dialog.querySelectorAll<HTMLElement>('button,input,select,textarea,a[href],[tabindex="0"]'),
+        ).filter(el => !el.hasAttribute('disabled'));
+        const first = nodes[0],
+          last = nodes[nodes.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    const frame = dialog
+      ? requestAnimationFrame(() => dialog.querySelector<HTMLElement>('input,button,select,textarea')?.focus())
+      : 0;
+    const oldOverflow = document.body.style.overflow;
+    if (dialog) document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      cancelAnimationFrame(frame);
+      document.body.style.overflow = oldOverflow;
+      if (dialog) previous?.focus();
+    };
+  }, [modal, selected]);
+  const update = (fn: (d: Data) => Data) => setData(d => fn(structuredClone(d)));
+  const notify = (message: string) => setToast(message);
+  const audit = (d: Data, text: string, task?: string) => {
+    d.activity.unshift({id: crypto.randomUUID(), actor: CURRENT, text, time: new Date().toISOString(), task});
+  };
+  const go = (next: string) => {
+    setPage(next);
+    setQuery('');
+    setSiteDetail(null);
+    setMobile(false);
+  };
+  const open = (m: Modal) => {
+    setError('');
+    setModal(m);
+  };
+  const rangeStart = period === 'week' ? '2026-10-12' : '2026-10-01';
+  const tasks = data.tasks.filter(
+    t =>
+      (siteFilter === 'all' || t.sites.includes(siteFilter)) &&
+      (member === 'all' || t.assignee === member || t.pending === member) &&
+      `${t.title} ${t.id} ${t.category}`.toLowerCase().includes(query.toLowerCase()),
+  );
+  const logs = data.logs.filter(
+    l =>
+      (siteFilter === 'all' || l.sites.includes(siteFilter)) &&
+      (member === 'all' || l.user === member) &&
+      l.date >= rangeStart &&
+      l.date <= '2026-10-18',
+  );
+  const pending = data.tasks.filter(t => t.pending === CURRENT);
+  const unread = data.notices.filter(n => !n.read).length;
+  const currentTask = data.tasks.find(t => t.id === selected);
+  const breakdownStatuses: Status[] = [...statuses, 'Cancelled'];
+  const breakdownColors = ['#aaa0f2', '#7164e9', '#f0b35f', '#a8b7df', '#8abfa8', '#d2d5df'];
+  let cumulative = 0;
+  const taskGradient = tasks.length
+    ? breakdownStatuses
+        .map((s, i) => {
+          const start = cumulative;
+          cumulative += (tasks.filter(t => t.status === s).length / tasks.length) * 100;
+          return `${breakdownColors[i]} ${start}% ${cumulative}%`;
+        })
+        .join(', ')
+    : '#edeaf5 0% 100%';
+  const chartData = ['12', '13', '14', '15', '16', '17', '18'].map((day, i) => ({
+    day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
+    ...Object.fromEntries(
+      people.map(p => [
+        p.id,
+        logs.filter(l => l.date === `2026-10-${day}` && l.user === p.id).reduce((s, l) => s + l.minutes, 0) / 60,
+      ]),
+    ),
+  }));
+  const websiteName = (id: string) => data.sites.find(s => s.id === id)?.name || id;
+  const exportLogs = () =>
+    saveDownload(
+      logs.map(l => ({
+        Date: l.date,
+        Contributor: person(l.user)?.name,
+        Minutes: l.minutes,
+        Category: l.category,
+        Notes: l.notes,
+        Task: l.task,
+        Websites: l.sites.map(websiteName).join('; '),
+      })),
+      'devorbit-timesheets',
+    );
+  async function exportXlsx() {
+    const {default: writeXlsxFile} = await import('write-excel-file');
+    const rows = [
+      [
+        {value: 'Date', fontWeight: 'bold' as const},
+        {value: 'Contributor', fontWeight: 'bold' as const},
+        {value: 'Minutes', fontWeight: 'bold' as const},
+        {value: 'Notes', fontWeight: 'bold' as const},
+        {value: 'Task', fontWeight: 'bold' as const},
+        {value: 'Websites', fontWeight: 'bold' as const},
+      ],
+      ...logs.map(l => [
+        {value: l.date},
+        {value: person(l.user)?.name || ''},
+        {value: l.minutes, type: Number},
+        {value: l.notes},
+        {value: l.task},
+        {value: l.sites.map(websiteName).join('; ')},
+      ]),
+    ];
+    await writeXlsxFile(rows, {fileName: 'devorbit-timesheets.xlsx'});
+    notify('Excel export downloaded');
+  }
+  function changeStatus(task: Task, status: Status) {
+    try {
+      let reason = '';
+      if (status === 'Blocked' || ['Completed', 'Cancelled'].includes(task.status))
+        reason =
+          window.prompt(status === 'Blocked' ? 'What is blocking this task?' : 'Reason for reopening this task:') || '';
+      const next = transition(task, status, CURRENT, 'Administrator', reason);
+      update(d => {
+        d.tasks = d.tasks.map(t => (t.id === next.id ? next : t));
+        audit(d, `changed ${task.id} to ${status}${reason ? `: ${reason}` : ''}`, task.id);
+        return d;
+      });
+      notify(`Task moved to ${status}`);
+    } catch (e) {
+      notify((e as Error).message);
+    }
+  }
+  function assignment(task: Task, accept: boolean) {
+    try {
+      const reason = accept ? '' : window.prompt('Please give a reason for declining:') || '';
+      const next = accept ? acceptAssignment(task, CURRENT) : declineAssignment(task, CURRENT, reason);
+      update(d => {
+        d.tasks = d.tasks.map(t => (t.id === task.id ? next : t));
+        audit(d, `${accept ? 'accepted' : 'declined'} ${task.id}${reason ? `: ${reason}` : ''}`, task.id);
+        d.notices = d.notices.map(n => (n.task === task.id ? {...n, read: true} : n));
+        return d;
+      });
+      notify(accept ? 'Assignment accepted. You now own this task.' : 'Assignment declined; reason saved in history.');
+    } catch (e) {
+      notify((e as Error).message);
+    }
+  }
+  function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError('');
+    const f = new FormData(e.currentTarget);
+    const get = (key: string) => String(f.get(key) || '').trim();
+    try {
+      const d = structuredClone(data);
+      if (modal === 'task') {
+        if (!get('title')) throw new Error('Please enter a task title.');
+        const assignee = get('assignee');
+        const review = f.get('review') === 'on';
+        const reviewer = get('reviewer');
+        if (review && reviewer === assignee) throw new Error('Choose a reviewer different from the assignee.');
+        const id = `DEV-${Math.max(...d.tasks.map(t => Number(t.id.split('-')[1]))) + 1}`;
+        d.tasks.unshift({
+          id,
+          title: get('title'),
+          description: get('description'),
+          category: get('category'),
+          priority: get('priority') as Task['priority'],
+          status: 'To Do',
+          creator: CURRENT,
+          assignee: assignee === CURRENT ? CURRENT : null,
+          pending: assignee && assignee !== CURRENT ? assignee : null,
+          sites: f.getAll('sites').map(String),
+          due: get('due'),
+          review,
+          reviewer,
+        });
+        audit(d, `created ${id}: ${get('title')}`, id);
+      }
+      if (modal === 'log') {
+        const minutes = Number(get('minutes'));
+        validateLog(minutes);
+        const day = get('date');
+        if (
+          totalMinutes(d.logs.filter(l => l.user === CURRENT && l.date === day)) + minutes > 720 &&
+          !window.confirm('This brings your daily total above 12 hours. Save this entry?')
+        )
+          return;
+        d.logs.unshift({
+          id: crypto.randomUUID(),
+          user: CURRENT,
+          date: day,
+          minutes,
+          category: get('category'),
+          notes: get('notes'),
+          task: get('task'),
+          sites: f.getAll('sites').map(String),
+        });
+        audit(d, `logged ${duration(minutes)}: ${get('notes')}`);
+      }
+      if (modal === 'site') {
+        const url = new URL(get('url'));
+        if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Enter a valid HTTP or HTTPS website.');
+        if (d.sites.some(s => s.url.replace(/\/$/, '') === url.href.replace(/\/$/, '')))
+          throw new Error('This website URL already exists.');
+        d.sites.push({
+          id: crypto.randomUUID(),
+          name: get('name'),
+          country: get('country'),
+          url: url.href,
+          cms: get('cms'),
+          status: 'Healthy',
+          flag: 'ðŸŒ',
+          score: 0,
+          previous: 0,
+          color: '#6559e8',
+        });
+        audit(d, `added the ${get('name')} website`);
+      }
+      if (modal === 'report') {
+        const score = Number(get('score'));
+        if (score < 0 || score > 100) throw new Error('SEO score must be between 0 and 100.');
+        const site = get('site');
+        const week = get('period');
+        const existing = d.reports.find(r => r.site === site && r.period === week);
+        if (existing && !revision)
+          throw new Error('This period already has a report. Use Revise to preserve the original.');
+        if (revision && !get('reason')) throw new Error('Please provide a correction reason.');
+        if (revision && d.reports.some(r => r.id === revision.id && r.revision > revision.revision))
+          throw new Error('A newer revision exists. Revise the latest record instead.');
+        const report: Report = {
+          id: revision?.id || crypto.randomUUID(),
+          site,
+          period: week,
+          score,
+          source: get('source'),
+          notes: get('notes'),
+          user: CURRENT,
+          version: 1,
+          revision: revision ? revision.revision + 1 : 1,
+          created: new Date().toISOString(),
+          reason: get('reason'),
+        };
+        d.reports.unshift(report);
+        const profile = d.sites.find(s => s.id === site);
+        if (profile && report.source === 'Manual technical audit') {
+          profile.previous = profile.score;
+          profile.score = score;
+        }
+        audit(d, `${revision ? 'revised' : 'submitted'} the ${websiteName(site)} SEO report`);
+      }
+      if (modal === 'template') {
+        d.templates.push({
+          id: crypto.randomUUID(),
+          title: get('title'),
+          description: get('description'),
+          state: 'Draft',
+          version: 0,
+          fields: [],
+          versions: [],
+        });
+        audit(d, `created template ${get('title')}`);
+      }
+      setData(d);
+      setModal(null);
+      setRevision(null);
+      notify('Saved to your local demo workspace.');
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+  function table(list: Task[], compact = false) {
+    return (
+      <div className="table-wrap">
+        <table className="task-table">
+          <thead>
+            <tr>
+              <th>Task name</th>
+              {!compact && <th>Website</th>}
+              <th>Status</th>
+              <th>Priority</th>
+              <th>Assignee</th>
+              <th>Due date</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {list.map(t => (
+              <tr
+                key={t.id}
+                onClick={() => setSelected(t.id)}
+                tabIndex={0}
+                onKeyDown={e => e.key === 'Enter' && setSelected(t.id)}
+              >
+                <td>
+                  <div className="task-title">
+                    <span className={`task-check ${t.status === 'Completed' ? 'done' : ''}`}>
+                      {t.status === 'Completed' && <Check size={12} />}
+                    </span>
+                    <span>
+                      <strong>{t.title}</strong>
+                      <small>
+                        {t.id} <span>Â·</span> {t.category}
+                      </small>
+                    </span>
+                  </div>
+                </td>
+                {!compact && (
+                  <td>
+                    <div className="site-tags">
+                      {t.sites.slice(0, 1).map(id => (
+                        <span key={id}>
+                          {data.sites.find(s => s.id === id)?.flag} {websiteName(id)}
+                        </span>
+                      ))}
+                      {t.sites.length > 1 && <small>+{t.sites.length - 1}</small>}
+                    </div>
+                  </td>
+                )}
+                <td>
+                  <Badge type={t.pending ? 'Pending' : t.status}>{t.pending ? 'Pending' : t.status}</Badge>
+                </td>
+                <td>
+                  <span className={`priority ${t.priority.toLowerCase()}`}>
+                    <span>âš‘</span>
+                    {t.priority}
+                  </span>
+                </td>
+                <td>
+                  <Avatar id={t.assignee || t.pending} small />
+                </td>
+                <td className={t.due < demoDate && !['Completed', 'Cancelled'].includes(t.status) ? 'overdue' : ''}>
+                  {t.due
+                    ? new Date(t.due + 'T12:00:00').toLocaleDateString('en-US', {month: 'short', day: 'numeric'})
+                    : 'â€”'}
+                </td>
+                <td>
+                  <ChevronRight size={15} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!list.length && <Empty />}
+      </div>
+    );
+  }
+  function workChart() {
+    return (
+      <>
+        <div className="chart">
+          <ResponsiveContainer width="100%" height={225}>
+            <BarChart data={chartData} barSize={24}>
+              <CartesianGrid strokeDasharray="3 5" vertical={false} stroke="#eceef4" />
+              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#696f85'}} dy={8} />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{fontSize: 11, fill: '#696f85'}}
+                tickFormatter={n => n + 'h'}
+              />
+              <Tooltip
+                cursor={{fill: '#f6f5ff'}}
+                contentStyle={{borderRadius: 10, border: '1px solid #e7e7ef', fontSize: 12}}
+                formatter={(v, name) => [`${Number(v).toFixed(1)}h`, person(String(name))?.name]}
+              />
+              {people.map((p, i) => (
+                <Bar
+                  key={p.id}
+                  dataKey={p.id}
+                  stackId="time"
+                  fill={['#7164e9', '#aaa0f2', '#c9c2f8', '#e3dffb'][i]}
+                  radius={i === 3 ? [4, 4, 0, 0] : undefined}
+                />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="chart-legend">
+          {people.map((p, i) => (
+            <button
+              key={p.id}
+              onClick={() => {
+                setMember(member === p.id ? 'all' : p.id);
+              }}
+            >
+              <i style={{background: ['#7164e9', '#aaa0f2', '#c9c2f8', '#e3dffb'][i]}} />
+              {p.name.split(' ')[0]}
+            </button>
+          ))}
+        </div>
+      </>
+    );
+  }
+  const filters = (
+    <div className="filters">
+      <span className="live-dot" />
+      Workspace snapshot
+      <span className="filter-spacer" />
+      <label>
+        <CalendarDays size={14} />
+        <select aria-label="Date range" value={period} onChange={e => setPeriod(e.target.value)}>
+          <option value="week">Oct 12 â€“ 18, 2026</option>
+          <option value="month">October 2026</option>
+        </select>
+      </label>
+      <label>
+        <Users size={14} />
+        <select aria-label="Team member" value={member} onChange={e => setMember(e.target.value)}>
+          <option value="all">All members</option>
+          {people.map(p => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <Globe2 size={14} />
+        <select aria-label="Website filter" value={siteFilter} onChange={e => setSiteFilter(e.target.value)}>
+          <option value="all">All websites</option>
+          {data.sites.map(s => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+  return (
+    <div className="app-shell">
+      <aside className={`sidebar ${mobile ? 'mobile-open' : ''}`}>
+        <a
+          className="brand"
+          href="#"
+          onClick={e => {
+            e.preventDefault();
+            go('Overview');
+          }}
+        >
+          <Image src="/logo.svg" alt="" width={35} height={35} unoptimized />
+          <span>
+            DevOrbit<span className="brand-dot">.</span>
+          </span>
+        </a>
+        <button
+          className="workspace-switch"
+          onClick={() => notify('You are in the International Desk demo workspace.')}
+        >
+          <span className="workspace-icon">ID</span>
+          <span>
+            <strong>International Desk</strong>
+            <small>Team workspace</small>
+          </span>
+          <ChevronsUpDown size={14} />
+        </button>
+        <div className="nav-groups">
+          {nav.map(g => (
+            <div className="nav-group" key={g.group}>
+              <div className="nav-label">{g.group}</div>
+              {g.items.map(([label, Icon]) => (
+                <button key={label} className={`nav-item ${page === label ? 'active' : ''}`} onClick={() => go(label)}>
+                  <Icon size={18} />
+                  <span>{label}</span>
+                  {label === 'My Tasks' && <em>{pending.length}</em>}
+                  {label === 'Notifications' && unread > 0 && <i className="nav-unread" />}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="sidebar-bottom">
+          <div className="help-card">
+            <span className="help-icon">
+              <Sparkles size={16} />
+            </span>
+            <strong>A little more in sync.</strong>
+            <p>
+              Your team. Your websites.
+              <br />
+              One shared orbit.
+            </p>
+            <button
+              onClick={() => {
+                go('Settings');
+                notify('Demo workspace information is in Settings.');
+              }}
+            >
+              Workspace guide <ArrowUpRight size={14} />
+            </button>
+          </div>
+          <button className="user-profile" onClick={() => go('Settings')}>
+            <Avatar id={CURRENT} />
+            <span>
+              <strong>Azmeer Ahmed</strong>
+              <small>Administrator</small>
+            </span>
+            <ChevronsUpDown size={14} />
+          </button>
+        </div>
+      </aside>
+      <div className="main-shell">
+        <header className="topbar">
+          <div className="breadcrumb">
+            <button className="mobile-toggle" aria-label="Toggle navigation" onClick={() => setMobile(!mobile)}>
+              <Menu size={20} />
+            </button>
+            <span>Workspace</span>
+            <ChevronRight size={13} />
+            <strong>{page}</strong>
+          </div>
+          <div className="topbar-actions">
+            <label className="global-search">
+              <Search size={16} />
+              <input
+                placeholder="Search tasks..."
+                value={query}
+                onChange={e => {
+                  setQuery(e.target.value);
+                  if (!['Overview', 'My Tasks', 'Team Task Board'].includes(page)) setPage('Team Task Board');
+                }}
+              />
+              <kbd>âŒ˜ K</kbd>
+            </label>
+            <button
+              className="icon-button"
+              aria-label="Help"
+              onClick={() =>
+                notify('DevOrbit demo Â· Changes are saved in this browser. Open Settings for setup details.')
+              }
+            >
+              <CircleHelp size={19} />
+            </button>
+            <button
+              className="icon-button notification-bell"
+              aria-label="Notifications"
+              onClick={() => go('Notifications')}
+            >
+              <Bell size={19} />
+              {unread > 0 && <i />}
+            </button>
+            <span className="topbar-divider" />
+            <Avatar id={CURRENT} small />
+          </div>
+        </header>
+        <main>
+          <div className="page-heading">
+            <div>
+              <div className="eyebrow">
+                INTERNATIONAL DESK <span>/</span> {page === 'Overview' ? 'WORKSPACE OVERVIEW' : page.toUpperCase()}
+              </div>
+              <h1>
+                {page === 'Overview' ? 'Everything in your orbit.' : page}
+                <span className="heading-period">{page === 'Overview' ? '' : ''}</span>
+              </h1>
+              <p>
+                {
+                  (
+                    {
+                      Overview: 'A clear view of your teamâ€™s work, websites, and what needs your attention.',
+                      'My Tasks': 'Your next steps, incoming assignments, and work in motion.',
+                      'Team Task Board': 'Move work forward, together. Every task has a clear owner.',
+                      Timesheets: 'Make time visible. Log your work and let the totals take care of themselves.',
+                      Websites: 'Every website, one connected workspace.',
+                      'SEO Reports': 'A consistent view of website health, week after week.',
+                      'Analytics & Exports': 'Understand the work behind the numbers.',
+                      'Form Builder': 'Build consistent reporting. Preserve every published version.',
+                      'Team & Roles': 'The people keeping everything in orbit.',
+                      Notifications: 'Your assignments, mentions, and updates in one place.',
+                      Settings: 'Make DevOrbit feel like your workspace.',
+                    } as Record<string, string>
+                  )[page]
+                }
+              </p>
+            </div>
+            <div className="heading-actions">
+              {page === 'Overview' && (
+                <button className="button secondary" onClick={exportLogs}>
+                  <ArrowDownToLine size={15} />
+                  Export
+                </button>
+              )}
+              <button
+                className="button primary"
+                onClick={() => {
+                  if (page === 'Websites') open('site');
+                  else if (page === 'Timesheets') open('log');
+                  else if (page === 'SEO Reports') {
+                    setRevision(null);
+                    open('report');
+                  } else if (page === 'Form Builder') open('template');
+                  else if (page === 'Team & Roles')
+                    notify('Live invitations require the Supabase authentication phase. See README for setup.');
+                  else open('task');
+                }}
+              >
+                <Plus size={17} />
+                {page === 'Websites'
+                  ? 'Add website'
+                  : page === 'Timesheets'
+                    ? 'Log time'
+                    : page === 'SEO Reports'
+                      ? 'Submit report'
+                      : page === 'Form Builder'
+                        ? 'New template'
+                        : page === 'Team & Roles'
+                          ? 'Invite member'
+                          : 'Create task'}
+              </button>
+            </div>
+          </div>
+          <div className="demo-banner">
+            <span>
+              <span className="demo-pill">DEMO WORKSPACE</span> Explore DevOrbit with sample data. Changes stay in this
+              browser.
+            </span>
+            <a href="/login">Open live workspace →</a>
+          </div>
+          {['Overview', 'Team Task Board', 'Analytics & Exports', 'Timesheets'].includes(page) && filters}
+          {page === 'Overview' && (
+            <>
+              <section className="kpi-grid">
+                {[
+                  {
+                    title: 'Active tasks',
+                    value: activeTasks(tasks).length,
+                    note: `${tasks.filter(t => t.status === 'Completed').length} completed this week`,
+                    icon: ListTodo,
+                    color: 'purple',
+                    action: 'Team Task Board',
+                  },
+                  {
+                    title: 'Pending assignments',
+                    value: tasks.filter(t => t.pending).length,
+                    note: 'Waiting for acceptance',
+                    icon: Clock3,
+                    color: 'orange',
+                    action: 'My Tasks',
+                  },
+                  {
+                    title: 'Time logged',
+                    value: duration(totalMinutes(logs)),
+                    note: 'Across the whole team',
+                    icon: Activity,
+                    color: 'blue',
+                    action: 'Timesheets',
+                  },
+                  {
+                    title: 'Active websites',
+                    value: data.sites.filter(
+                      s => s.status !== 'Archived' && (siteFilter === 'all' || s.id === siteFilter),
+                    ).length,
+                    note: `${data.sites.filter(s => s.status === 'Needs attention').length} website needs attention`,
+                    icon: Globe2,
+                    color: 'green',
+                    action: 'Websites',
+                  },
+                ].map((k, i) => (
+                  <button
+                    className="kpi card"
+                    key={k.title}
+                    onClick={() => {
+                      go(k.action);
+                      if (i === 1) setTaskTab('Pending');
+                    }}
+                  >
+                    <div className="kpi-top">
+                      <span>{k.title}</span>
+                      <span className={`kpi-icon ${k.color}`}>
+                        <k.icon size={17} />
+                      </span>
+                    </div>
+                    <div className="kpi-value">
+                      {k.value}
+                      <ArrowUpRight size={18} />
+                    </div>
+                    <div className="kpi-note">
+                      <span className={i === 0 ? 'positive' : ''}>
+                        {i === 0 && <CheckCheck size={13} />} {k.note}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </section>
+              <div className="overview-charts">
+                <section className="card">
+                  <div className="card-heading">
+                    <div>
+                      <h2>Team activity</h2>
+                      <p>Time invested, day by day</p>
+                    </div>
+                    <button className="text-button" onClick={() => go('Timesheets')}>
+                      View timesheets <ArrowUpRight size={14} />
+                    </button>
+                  </div>
+                  {workChart()}
+                </section>
+                <section className="card task-breakdown">
+                  <div className="card-heading">
+                    <div>
+                      <h2>Task overview</h2>
+                      <p>A little clarity on whatâ€™s moving</p>
+                    </div>
+                    <button className="icon-button" aria-label="Open task board" onClick={() => go('Team Task Board')}>
+                      <Ellipsis size={19} />
+                    </button>
+                  </div>
+                  <div className="donut-area">
+                    <div className="donut" style={{background: `conic-gradient(${taskGradient})`}}>
+                      <div>
+                        <strong>{tasks.length}</strong>
+                        <span>Total tasks</span>
+                      </div>
+                    </div>
+                    <div className="donut-legend">
+                      {breakdownStatuses
+                        .filter(s => s !== 'Cancelled' || tasks.some(t => t.status === s))
+                        .map((s, i) => (
+                          <button
+                            key={s}
+                            onClick={() => {
+                              go('Team Task Board');
+                              setQuery('');
+                            }}
+                          >
+                            <i style={{background: breakdownColors[i]}} />
+                            <span>{s}</span>
+                            <strong>{tasks.filter(t => t.status === s).length}</strong>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                  <div className="breakdown-footer">
+                    <span className="tiny-dot" />
+                    Pending requests are separate from accepted workload
+                  </div>
+                </section>
+              </div>
+              <div className="attention-strip">
+                <div className="attention-symbol">
+                  <Target size={19} />
+                </div>
+                <div>
+                  <strong>A couple of things need you</strong>
+                  <p>
+                    {pending.length} assignment requests Â·{' '}
+                    {data.tasks.filter(t => t.status === 'In Review' && t.reviewer === CURRENT).length} task ready for
+                    review Â· {data.tasks.filter(t => t.status === 'Blocked').length} blocked task
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    go('My Tasks');
+                    setTaskTab('Pending');
+                  }}
+                >
+                  Take a look <ArrowRight size={15} />
+                </button>
+              </div>
+              <section className="card priority-tasks">
+                <div className="card-heading">
+                  <div>
+                    <h2>
+                      Tasks in focus{' '}
+                      <span className="count-pill">{tasks.filter(t => t.status !== 'Completed').length}</span>
+                    </h2>
+                    <p>The work that deserves a closer look</p>
+                  </div>
+                  <button className="text-button" onClick={() => go('Team Task Board')}>
+                    View all tasks <ArrowRight size={14} />
+                  </button>
+                </div>
+                {table(tasks.filter(t => t.status !== 'Completed').slice(0, 4))}
+                <div className="table-footer">
+                  <span>Showing priority and upcoming tasks</span>
+                  <button onClick={() => open('task')}>
+                    <Plus size={13} /> Add a task
+                  </button>
+                </div>
+              </section>
+              <div className="bottom-grid">
+                <section className="card">
+                  <div className="card-heading">
+                    <div>
+                      <h2>Website pulse</h2>
+                      <p>A quick check on your global footprint</p>
+                    </div>
+                    <button className="text-button" onClick={() => go('Websites')}>
+                      All websites <ArrowUpRight size={14} />
+                    </button>
+                  </div>
+                  <div className="website-pulse">
+                    {data.sites.slice(0, 4).map(s => (
+                      <button
+                        key={s.id}
+                        onClick={() => {
+                          go('Websites');
+                          setSiteDetail(s.id);
+                        }}
+                      >
+                        <span className="flag">{s.flag}</span>
+                        <div>
+                          <strong>{s.name}</strong>
+                          <small>{new URL(s.url).host}</small>
+                        </div>
+                        <span className={`health-dot ${s.status === 'Healthy' ? 'healthy' : 'warning'}`} />
+                        <span className="pulse-score">
+                          {s.score}
+                          <small>/100</small>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+                <section className="card">
+                  <div className="card-heading">
+                    <div>
+                      <h2>Recent activity</h2>
+                      <p>The latest around your workspace</p>
+                    </div>
+                    <span className="live-label">
+                      <i />
+                      Live
+                    </span>
+                  </div>
+                  <div className="activity-feed">
+                    {data.activity.slice(0, 4).map(a => (
+                      <button key={a.id} onClick={() => (a.task ? setSelected(a.task) : go('SEO Reports'))}>
+                        <Avatar id={a.actor} small />
+                        <div>
+                          <p>
+                            <strong>{person(a.actor)?.name.split(' ')[0]}</strong> {a.text}
+                          </p>
+                          <small>
+                            {new Date(a.time).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              timeZone: 'Asia/Karachi',
+                            })}
+                          </small>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            </>
+          )}
+          {page === 'My Tasks' && (
+            <>
+              <div className="tabs">
+                {['Assigned', 'Pending', 'Created', 'Completed'].map(t => (
+                  <button className={taskTab === t ? 'active' : ''} key={t} onClick={() => setTaskTab(t)}>
+                    {t}
+                    {t === 'Pending' && <span>{pending.length}</span>}
+                  </button>
+                ))}
+              </div>
+              {taskTab === 'Pending' ? (
+                <div className="request-grid">
+                  {pending.map(t => (
+                    <div key={t.id} className="card request-card">
+                      <div>
+                        <Badge type="Pending">Awaiting your response</Badge>
+                        <span>{t.id}</span>
+                      </div>
+                      <h2 onClick={() => setSelected(t.id)}>{t.title}</h2>
+                      <p>{t.description}</p>
+                      <div className="request-meta">
+                        <Avatar id={t.creator} small />
+                        Assigned by {person(t.creator)?.name}
+                      </div>
+                      <div className="request-actions">
+                        <button className="button primary" onClick={() => assignment(t, true)}>
+                          <Check size={15} />
+                          Accept assignment
+                        </button>
+                        <button className="button secondary" onClick={() => assignment(t, false)}>
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {!pending.length && <Empty text="You have no pending assignment requests." />}
+                </div>
+              ) : (
+                <section className="card">
+                  {table(
+                    tasks.filter(t =>
+                      taskTab === 'Created'
+                        ? t.creator === CURRENT
+                        : taskTab === 'Completed'
+                          ? t.assignee === CURRENT && t.status === 'Completed'
+                          : t.assignee === CURRENT && t.status !== 'Completed',
+                    ),
+                  )}
+                </section>
+              )}
+            </>
+          )}
+          {page === 'Team Task Board' && (
+            <>
+              <div className="section-toolbar">
+                <span>
+                  <strong>{tasks.length} tasks</strong> <span className="muted">across your workspace</span>
+                </span>
+                <div className="segmented">
+                  <button className={!boardTable ? 'active' : ''} onClick={() => setBoardTable(false)}>
+                    <Blocks size={14} />
+                    Board
+                  </button>
+                  <button className={boardTable ? 'active' : ''} onClick={() => setBoardTable(true)}>
+                    <ListTodo size={14} />
+                    Table
+                  </button>
+                </div>
+              </div>
+              {tasks.some(t => t.pending) && (
+                <div className="pending-summary">
+                  <Clock3 size={16} />
+                  {tasks.filter(t => t.pending).length} pending assignment requests{' '}
+                  <button
+                    onClick={() => {
+                      go('My Tasks');
+                      setTaskTab('Pending');
+                    }}
+                  >
+                    View requests <ArrowRight size={13} />
+                  </button>
+                </div>
+              )}
+              {boardTable ? (
+                <section className="card">{table(tasks)}</section>
+              ) : (
+                <div className="kanban">
+                  {statuses.map(status => (
+                    <section
+                      key={status}
+                      className="kanban-column"
+                      onDragOver={e => e.preventDefault()}
+                      onDrop={e => {
+                        e.preventDefault();
+                        const task = data.tasks.find(t => t.id === e.dataTransfer.getData('text/plain'));
+                        if (task) changeStatus(task, status);
+                      }}
+                    >
+                      <h3>
+                        <span className={`status-dot ${status.toLowerCase().replaceAll(' ', '-')}`} />
+                        {status}
+                        <span>{tasks.filter(t => t.status === status && t.assignee).length}</span>
+                        <button aria-label={`Add ${status} task`} onClick={() => open('task')}>
+                          <Plus size={14} />
+                        </button>
+                      </h3>
+                      {tasks
+                        .filter(t => t.status === status && t.assignee)
+                        .map(t => (
+                          <article
+                            draggable
+                            onDragStart={e => e.dataTransfer.setData('text/plain', t.id)}
+                            key={t.id}
+                            className="kanban-task"
+                            onClick={() => setSelected(t.id)}
+                            tabIndex={0}
+                            onKeyDown={e => e.key === 'Enter' && setSelected(t.id)}
+                          >
+                            <div>
+                              <small>{t.id}</small>
+                              <Grip size={13} />
+                            </div>
+                            <h4>{t.title}</h4>
+                            <Badge type={t.category}>{t.category}</Badge>
+                            <p>
+                              {t.sites.map(id => data.sites.find(s => s.id === id)?.flag).join(' ')}{' '}
+                              {t.sites.length ? websiteName(t.sites[0]) : 'General task'}
+                            </p>
+                            <footer>
+                              <Avatar id={t.assignee} small />
+                              <span className={`priority ${t.priority.toLowerCase()}`}>âš‘ {t.priority}</span>
+                            </footer>
+                          </article>
+                        ))}
+                    </section>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+          {page === 'Timesheets' && (
+            <>
+              <div className="summary-banner card">
+                <div className="summary-icon">
+                  <Clock3 size={23} />
+                </div>
+                <div>
+                  <small>Total logged time</small>
+                  <strong>{duration(totalMinutes(logs))}</strong>
+                </div>
+                <div>
+                  <small>Work entries</small>
+                  <strong>{logs.length}</strong>
+                </div>
+                <div>
+                  <small>Contributors</small>
+                  <strong>{new Set(logs.map(l => l.user)).size}</strong>
+                </div>
+                <button className="button secondary" onClick={exportLogs}>
+                  <ArrowDownToLine size={15} />
+                  CSV
+                </button>
+                <button className="button secondary" onClick={exportXlsx}>
+                  <FileText size={15} />
+                  Excel
+                </button>
+              </div>
+              <section className="card">
+                <div className="card-heading">
+                  <div>
+                    <h2>Work log</h2>
+                    <p>Manual entries Â· durations are counted once across websites</p>
+                  </div>
+                </div>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Contributor</th>
+                        <th>Work description</th>
+                        <th>Category</th>
+                        <th>Duration</th>
+                        <th>Websites</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {logs.map(l => (
+                        <tr key={l.id}>
+                          <td>{l.date}</td>
+                          <td>
+                            <span className="person-cell">
+                              <Avatar id={l.user} small />
+                              {person(l.user)?.name}
+                            </span>
+                          </td>
+                          <td>
+                            <strong>{l.notes}</strong>
+                            <small className="block">{l.task || 'Standalone work'}</small>
+                          </td>
+                          <td>
+                            <Badge>{l.category}</Badge>
+                          </td>
+                          <td>
+                            <strong>{duration(l.minutes)}</strong>
+                          </td>
+                          <td>{l.sites.map(websiteName).join(', ') || 'General'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!logs.length && <Empty />}
+                </div>
+              </section>
+            </>
+          )}
+          {page === 'Websites' &&
+            (!siteDetail ? (
+              <>
+                <div className="section-toolbar">
+                  <strong>{data.sites.filter(s => s.status !== 'Archived').length} connected websites</strong>
+                  <span className="muted">Website profiles contain no credentials</span>
+                </div>
+                <div className="website-grid">
+                  {data.sites.map(s => (
+                    <article className="card website-card" key={s.id}>
+                      <div className="website-card-top">
+                        <span className="big-flag">{s.flag}</span>
+                        <Badge type={s.status}>{s.status}</Badge>
+                      </div>
+                      <h2>{s.name}</h2>
+                      <p>
+                        {new URL(s.url).host}
+                        <ExternalLink size={12} />
+                      </p>
+                      <div className="website-metrics">
+                        <span>
+                          <small>CMS</small>
+                          <strong>{s.cms}</strong>
+                        </span>
+                        <span>
+                          <small>Active tasks</small>
+                          <strong>{activeTasks(data.tasks).filter(t => t.sites.includes(s.id)).length}</strong>
+                        </span>
+                        <span>
+                          <small>SEO score</small>
+                          <strong>
+                            {s.score || 'â€”'}
+                            <em>/100</em>
+                          </strong>
+                        </span>
+                      </div>
+                      <footer>
+                        <div className="avatar-stack">
+                          {people.slice(0, 3).map(p => (
+                            <Avatar key={p.id} id={p.id} small />
+                          ))}
+                        </div>
+                        <button
+                          className="text-button"
+                          onClick={() => {
+                            setSiteDetail(s.id);
+                            setDetailTab('Overview');
+                          }}
+                        >
+                          View website <ArrowRight size={14} />
+                        </button>
+                      </footer>
+                    </article>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <button className="text-button back-button" onClick={() => setSiteDetail(null)}>
+                  <ArrowLeft size={14} />
+                  All websites
+                </button>
+                {(() => {
+                  const s = data.sites.find(s => s.id === siteDetail)!;
+                  return (
+                    <>
+                      <section className="card website-detail-header">
+                        <span className="big-flag">{s.flag}</span>
+                        <div>
+                          <h2>{s.name}</h2>
+                          <p>{s.url}</p>
+                        </div>
+                        <Badge type={s.status}>{s.status}</Badge>
+                        <button
+                          className="button secondary"
+                          onClick={() => {
+                            if (window.confirm('Archive this website? Historical records will be preserved.'))
+                              update(d => {
+                                d.sites = d.sites.map(x => (x.id === s.id ? {...x, status: 'Archived'} : x));
+                                audit(d, `archived ${s.name}`);
+                                return d;
+                              });
+                          }}
+                        >
+                          Archive website
+                        </button>
+                      </section>
+                      <div className="tabs">
+                        {[
+                          'Overview',
+                          'Tasks & Updates',
+                          'SEO History',
+                          'Maintenance',
+                          'Integrations',
+                          'Activity History',
+                        ].map(t => (
+                          <button className={detailTab === t ? 'active' : ''} key={t} onClick={() => setDetailTab(t)}>
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                      <section className="card padded">
+                        {detailTab === 'Overview' ? (
+                          <>
+                            <h2>Website profile</h2>
+                            <div className="detail-grid">
+                              <div>
+                                <small>Country / chapter</small>
+                                <strong>{s.country}</strong>
+                              </div>
+                              <div>
+                                <small>Content management</small>
+                                <strong>{s.cms}</strong>
+                              </div>
+                              <div>
+                                <small>Canonical URL</small>
+                                <a href={s.url} target="_blank" rel="noreferrer">
+                                  {s.url}
+                                </a>
+                              </div>
+                              <div>
+                                <small>Current status</small>
+                                <strong>{s.status}</strong>
+                              </div>
+                            </div>
+                            <p className="muted">
+                              Demo website identity. Replace example.org profiles before live use.
+                            </p>
+                          </>
+                        ) : detailTab === 'Tasks & Updates' ? (
+                          table(data.tasks.filter(t => t.sites.includes(s.id)))
+                        ) : detailTab === 'SEO History' ? (
+                          <>
+                            {data.reports
+                              .filter(r => r.site === s.id)
+                              .map(r => (
+                                <div className="history-item" key={r.id + '-' + r.revision}>
+                                  <strong>Week of {r.period}</strong>
+                                  <span>
+                                    {r.score}/100 Â· {r.source} Â· Revision {r.revision}
+                                  </span>
+                                </div>
+                              ))}
+                          </>
+                        ) : detailTab === 'Maintenance' ? (
+                          table(data.tasks.filter(t => t.sites.includes(s.id) && t.category === 'Maintenance'))
+                        ) : detailTab === 'Integrations' ? (
+                          <Empty text="No integrations configured. Automated analytics integrations are outside the MVP." />
+                        ) : (
+                          <Empty text="New website configuration changes are recorded in the workspace activity history." />
+                        )}
+                      </section>
+                    </>
+                  );
+                })()}
+              </>
+            ))}
+          {page === 'SEO Reports' && (
+            <>
+              <div className="info-callout">
+                <ShieldCheck size={20} />
+                <div>
+                  <strong>Submit directly. Keep the history.</strong>
+                  <p>
+                    Reports appear immediately. Corrections create a new revision and preserve the original methodology
+                    and values.
+                  </p>
+                </div>
+              </div>
+              <section className="card">
+                <div className="card-heading">
+                  <div>
+                    <h2>Report history</h2>
+                    <p>Weekly SEO report Â· Manual technical audit Â· 0â€“100 scale</p>
+                  </div>
+                  <button
+                    className="button secondary"
+                    onClick={() =>
+                      saveDownload(
+                        data.reports.map(r => ({
+                          Website: websiteName(r.site),
+                          Period: r.period,
+                          Score: r.score,
+                          Source: r.source,
+                          Revision: r.revision,
+                          Notes: r.notes,
+                        })),
+                        'devorbit-reports',
+                      )
+                    }
+                  >
+                    <ArrowDownToLine size={14} />
+                    Export CSV
+                  </button>
+                </div>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Website</th>
+                        <th>Reporting week</th>
+                        <th>SEO score</th>
+                        <th>Methodology</th>
+                        <th>Submitted by</th>
+                        <th>Revision</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.reports.map(r => (
+                        <tr key={r.id + '-' + r.revision}>
+                          <td>
+                            <strong>
+                              {data.sites.find(s => s.id === r.site)?.flag} {websiteName(r.site)}
+                            </strong>
+                          </td>
+                          <td>{r.period}</td>
+                          <td>
+                            <span className="score-badge">
+                              {r.score}
+                              <small>/100</small>
+                            </span>
+                          </td>
+                          <td>{r.source}</td>
+                          <td>
+                            <span className="person-cell">
+                              <Avatar id={r.user} small />
+                              {person(r.user)?.name.split(' ')[0]}
+                            </span>
+                          </td>
+                          <td>
+                            <Badge>
+                              v{r.version} Â· rev {r.revision}
+                            </Badge>
+                          </td>
+                          <td>
+                            <button
+                              className="text-button"
+                              onClick={() => {
+                                setRevision(r);
+                                open('report');
+                              }}
+                            >
+                              Revise <ArrowUpRight size={13} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+              <p className="footnote">
+                Reporting coverage requires an explicit website schedule. Demo websites have no reporting schedule
+                assigned.
+              </p>
+            </>
+          )}
+          {page === 'Analytics & Exports' && (
+            <>
+              <div className="overview-charts">
+                <section className="card">
+                  <div className="card-heading">
+                    <div>
+                      <h2>Time by contributor</h2>
+                      <p>Click a legend to filter the source records</p>
+                    </div>
+                  </div>
+                  {workChart()}
+                </section>
+                <section className="card padded">
+                  <h2>Work distribution</h2>
+                  <p className="muted">Time invested, with each work log counted once.</p>
+                  {people.map(p => (
+                    <button
+                      className="workload-row"
+                      key={p.id}
+                      onClick={() => setMember(member === p.id ? 'all' : p.id)}
+                    >
+                      <Avatar id={p.id} small />
+                      <span>{p.name}</span>
+                      <div className="progress-track">
+                        <i
+                          style={{
+                            width: `${(totalMinutes(logs.filter(l => l.user === p.id)) / Math.max(totalMinutes(logs), 1)) * 100}%`,
+                          }}
+                        />
+                      </div>
+                      <strong>{duration(totalMinutes(logs.filter(l => l.user === p.id)))}</strong>
+                    </button>
+                  ))}
+                </section>
+              </div>
+              <section className="card">
+                <div className="card-heading">
+                  <div>
+                    <h2>Underlying work records</h2>
+                    <p>
+                      {logs.length} entries Â· {duration(totalMinutes(logs))} Â· Current filters
+                    </p>
+                  </div>
+                  <div className="row">
+                    <button className="button secondary" onClick={exportLogs}>
+                      Export CSV
+                    </button>
+                    <button className="button secondary" onClick={exportXlsx}>
+                      Export Excel
+                    </button>
+                  </div>
+                </div>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Contributor</th>
+                        <th>Activity</th>
+                        <th>Minutes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {logs.map(l => (
+                        <tr key={l.id}>
+                          <td>{l.date}</td>
+                          <td>{person(l.user)?.name}</td>
+                          <td>{l.notes}</td>
+                          <td>{l.minutes}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </>
+          )}
+          {page === 'Notifications' && (
+            <section className="card">
+              <div className="card-heading">
+                <h2>
+                  Inbox <span className="count-pill">{unread} unread</span>
+                </h2>
+                <button
+                  className="text-button"
+                  onClick={() => update(d => ({...d, notices: d.notices.map(n => ({...n, read: true}))}))}
+                >
+                  <CheckCheck size={15} />
+                  Mark all as read
+                </button>
+              </div>
+              {data.notices.map(n => (
+                <button
+                  key={n.id}
+                  className={`notification-row ${n.read ? 'read' : ''}`}
+                  onClick={() => {
+                    update(d => ({...d, notices: d.notices.map(x => (x.id === n.id ? {...x, read: true} : x))}));
+                    if (n.task) setSelected(n.task);
+                  }}
+                >
+                  <span className="notification-symbol">
+                    <Bell size={18} />
+                  </span>
+                  <div>
+                    <strong>{n.title}</strong>
+                    <p>{n.body}</p>
+                  </div>
+                  {!n.read && <i className="unread-dot" />}
+                  <ChevronRight size={16} />
+                </button>
+              ))}
+            </section>
+          )}
+          {page === 'Team & Roles' && (
+            <>
+              <div className="info-callout">
+                <Users size={21} />
+                <div>
+                  <strong>Built for a collaborative team</strong>
+                  <p>
+                    Developers can assign work to each other. Role changes and invitations require live server
+                    authorization.
+                  </p>
+                </div>
+              </div>
+              <section className="card">
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Team member</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Active tasks</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {people.map(p => (
+                        <tr key={p.id}>
+                          <td>
+                            <span className="person-cell">
+                              <Avatar id={p.id} />
+                              <strong>
+                                {p.name}
+                                {p.id === CURRENT ? ' (you)' : ''}
+                              </strong>
+                            </span>
+                          </td>
+                          <td>{p.email}</td>
+                          <td>
+                            <Badge type={p.role}>{p.role}</Badge>
+                          </td>
+                          <td>{activeTasks(data.tasks).filter(t => t.assignee === p.id).length}</td>
+                          <td>
+                            <Badge type="Healthy">Active Â· demo</Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </>
+          )}
+          {page === 'Form Builder' && (
+            <div className="form-builder">
+              <aside className="card template-list">
+                <div className="card-heading">
+                  <h2>Templates</h2>
+                </div>
+                {data.templates.map(t => (
+                  <button
+                    key={t.id}
+                    className={templateId === t.id ? 'active' : ''}
+                    onClick={() => setTemplateId(t.id)}
+                  >
+                    <FileText size={18} />
+                    <span>
+                      <strong>{t.title}</strong>
+                      <small>
+                        {t.state} Â· Version {t.version || 'draft'}
+                      </small>
+                    </span>
+                    <ChevronRight size={14} />
+                  </button>
+                ))}
+              </aside>
+              {(() => {
+                const template = data.templates.find(t => t.id === templateId) || data.templates[0];
+                return (
+                  <section className="card template-editor">
+                    <div className="card-heading">
+                      <div>
+                        <h2>{template.title}</h2>
+                        <p>{template.description}</p>
+                      </div>
+                      <Badge type={template.state}>{template.state}</Badge>
+                    </div>
+                    <div className="tabs">
+                      <button className={!preview ? 'active' : ''} onClick={() => setPreview(false)}>
+                        Fields & validation
+                      </button>
+                      <button className={preview ? 'active' : ''} onClick={() => setPreview(true)}>
+                        Preview
+                      </button>
+                    </div>
+                    <div className="padded">
+                      {template.fields.map((field, i) => (
+                        <div key={field.key} className="builder-field">
+                          {preview ? (
+                            <label className="field">
+                              {field.label}
+                              {field.required ? ' *' : ''}
+                              {field.type === 'textarea' ? (
+                                <textarea placeholder={field.label} />
+                              ) : (
+                                <input type={field.type} placeholder={field.label} />
+                              )}
+                            </label>
+                          ) : (
+                            <>
+                              <Grip size={17} />
+                              <span>
+                                <strong>
+                                  {field.label}
+                                  {field.required ? ' *' : ''}
+                                </strong>
+                                <small>
+                                  {field.type} Â· {field.key}
+                                </small>
+                              </span>
+                              <button
+                                className="icon-button"
+                                aria-label={`Remove ${field.label}`}
+                                onClick={() =>
+                                  update(d => {
+                                    const t = d.templates.find(t => t.id === template.id)!;
+                                    t.fields.splice(i, 1);
+                                    t.state = 'Draft';
+                                    return d;
+                                  })
+                                }
+                              >
+                                <X size={15} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                      {!preview && (
+                        <button
+                          className="add-field"
+                          onClick={() => {
+                            const label = window.prompt('New field label:');
+                            if (!label) return;
+                            if (/password|secret|token|credential/i.test(label)) {
+                              notify('Forms must not collect passwords, secrets, or credentials.');
+                              return;
+                            }
+                            const type =
+                              window.prompt('Field type: text, textarea, number, date, url, checkbox', 'text') ||
+                              'text';
+                            if (!['text', 'textarea', 'number', 'date', 'url', 'checkbox'].includes(type)) {
+                              notify('Please choose one of the listed field types.');
+                              return;
+                            }
+                            update(d => {
+                              const t = d.templates.find(t => t.id === template.id)!;
+                              const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_') + '_' + t.fields.length;
+                              t.fields.push({key, label, type, required: false} as Field);
+                              t.state = 'Draft';
+                              return d;
+                            });
+                          }}
+                        >
+                          <Plus size={16} />
+                          Add a field
+                        </button>
+                      )}
+                      <div className="template-footer">
+                        <p>
+                          Publishing creates a new immutable version.
+                          <br />
+                          Earlier submissions retain their original field definitions.
+                        </p>
+                        <button
+                          className="button primary"
+                          onClick={() => {
+                            if (!template.fields.length) {
+                              notify('Add at least one field before publishing.');
+                              return;
+                            }
+                            update(d => {
+                              const t = d.templates.find(t => t.id === template.id)!;
+                              t.version++;
+                              t.versions.push({version: t.version, fields: structuredClone(t.fields)});
+                              t.state = 'Published';
+                              audit(d, `published ${t.title} version ${t.version}`);
+                              return d;
+                            });
+                            notify('New template version published. Previous versions preserved.');
+                          }}
+                        >
+                          Publish version {template.version + 1}
+                        </button>
+                      </div>
+                      <h3 className="version-heading">Published history</h3>
+                      {template.versions.map(v => (
+                        <div className="history-item" key={v.version}>
+                          <strong>Version {v.version}</strong>
+                          <span>{v.fields.length} fields Â· Immutable snapshot</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })()}
+            </div>
+          )}
+          {page === 'Settings' && (
+            <div className="settings-grid">
+              <section className="card padded">
+                <h2>Workspace settings</h2>
+                <p className="muted">Your DevOrbit setup at a glance.</p>
+                <div className="detail-grid">
+                  <div>
+                    <small>Product</small>
+                    <strong>DevOrbit</strong>
+                  </div>
+                  <div>
+                    <small>Workspace</small>
+                    <strong>International Desk</strong>
+                  </div>
+                  <div>
+                    <small>Timezone</small>
+                    <strong>Asia/Karachi</strong>
+                  </div>
+                  <div>
+                    <small>Reporting week</small>
+                    <strong>Monday â€“ Sunday</strong>
+                  </div>
+                </div>
+                <div className="info-callout">
+                  <ShieldCheck size={20} />
+                  <div>
+                    <strong>Local demo mode</strong>
+                    <p>
+                      This demo stores sample records only in this browser. Open /login for the separate
+                      Supabase-connected workspace. See docs/SUPABASE_SETUP.md for database and account setup.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  className="button secondary"
+                  onClick={() => {
+                    if (window.confirm('Reset all local demo changes?')) {
+                      setData(seed());
+                      notify('Demo workspace reset.');
+                    }
+                  }}
+                >
+                  Reset demo data
+                </button>
+              </section>
+              <section className="card padded">
+                <div className="profile-big">
+                  <Avatar id={CURRENT} />
+                  <h2>Azmeer Ahmed</h2>
+                  <Badge type="Administrator">Administrator Â· demo identity</Badge>
+                </div>
+                <h3>Production connection</h3>
+                <p className="muted">
+                  Supabase configuration is read from your local environment. Apply the database migration and provision
+                  your invited account, then open /login. The initial connected workspace is read-only while workflow
+                  mutations are implemented.
+                </p>
+                <p className="muted">
+                  Invitation-only onboarding. No public self-registration. Never store service-role keys in the client.
+                </p>
+              </section>
+            </div>
+          )}
+          <footer className="page-footer">
+            <span>
+              <Image src="/logo.svg" alt="" width={35} height={35} unoptimized />
+              DevOrbit <span>Â·</span> A shared space for work that matters.
+            </span>
+            <span>
+              Asia/Karachi <span className="footer-dot" /> Local demo
+            </span>
+          </footer>
+        </main>
+      </div>
+      {toast && (
+        <div className="toast" role="status">
+          <CheckCheck size={18} />
+          {toast}
+          <button aria-label="Dismiss notification" onClick={() => setToast('')}>
+            <X size={14} />
+          </button>
+        </div>
+      )}
+      {modal && (
+        <div
+          className="overlay"
+          onMouseDown={e => {
+            if (e.target === e.currentTarget) setModal(null);
+          }}
+        >
+          <section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <header>
+              <div>
+                <span className="eyebrow">DEVORBIT WORKSPACE</span>
+                <h2 id="modal-title">
+                  {modal === 'task'
+                    ? 'Create a task'
+                    : modal === 'log'
+                      ? 'Log your time'
+                      : modal === 'site'
+                        ? 'Add a website'
+                        : modal === 'template'
+                          ? 'Create a template'
+                          : revision
+                            ? 'Revise SEO report'
+                            : 'Submit SEO report'}
+                </h2>
+              </div>
+              <button className="icon-button" aria-label="Close dialog" onClick={() => setModal(null)}>
+                <X size={20} />
+              </button>
+            </header>
+            <form onSubmit={submit}>
+              <div className="modal-fields">
+                {modal === 'task' && (
+                  <>
+                    <label className="field">
+                      Task title *<input autoFocus required name="title" placeholder="What needs to be done?" />
+                    </label>
+                    <label className="field">
+                      Description
+                      <textarea
+                        name="description"
+                        placeholder="Add a little context, goals, or acceptance criteria..."
+                        rows={3}
+                      />
+                    </label>
+                    <div className="form-row">
+                      <label className="field">
+                        Category
+                        <select name="category">
+                          {['Development', 'Bug fix', 'SEO', 'Content', 'Maintenance', 'Meeting', 'General'].map(s => (
+                            <option key={s}>{s}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="field">
+                        Priority
+                        <select name="priority" defaultValue="Medium">
+                          {['Low', 'Medium', 'High', 'Urgent'].map(s => (
+                            <option key={s}>{s}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <div className="form-row">
+                      <label className="field">
+                        Assign to
+                        <select name="assignee" defaultValue={CURRENT}>
+                          <option value="">Unassigned</option>
+                          {people.map(p => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                              {p.id === CURRENT ? ' (you)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="field">
+                        Due date
+                        <input type="date" name="due" />
+                      </label>
+                    </div>
+                    <p className="form-hint">Assignments to teammates stay pending until they accept.</p>
+                    <label className="checkbox-field">
+                      <input type="checkbox" name="review" />
+                      Require independent review before completion
+                    </label>
+                    <label className="field">
+                      Reviewer
+                      <select name="reviewer" defaultValue="omar">
+                        {people.map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {siteChoices(data)}
+                  </>
+                )}
+                {modal === 'log' && (
+                  <>
+                    <div className="form-row">
+                      <label className="field">
+                        Work date *<input required type="date" name="date" defaultValue={demoDate} />
+                      </label>
+                      <label className="field">
+                        Duration (minutes) *
+                        <input
+                          required
+                          type="number"
+                          min="1"
+                          max="1440"
+                          step="1"
+                          name="minutes"
+                          placeholder="e.g. 90"
+                        />
+                      </label>
+                    </div>
+                    <label className="field">
+                      What did you work on? *<textarea required name="notes" placeholder="Describe your work..." />
+                    </label>
+                    <div className="form-row">
+                      <label className="field">
+                        Category
+                        <select name="category">
+                          {['Development', 'SEO', 'Maintenance', 'Meeting', 'Coordination', 'Training', 'General'].map(
+                            s => (
+                              <option key={s}>{s}</option>
+                            ),
+                          )}
+                        </select>
+                      </label>
+                      <label className="field">
+                        Related task (optional)
+                        <select name="task">
+                          <option value="">Standalone work</option>
+                          {data.tasks.map(t => (
+                            <option key={t.id} value={t.id}>
+                              {t.id} Â· {t.title}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    {siteChoices(data)}
+                    <p className="form-hint">
+                      Time is credited to you and counted once, regardless of linked websites.
+                    </p>
+                  </>
+                )}
+                {modal === 'site' && (
+                  <>
+                    <label className="field">
+                      Website name *<input required name="name" placeholder="e.g. France" />
+                    </label>
+                    <label className="field">
+                      Country / chapter *<input required name="country" placeholder="e.g. France" />
+                    </label>
+                    <label className="field">
+                      Canonical URL *<input required type="url" name="url" placeholder="https://fr.example.org" />
+                    </label>
+                    <label className="field">
+                      CMS
+                      <select name="cms">
+                        {['WordPress', 'Webflow', 'Drupal', 'Custom', 'Other'].map(x => (
+                          <option key={x}>{x}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <p className="form-hint">Never add passwords, API keys, or credentials to website profiles.</p>
+                  </>
+                )}
+                {modal === 'report' && (
+                  <>
+                    <div className="form-row">
+                      <label className="field">
+                        Website *
+                        <select required name="site" defaultValue={revision?.site}>
+                          {data.sites
+                            .filter(s => s.status !== 'Archived')
+                            .map(s => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                      <label className="field">
+                        Reporting week starts *
+                        <input required type="date" name="period" defaultValue={revision?.period || '2026-10-12'} />
+                      </label>
+                    </div>
+                    <label className="field">
+                      SEO score (0â€“100) *
+                      <input required type="number" min="0" max="100" name="score" defaultValue={revision?.score} />
+                    </label>
+                    <label className="field">
+                      Source / methodology *
+                      <input required name="source" defaultValue={revision?.source || 'Manual technical audit'} />
+                    </label>
+                    <label className="field">
+                      Findings and next steps
+                      <textarea name="notes" defaultValue={revision?.notes} />
+                    </label>
+                    {revision && (
+                      <label className="field">
+                        Correction reason *
+                        <input required name="reason" placeholder="Why is this report being revised?" />
+                      </label>
+                    )}
+                    <p className="form-hint">
+                      Direct submission Â· Template v1 Â· Values use a 0â€“100 scale. Compare only reports using the
+                      same methodology.
+                    </p>
+                  </>
+                )}
+                {modal === 'template' && (
+                  <>
+                    <label className="field">
+                      Template name *<input required name="title" placeholder="e.g. Monthly maintenance review" />
+                    </label>
+                    <label className="field">
+                      Description
+                      <textarea name="description" placeholder="What will this template capture?" />
+                    </label>
+                  </>
+                )}
+                {error && (
+                  <div className="form-error" role="alert">
+                    {error}
+                  </div>
+                )}
+              </div>
+              <footer>
+                <button type="button" className="button secondary" onClick={() => setModal(null)}>
+                  Cancel
+                </button>
+                <button className="button primary" type="submit">
+                  {modal === 'report'
+                    ? revision
+                      ? 'Save revision'
+                      : 'Submit report'
+                    : modal === 'task'
+                      ? 'Create task'
+                      : 'Save'}
+                  <ArrowRight size={15} />
+                </button>
+              </footer>
+            </form>
+          </section>
+        </div>
+      )}
+      {currentTask && (
+        <div className="overlay drawer-overlay" onMouseDown={e => e.target === e.currentTarget && setSelected(null)}>
+          <section className="drawer" role="dialog" aria-modal="true" aria-label="Task details">
+            <header>
+              <span>
+                {currentTask.id} <span className="muted">/ Task details</span>
+              </span>
+              <button className="icon-button" aria-label="Close task" onClick={() => setSelected(null)}>
+                <X size={20} />
+              </button>
+            </header>
+            <div className="drawer-body">
+              <div className="row">
+                <Badge type={currentTask.pending ? 'Pending' : currentTask.status}>
+                  {currentTask.pending ? 'Pending assignment' : currentTask.status}
+                </Badge>
+                <span className={`priority ${currentTask.priority.toLowerCase()}`}>âš‘ {currentTask.priority}</span>
+              </div>
+              <h2>{currentTask.title}</h2>
+              <p className="task-description">{currentTask.description}</p>
+              <div className="task-metadata">
+                <span>Assignee</span>
+                <strong>
+                  <Avatar id={currentTask.assignee} small />
+                  {person(currentTask.assignee)?.name || 'Unassigned'}
+                </strong>
+                <span>Requested assignee</span>
+                <strong>{person(currentTask.pending)?.name || 'No pending request'}</strong>
+                <span>Created by</span>
+                <strong>{person(currentTask.creator)?.name}</strong>
+                <span>Due date</span>
+                <strong>{currentTask.due || 'No due date'}</strong>
+                <span>Websites</span>
+                <strong>{currentTask.sites.map(websiteName).join(', ') || 'General task'}</strong>
+                <span>Review</span>
+                <strong>
+                  {currentTask.review ? `Required Â· ${person(currentTask.reviewer)?.name}` : 'Not required'}
+                </strong>
+              </div>
+              {currentTask.blocker && <div className="form-error">Blocked: {currentTask.blocker}</div>}
+              {currentTask.pending === CURRENT && (
+                <div className="request-actions">
+                  <button className="button primary" onClick={() => assignment(currentTask, true)}>
+                    Accept assignment
+                  </button>
+                  <button className="button secondary" onClick={() => assignment(currentTask, false)}>
+                    Decline
+                  </button>
+                </div>
+              )}
+              {currentTask.assignee && (
+                <div className="task-status-control">
+                  <label className="field">
+                    Update progress
+                    <select
+                      value={currentTask.status}
+                      onChange={e => changeStatus(currentTask, e.target.value as Status)}
+                    >
+                      {[...statuses, 'Cancelled'].map(s => (
+                        <option key={s}>{s}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    className="button secondary"
+                    onClick={() => {
+                      setSelected(null);
+                      open('log');
+                    }}
+                  >
+                    <Clock3 size={15} />
+                    Log time
+                  </button>
+                </div>
+              )}
+              <div className="handover-panel">
+                <h3>Ownership & collaboration</h3>
+                {currentTask.pending ? (
+                  <div className="row">
+                    <span className="muted">A request is pending with {person(currentTask.pending)?.name}.</span>
+                    <button
+                      className="text-button"
+                      onClick={() =>
+                        update(d => {
+                          const t = d.tasks.find(t => t.id === currentTask.id)!;
+                          t.pending = null;
+                          audit(d, `withdrew the pending assignment for ${t.id}`, t.id);
+                          return d;
+                        })
+                      }
+                    >
+                      Withdraw request
+                    </button>
+                  </div>
+                ) : (
+                  <div className="task-status-control">
+                    <label className="field">
+                      Request handover
+                      <select value={handover} onChange={e => setHandover(e.target.value)}>
+                        <option value="">Select a teammate</option>
+                        {people
+                          .filter(p => p.id !== currentTask.assignee)
+                          .map(p => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                    <button
+                      className="button secondary"
+                      onClick={() => {
+                        try {
+                          const next = requestHandover(currentTask, handover, CURRENT, 'Administrator');
+                          update(d => {
+                            d.tasks = d.tasks.map(t => (t.id === next.id ? next : t));
+                            audit(d, `requested handover of ${next.id} to ${person(handover)?.name}`, next.id);
+                            return d;
+                          });
+                          notify('Handover requested. Current ownership stays until acceptance.');
+                        } catch (e) {
+                          notify((e as Error).message);
+                        }
+                      }}
+                    >
+                      Request handover
+                    </button>
+                  </div>
+                )}
+                <label className="field">
+                  Collaborators
+                  <select
+                    value=""
+                    onChange={e => {
+                      const id = e.target.value;
+                      if (!id) return;
+                      update(d => {
+                        const t = d.tasks.find(t => t.id === currentTask.id)!;
+                        t.collaborators = Array.from(new Set([...(t.collaborators || []), id]));
+                        audit(d, `added ${person(id)?.name} as collaborator on ${t.id}`, t.id);
+                        return d;
+                      });
+                    }}
+                  >
+                    <option value="">Add a teammate</option>
+                    {people
+                      .filter(p => p.id !== currentTask.assignee && !(currentTask.collaborators || []).includes(p.id))
+                      .map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <div className="collaborator-list">
+                  {(currentTask.collaborators || []).map(id => (
+                    <button
+                      key={id}
+                      onClick={() =>
+                        update(d => {
+                          const t = d.tasks.find(t => t.id === currentTask.id)!;
+                          t.collaborators = t.collaborators?.filter(p => p !== id);
+                          audit(d, `removed ${person(id)?.name} as collaborator on ${t.id}`, t.id);
+                          return d;
+                        })
+                      }
+                    >
+                      <Avatar id={id} small />
+                      {person(id)?.name}
+                      <X size={12} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <h3>Comments</h3>
+              <div className="comments">
+                {data.comments
+                  .filter(c => c.task === currentTask.id)
+                  .map(c => (
+                    <div className="comment" key={c.id}>
+                      <Avatar id={c.user} small />
+                      <div>
+                        <strong>{person(c.user)?.name}</strong>
+                        <p>{c.body}</p>
+                        <small>{new Date(c.time).toLocaleDateString()}</small>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+              <form
+                className="comment-form"
+                onSubmit={e => {
+                  e.preventDefault();
+                  if (!comment.trim()) return;
+                  update(d => {
+                    d.comments.push({
+                      id: crypto.randomUUID(),
+                      task: currentTask.id,
+                      user: CURRENT,
+                      body: comment.trim(),
+                      time: new Date().toISOString(),
+                    });
+                    audit(d, `commented on ${currentTask.id}`, currentTask.id);
+                    return d;
+                  });
+                  setComment('');
+                }}
+              >
+                <textarea
+                  aria-label="Comment"
+                  placeholder="Add a comment..."
+                  value={comment}
+                  onChange={e => setComment(e.target.value)}
+                />
+                <button className="button primary" type="submit">
+                  <MessageSquare size={14} />
+                  Post comment
+                </button>
+              </form>
+              <h3>Activity history</h3>
+              {data.activity
+                .filter(a => a.task === currentTask.id)
+                .map(a => (
+                  <div className="history-item" key={a.id}>
+                    <strong>{person(a.actor)?.name}</strong>
+                    <span>{a.text}</span>
+                  </div>
+                ))}
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}
+function siteChoices(data: Data) {
+  return (
+    <fieldset className="site-choices">
+      <legend>Linked websites (optional)</legend>
+      {data.sites
+        .filter(s => s.status !== 'Archived')
+        .map(s => (
+          <label key={s.id}>
+            <input type="checkbox" name="sites" value={s.id} />
+            {s.flag} {s.name}
+          </label>
+        ))}
+    </fieldset>
+  );
+}

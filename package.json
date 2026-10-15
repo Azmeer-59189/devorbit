@@ -19,8 +19,7 @@
     "next": "^16.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "recharts": "^3.0.0",
-    "write-excel-file": "2.3.0"
+    "recharts": "^3.0.0"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.10",

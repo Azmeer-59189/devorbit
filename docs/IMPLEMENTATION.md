@@ -88,6 +88,12 @@ The Team page includes invitation creation/list/resend/cancel and keeps manual p
 
 # Home analytics slice
 
+## Fixed SEO overview and comparison
+
+The fixed SEO page now shows audit coverage, checklist issue counts, missing fields, an attention filter and per-website issue details. Unknown values are counted separately from negative/in-progress checklist statuses; zero scores remain recorded. Generated maintenance reference dates and remarks are excluded from completeness checks.
+
+Saved form history supports comparing an older version with the latest saved version, including note-only changes and source changes. Comparison uses immutable saved snapshots, excluding automatic references and generated summaries. Existing limits remain 30 form versions and 100 dated audit records per website. No new migration is required. Local unit tests cover missing/status distinctions and snapshot comparisons; hosted browser appearance remains unverified.
+
 Migration 009 adds a read-only security-invoker dashboard RPC with active-membership checks, validated calendar range/member/website filters, caller RLS, full-dataset task/time aggregates and capped record previews. Website associations use EXISTS for task/time filtering, avoiding multiplication of durations. Current task snapshots are explicitly distinguished from date-filtered work/completion/measurement facts. SEO joins observations to current report revision pointers, retains source/scale, and never averages sources together. Missing schedule denominators are not invented.
 
 The live Home dashboard contains task status, workload, daily/weekly time, contributor totals, linked-website time and single-website/source SEO charts. Weekly bins preserve minute totals and disclose partial weeks. Recharts animations are disabled to keep the UI steady. Legends, tables and underlying-record previews supplement chart interaction. Preview limits are disclosed separately from aggregate totals. Database tests verify RLS isolation, inactive access, date validation, total reconciliation, shared-link handling and latest SEO revisions; a unit test verifies weekly boundaries. Real hosted charts and browser appearance require verification after migration.

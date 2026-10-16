@@ -3,6 +3,8 @@ import {useEffect, useRef, useState} from 'react';
 import {Workspace, statusName} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
 import {seoFields, seoStatuses, SeoValues, seoInput} from '@/lib/seo-health';
+import {compareSeo, reviewSeo} from '@/lib/seo-review';
+import SeoTrend from '@/components/seo-trend';
 type Audit = {
   id: string;
   measurement_date: string;
@@ -61,6 +63,8 @@ export default function LiveSeoHealth({data, onChanged}: {data: Workspace; onCha
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [search, setSearch] = useState('');
+  const [attentionOnly, setAttentionOnly] = useState(false);
+  const [versionId, setVersionId] = useState('');
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const lock = useRef(false);
@@ -101,6 +105,7 @@ export default function LiveSeoHealth({data, onChanged}: {data: Workspace; onCha
       setNotes(selected?.notes || {});
       setSource(selected?.source || '');
       setReason('');
+      setVersionId('');
       setDirty(false);
       pending.current = null;
     } catch (e) {
@@ -142,6 +147,15 @@ export default function LiveSeoHealth({data, onChanged}: {data: Workspace; onCha
     }
   }
   const member = (id: string) => data.members.find(m => m.id === id)?.display_name || 'Team member';
+  const visibleSites = (catalog?.websites || []).filter(w => {
+    const review = reviewSeo(w.fields);
+    return (
+      `${w.name} ${w.country}`.toLowerCase().includes(search.toLowerCase()) &&
+      (!attentionOnly || review.issues.length > 0 || review.missing.length > 0 || !w.latest_audit)
+    );
+  });
+  const selectedVersion = catalog?.revisions.find(r => r.id === versionId);
+  const latestVersion = catalog?.revisions[0];
   function change(key: string, value: string | number | null) {
     setFields({...fields, [key]: value});
     setDirty(true);
@@ -180,9 +194,17 @@ export default function LiveSeoHealth({data, onChanged}: {data: Workspace; onCha
       {!catalog && !error && <p>Loading website health…</p>}
       {!site && catalog && (
         <>
+          <p className="form-hint">
+            {catalog.websites.length} websites · {catalog.websites.filter(w => !!w.latest_audit).length} with a dated
+            audit · {catalog.websites.filter(w => reviewSeo(w.fields).issues.length > 0).length} with checklist issues
+          </p>
           <label className="field">
             Find a website
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Website or country" />
+          </label>
+          <label className="checkbox-field">
+            <input type="checkbox" checked={attentionOnly} onChange={e => setAttentionOnly(e.target.checked)} />
+            Show websites needing attention
           </label>
           <section className="card table-wrap">
             <table>
@@ -194,39 +216,60 @@ export default function LiveSeoHealth({data, onChanged}: {data: Workspace; onCha
                   <th>Source</th>
                   <th>Analytics</th>
                   <th>Page load</th>
+                  <th>Needs attention</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
-                {catalog.websites
-                  .filter(w => `${w.name} ${w.country}`.toLowerCase().includes(search.toLowerCase()))
-                  .map(w => (
-                    <tr key={w.id}>
-                      <td>
-                        <strong>{w.name}</strong>
-                        <small className="block">
-                          {w.country}
-                          {w.archived_at || w.status === 'archived' ? ' · Archived' : ''}
-                        </small>
-                      </td>
-                      <td>{w.latest_audit ? `${w.latest_audit.score}/100` : 'Not recorded'}</td>
-                      <td>{w.latest_audit?.measurement_date || 'Not recorded'}</td>
-                      <td>{w.latest_audit?.source || '—'}</td>
-                      <td>{statusName(String(w.fields.google_analytics || 'unknown'))}</td>
-                      <td>
-                        {typeof w.fields.page_seconds === 'number' ? `${w.fields.page_seconds} s` : 'Not recorded'}
-                      </td>
-                      <td>
-                        <button className="text-button" disabled={busy} onClick={() => open(w.id)}>
-                          Open SEO form
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                {visibleSites.map(w => (
+                  <tr key={w.id}>
+                    <td>
+                      <strong>{w.name}</strong>
+                      <small className="block">
+                        {w.country}
+                        {w.archived_at || w.status === 'archived' ? ' · Archived' : ''}
+                      </small>
+                    </td>
+                    <td>{w.latest_audit ? `${w.latest_audit.score}/100` : 'Not recorded'}</td>
+                    <td>{w.latest_audit?.measurement_date || 'Not recorded'}</td>
+                    <td>{w.latest_audit?.source || '—'}</td>
+                    <td>{statusName(String(w.fields.google_analytics || 'unknown'))}</td>
+                    <td>{typeof w.fields.page_seconds === 'number' ? `${w.fields.page_seconds} s` : 'Not recorded'}</td>
+                    <td>
+                      <details>
+                        <summary>
+                          {reviewSeo(w.fields).issues.length} issues · {reviewSeo(w.fields).missing.length} missing
+                          fields
+                        </summary>
+                        <ul>
+                          {reviewSeo(w.fields).issues.map(f => (
+                            <li key={f.key}>
+                              {f.label}: {statusName(String(w.fields[f.key]))}
+                            </li>
+                          ))}
+                        </ul>
+                        <p>
+                          Not recorded:{' '}
+                          {reviewSeo(w.fields)
+                            .missing.map(f => f.label)
+                            .join(', ') || 'None'}
+                        </p>
+                      </details>
+                    </td>
+                    <td>
+                      <button className="text-button" disabled={busy} onClick={() => open(w.id)}>
+                        Open SEO form
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
             {!catalog.websites.length && (
               <p className="padded">Add a website or import the source sheet below to get started.</p>
+            )}
+            {!!catalog.websites.length && !visibleSites.length && (
+              <p className="padded">No websites match these filters.</p>
             )}
           </section>
           <p className="form-hint">
@@ -237,6 +280,28 @@ export default function LiveSeoHealth({data, onChanged}: {data: Workspace; onCha
       )}
       {site && catalog && (
         <>
+          <SeoTrend key={site.id} audits={catalog.audits} />
+          <section className="card padded">
+            <h3>Latest saved review</h3>
+            <p>
+              {reviewSeo(site.fields).issues.length} checklist issues · {reviewSeo(site.fields).missing.length} fields
+              not recorded.
+            </p>
+            <p className="form-hint">
+              Generated maintenance reference dates are excluded from completeness and issue counts.
+            </p>
+            <details>
+              <summary>Review checklist issues</summary>
+              <ul>
+                {reviewSeo(site.fields).issues.map(f => (
+                  <li key={f.key}>
+                    {f.label}: {statusName(String(site.fields[f.key]))}
+                  </li>
+                ))}
+              </ul>
+              {!reviewSeo(site.fields).issues.length && <p>No issues flagged by recorded checklist statuses.</p>}
+            </details>
+          </section>
           <form
             className="card padded seo-fixed-form"
             onSubmit={e => {
@@ -412,6 +477,58 @@ export default function LiveSeoHealth({data, onChanged}: {data: Workspace; onCha
             {!catalog.audits.length && <p>No audits recorded yet.</p>}
             <h3>Form change history</h3>
             <p className="form-hint">Latest 30 saved versions. Every save preserves the previous version.</p>
+            <label className="field">
+              Compare a saved version with the latest saved version
+              <select value={versionId} onChange={e => setVersionId(e.target.value)}>
+                <option value="">Choose a version</option>
+                {catalog.revisions.slice(1).map(r => (
+                  <option key={r.id} value={r.id}>
+                    Version {r.revision}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {selectedVersion && latestVersion && (
+              <div className="table-wrap">
+                <p>
+                  Version {selectedVersion.revision} → Version {latestVersion.revision}. Automatic maintenance
+                  references and summaries are excluded.
+                </p>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Field</th>
+                      <th>Previous</th>
+                      <th>Latest saved</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {compareSeo(selectedVersion, latestVersion).map(f => (
+                      <tr key={f.key}>
+                        <th>{f.label}</th>
+                        {[selectedVersion, latestVersion].map(r => (
+                          <td key={r.id}>
+                            {String(r.fields[f.key] ?? 'Not recorded') || 'Not recorded'}
+                            {r.notes[f.key] && <small className="block">Note: {r.notes[f.key]}</small>}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                    {selectedVersion.source !== latestVersion.source && (
+                      <tr>
+                        <th>Audit source</th>
+                        <td>{selectedVersion.source || 'Not recorded'}</td>
+                        <td>{latestVersion.source || 'Not recorded'}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+                {!compareSeo(selectedVersion, latestVersion).length &&
+                  selectedVersion.source === latestVersion.source && (
+                    <p>No recorded field or note changes between these versions.</p>
+                  )}
+              </div>
+            )}
             {catalog.revisions.map(r => (
               <details key={r.id} className="seo-history">
                 <summary>

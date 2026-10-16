@@ -1,9 +1,13 @@
 'use client';
 import {useEffect, useRef, useState} from 'react';
+import {useSearchParams} from 'next/navigation';
 import {Workspace, statusName} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
 import {seoFields, seoStatuses, SeoValues, seoInput} from '@/lib/seo-health';
-import {compareSeo, reviewSeo} from '@/lib/seo-review';
+import {compareSeo, reviewSeo, seoExportRows} from '@/lib/seo-review';
+import {workspaceDate} from '@/lib/dates';
+import {downloadRows, type ExportFormat} from '@/lib/export';
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import SeoTrend from '@/components/seo-trend';
 type Audit = {
   id: string;
@@ -69,11 +73,30 @@ export default function LiveSeoHealth({data, onChanged}: {data: Workspace; onCha
   const [confirmed, setConfirmed] = useState(false);
   const lock = useRef(false);
   const pending = useRef<{key: string; id: string} | null>(null);
+  // ?website=<id> opens that website's form, so dashboard links and shared URLs land on it.
+  const initialSite = useRef(useSearchParams().get('website'));
+  function show(d: Catalog, id: string | null) {
+    setCatalog(d);
+    const selected = id ? d.websites[0] || null : null;
+    setSite(selected);
+    setFields(selected ? {...selected.fields, website_url: selected.canonical_url, cms: selected.cms || ''} : {});
+    setNotes(selected?.notes || {});
+    setSource(selected?.source || '');
+    setReason('');
+    setVersionId('');
+    setDirty(false);
+    pending.current = null;
+    const url = new URL(window.location.href);
+    if (selected) url.searchParams.set('website', selected.id);
+    else url.searchParams.delete('website');
+    if (url.href !== window.location.href) window.history.replaceState(window.history.state, '', url);
+  }
   useEffect(() => {
     let cancelled = false;
-    workspaceFetch('/api/seo-health')
+    const id = uuid.test(initialSite.current || '') ? initialSite.current : null;
+    workspaceFetch('/api/seo-health' + (id ? `?website=${id}` : ''))
       .then(d => {
-        if (!cancelled) setCatalog(d);
+        if (!cancelled) show(d, id);
       })
       .catch(e => {
         if (!cancelled) setError(e.message);
@@ -97,17 +120,7 @@ export default function LiveSeoHealth({data, onChanged}: {data: Workspace; onCha
     setBusy(true);
     setError('');
     try {
-      const d: Catalog = await workspaceFetch('/api/seo-health' + (id ? `?website=${id}` : ''));
-      setCatalog(d);
-      const selected = id ? d.websites[0] : null;
-      setSite(selected);
-      setFields(selected ? {...selected.fields, website_url: selected.canonical_url, cms: selected.cms || ''} : {});
-      setNotes(selected?.notes || {});
-      setSource(selected?.source || '');
-      setReason('');
-      setVersionId('');
-      setDirty(false);
-      pending.current = null;
+      show(await workspaceFetch('/api/seo-health' + (id ? `?website=${id}` : '')), id);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -154,6 +167,13 @@ export default function LiveSeoHealth({data, onChanged}: {data: Workspace; onCha
       (!attentionOnly || review.issues.length > 0 || review.missing.length > 0 || !w.latest_audit)
     );
   });
+  function exportSites(format: ExportFormat) {
+    setError('');
+    downloadRows(seoExportRows(visibleSites), format, 'SEO website health', workspaceDate(data.workspace.timezone));
+    setMessage(
+      `Exported ${visibleSites.length} of ${catalog?.websites.length ?? 0} websites, one column per form field.`,
+    );
+  }
   const selectedVersion = catalog?.revisions.find(r => r.id === versionId);
   const latestVersion = catalog?.revisions[0];
   function change(key: string, value: string | number | null) {
@@ -206,6 +226,14 @@ export default function LiveSeoHealth({data, onChanged}: {data: Workspace; onCha
             <input type="checkbox" checked={attentionOnly} onChange={e => setAttentionOnly(e.target.checked)} />
             Show websites needing attention
           </label>
+          <div className="row">
+            <button className="button secondary" disabled={!visibleSites.length} onClick={() => exportSites('csv')}>
+              Export CSV
+            </button>
+            <button className="button secondary" disabled={!visibleSites.length} onClick={() => exportSites('xlsx')}>
+              Export Excel
+            </button>
+          </div>
           <section className="card table-wrap">
             <table>
               <thead>

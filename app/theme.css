@@ -1729,6 +1729,26 @@ button.website-related-row:hover {
   gap: 7px;
   align-items: center;
 }
+.analytics-legend button {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  font-size: inherit;
+}
+.analytics-legend button:hover {
+  text-decoration: underline;
+}
+.kpi-link {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+}
+.kpi-link:hover {
+  border-color: #b9b0d4;
+}
 .analytics-legend i {
   width: 8px;
   height: 8px;

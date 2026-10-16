@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {compareSeo, reviewSeo} from '../lib/seo-review';
+import {compareSeo, reviewSeo, seoExportRows} from '../lib/seo-review';
+import {seoFields} from '../lib/seo-health';
 
 test('SEO review distinguishes unknown, missing, negative, and not-applicable statuses', () => {
   const review = reviewSeo({seo_implementation: 'no', google_analytics: 'unknown', seo_score: 0, qa: 'generated'});
@@ -19,4 +20,31 @@ test('SEO comparison retains note-only changes and zero scores, excluding automa
     changes.map(f => f.key),
     ['seo_score', 'google_analytics'],
   );
+});
+
+test('SEO exports have one labelled column per form field and flag automatic dates', () => {
+  const [row] = seoExportRows([
+    {
+      name: 'UK',
+      country: 'United Kingdom',
+      canonical_url: 'https://example.org',
+      cms: 'WordPress',
+      status: 'active',
+      archived_at: null,
+      fields: {seo_implementation: 'in_progress', seo_score: 0, plugin_updated: '2026-10-01'},
+      notes: {seo_implementation: 'Schema pending', plugin_updated: 'Automatically set'},
+      source: 'Sheet',
+      latest_audit: {score: 71, measurement_date: '2026-10-01', source: 'Lighthouse'},
+    },
+  ]);
+  for (const field of seoFields)
+    assert.ok(field.label in row || `${field.label} (automatic reference)` in row, `missing column for ${field.label}`);
+  assert.equal(row['Website URL'], 'https://example.org');
+  assert.equal(row['CMS Platform'], 'WordPress');
+  assert.equal(row['SEO Implementation'], 'In Progress');
+  assert.equal(row['SEO Rating'], 0);
+  assert.equal(row['Last Plugin Update (automatic reference)'], '2026-10-01');
+  assert.equal(row['Latest audit score'], 71);
+  assert.equal(row['Field notes'], 'SEO Implementation: Schema pending');
+  assert.match(String(row['Checklist issues']), /SEO Implementation/);
 });

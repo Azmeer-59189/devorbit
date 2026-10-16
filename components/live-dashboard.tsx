@@ -17,6 +17,7 @@ import {
 import {Workspace, statusName} from '@/lib/live-types';
 import {shiftDate, workspaceDate} from '@/lib/dates';
 import {workspaceFetch} from '@/lib/workspace-client';
+import {taskFiltersToSearch, type TaskFilters} from '@/lib/task-list';
 type Dashboard = {
   today: string;
   active_tasks: number;
@@ -59,11 +60,14 @@ function Empty() {
 export default function LiveDashboard({
   data,
   onTask,
-  onReports,
+  onTasks,
+  onSeo,
 }: {
   data: Workspace;
   onTask: (id: string) => void;
-  onReports: () => void;
+  /** Opens the task list with these URL filters. */
+  onTasks: (search: string) => void;
+  onSeo: (websiteId: string | null) => void;
 }) {
   const [end, setEnd] = useState(() => workspaceDate(data.workspace.timezone));
   const [start, setStart] = useState(() => shiftDate(workspaceDate(data.workspace.timezone), -27));
@@ -95,6 +99,10 @@ export default function LiveDashboard({
   const error = failure?.key === key ? failure.message : '';
   const name = (id: string | null) => data.members.find(m => m.id === id)?.display_name || 'Unassigned';
   const chartStyle = {fontSize: 12, color: '#625a70'};
+  // Task charts ignore the date range and filter by website and current owner, exactly
+  // like the task list, so the list opened from a chart shows the count that was clicked.
+  const drill = (filters: Partial<TaskFilters>) =>
+    onTasks(taskFiltersToSearch({website, owner: user, ...filters}).toString());
   return (
     <section className="live-analytics">
       <div className="analytics-heading">
@@ -180,16 +188,29 @@ export default function LiveDashboard({
         <>
           <div className="kpi-grid analytics-kpis">
             {[
-              {label: 'Active tasks · now', value: dashboard.active_tasks},
-              {label: 'Overdue · now', value: dashboard.overdue_tasks},
+              {label: 'Active tasks · now', value: dashboard.active_tasks, open: {status: 'open'}},
+              {label: 'Overdue · now', value: dashboard.overdue_tasks, open: {overdue: true}},
+              // Completion dates are not a task-list filter, so this tile has no drill-down.
               {label: 'Completed · selected dates', value: dashboard.completed_tasks},
-              {label: 'Matching tasks', value: dashboard.task_count},
-            ].map(k => (
-              <div className="card kpi" key={k.label}>
-                <div className="kpi-top">{k.label}</div>
-                <div className="kpi-value">{k.value}</div>
-              </div>
-            ))}
+              {label: 'Matching tasks', value: dashboard.task_count, open: {}},
+            ].map(k =>
+              k.open ? (
+                <button
+                  className="card kpi kpi-link"
+                  key={k.label}
+                  onClick={() => drill(k.open)}
+                  aria-label={`${k.label}: ${k.value}. View these tasks`}
+                >
+                  <div className="kpi-top">{k.label}</div>
+                  <div className="kpi-value">{k.value}</div>
+                </button>
+              ) : (
+                <div className="card kpi" key={k.label}>
+                  <div className="kpi-top">{k.label}</div>
+                  <div className="kpi-value">{k.value}</div>
+                </div>
+              ),
+            )}
           </div>
           <div className="analytics-grid">
             <article className="card analytics-chart">
@@ -206,6 +227,8 @@ export default function LiveDashboard({
                         innerRadius={60}
                         outerRadius={90}
                         isAnimationActive={false}
+                        cursor="pointer"
+                        onClick={(_, index) => drill({status: dashboard.statuses[index].progress})}
                       >
                         {dashboard.statuses.map((s, i) => (
                           <Cell key={s.progress} fill={colors[i % colors.length]} />
@@ -216,12 +239,13 @@ export default function LiveDashboard({
                   </ResponsiveContainer>
                   <div className="analytics-legend">
                     {dashboard.statuses.map((s, i) => (
-                      <span key={s.progress}>
+                      <button key={s.progress} onClick={() => drill({status: s.progress})}>
                         <i style={{background: colors[i % colors.length]}} />
                         {statusName(s.progress)} <strong>{s.count}</strong>
-                      </span>
+                      </button>
                     ))}
                   </div>
+                  <p className="form-hint">Select a slice or label to see those tasks.</p>
                 </>
               ) : (
                 <Empty />
@@ -233,21 +257,44 @@ export default function LiveDashboard({
                 Active tasks by current owner, with unassigned work separate. Pending requests do not change ownership.
               </p>
               {dashboard.workload.length ? (
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={dashboard.workload} accessibilityLayer style={chartStyle}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e6dfeb" />
-                    <XAxis dataKey="name" tick={{fontSize: 11}} interval={0} height={65} angle={-20} textAnchor="end" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip />
-                    <Bar
-                      dataKey="count"
-                      name="Active tasks"
-                      fill="#746095"
-                      radius={[4, 4, 0, 0]}
-                      isAnimationActive={false}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                <>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={dashboard.workload} accessibilityLayer style={chartStyle}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e6dfeb" />
+                      <XAxis
+                        dataKey="name"
+                        tick={{fontSize: 11}}
+                        interval={0}
+                        height={65}
+                        angle={-20}
+                        textAnchor="end"
+                      />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Bar
+                        dataKey="count"
+                        name="Active tasks"
+                        fill="#746095"
+                        radius={[4, 4, 0, 0]}
+                        isAnimationActive={false}
+                        cursor="pointer"
+                        onClick={(_, index) =>
+                          drill({status: 'open', owner: dashboard.workload[index].assignee_id || 'unassigned'})
+                        }
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div className="analytics-legend">
+                    {dashboard.workload.map(w => (
+                      <button
+                        key={w.assignee_id || 'unassigned'}
+                        onClick={() => drill({status: 'open', owner: w.assignee_id || 'unassigned'})}
+                      >
+                        {w.name} <strong>{w.count}</strong>
+                      </button>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <Empty />
               )}
@@ -262,8 +309,8 @@ export default function LiveDashboard({
                   their original source.
                 </p>
               </div>
-              <button className="text-button" onClick={onReports}>
-                Open reports
+              <button className="text-button" onClick={() => onSeo(website || null)}>
+                {website ? 'Open SEO form' : 'Open reports'}
               </button>
             </div>
             <label className="field analytics-source">
@@ -336,7 +383,12 @@ export default function LiveDashboard({
           </article>
           <section className="card analytics-records">
             <h3>Behind the numbers</h3>
-            <p>Charts use all matching records. The preview below shows up to 50 tasks.</p>
+            <p>
+              Charts use all matching records. The preview below shows up to 50 tasks.{' '}
+              <button className="text-button" onClick={() => drill({})}>
+                Open all {dashboard.task_count} in Tasks
+              </button>
+            </p>
             <details>
               <summary>
                 Task records ({dashboard.tasks.length} of {dashboard.task_count})

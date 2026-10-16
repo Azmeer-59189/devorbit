@@ -1,14 +1,23 @@
 'use client';
 import {useEffect, useRef, useState} from 'react';
-import {Task, Workspace, statusName} from '@/lib/live-types';
+import {useSearchParams} from 'next/navigation';
+import {Workspace, statusName} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
 import {taskActionInput} from '@/lib/live-validation';
-import {boardTransition, taskStatuses} from '@/lib/task-list';
-type ListTask = Task & {
-  website_ids: string[];
-  pending_assignment_id: string | null;
-  pending_recipient_id: string | null;
-};
+import {workspaceDate} from '@/lib/dates';
+import {downloadRows, type ExportFormat} from '@/lib/export';
+import {
+  boardTransition,
+  taskExportLimit,
+  taskExportRows,
+  taskFilterDefaults as defaults,
+  taskFiltersFromSearch,
+  taskFiltersToSearch,
+  taskStatuses,
+  taskStatusFilters,
+  type TaskListRow as ListTask,
+} from '@/lib/task-list';
+const myScopes = ['assigned', 'pending', 'created', 'completed'];
 type Result = {
   tasks: ListTask[];
   total: number;
@@ -16,19 +25,6 @@ type Result = {
   page_size: number;
   board_counts: Record<string, number>;
   unassigned: number;
-};
-const defaults = {
-  q: '',
-  website: '',
-  owner: '',
-  creator: '',
-  status: '',
-  priority: '',
-  start: '',
-  end: '',
-  overdue: false,
-  sort: 'newest',
-  page: 1,
 };
 export default function LiveTasks({
   data,
@@ -43,8 +39,14 @@ export default function LiveTasks({
   onChanged: () => Promise<void>;
   onCreate: () => void;
 }) {
-  const [filters, setFilters] = useState(defaults);
-  const [scope, setScope] = useState(mine ? 'assigned' : 'all');
+  // Filters start from the URL (e.g. a dashboard drill-down) and are written back to it,
+  // so a filtered list can be bookmarked or shared.
+  const searchParams = useSearchParams();
+  const [filters, setFilters] = useState(() => taskFiltersFromSearch(searchParams));
+  const [scope, setScope] = useState(() => {
+    const value = searchParams.get('scope') || '';
+    return mine ? (myScopes.includes(value) ? value : 'assigned') : 'all';
+  });
   const [view, setView] = useState('list');
   const [refresh, setRefresh] = useState(0);
   const [snapshot, setSnapshot] = useState<{key: string; value: Result} | null>(null);
@@ -56,6 +58,17 @@ export default function LiveTasks({
   const dragged = useRef<ListTask | null>(null);
   const params = new URLSearchParams(Object.entries({...filters, scope}).map(([key, value]) => [key, String(value)]));
   const key = params.toString() + `&refresh=${refresh}`;
+  const shareable = taskFiltersToSearch(filters);
+  if (mine && scope !== 'assigned') shareable.set('scope', scope);
+  const shared = shareable.toString();
+  useEffect(() => {
+    const url = new URLSearchParams(window.location.search);
+    for (const name of [...Object.keys(defaults), 'scope']) url.delete(name);
+    for (const [name, value] of new URLSearchParams(shared)) url.set(name, value);
+    const search = url.toString();
+    if (search !== window.location.search.slice(1))
+      window.history.replaceState(window.history.state, '', window.location.pathname + (search ? '?' + search : ''));
+  }, [shared]);
   useEffect(() => {
     let cancelled = false;
     const timer = setTimeout(() => {
@@ -80,6 +93,34 @@ export default function LiveTasks({
   const name = (id: string | null) => data.members.find(m => m.id === id)?.display_name || 'Unassigned';
   const sites = (task: ListTask) =>
     task.website_ids.map(id => data.websites.find(w => w.id === id)?.name || 'Website').join(', ') || 'General work';
+  async function exportTasks(format: ExportFormat) {
+    if (lock.current) return;
+    lock.current = true;
+    setBusy(true);
+    setActionError('');
+    setMessage('');
+    try {
+      const all = new URLSearchParams(params);
+      all.set('page', '1');
+      all.set('export', 'true');
+      const value: Result = await workspaceFetch(`/api/tasks?${all}`);
+      if (value.page_size !== taskExportLimit)
+        throw new Error('Exports need the latest database migration (015). Ask your administrator to apply it.');
+      const rows = taskExportRows(value.tasks, {...data, timezone: data.workspace.timezone});
+      if (!rows.length) throw new Error('No tasks match these filters.');
+      downloadRows(rows, format, 'Tasks', workspaceDate(data.workspace.timezone));
+      setMessage(
+        value.total > rows.length
+          ? `Exported the first ${rows.length.toLocaleString()} of ${value.total.toLocaleString()} matching tasks. Narrow the filters to export the rest.`
+          : `Exported ${rows.length} matching tasks.`,
+      );
+    } catch (e) {
+      setActionError((e as Error).message);
+    } finally {
+      lock.current = false;
+      setBusy(false);
+    }
+  }
   function filter(p: Partial<typeof defaults>) {
     setFilters({...filters, ...p, page: 1});
   }
@@ -167,9 +208,17 @@ export default function LiveTasks({
             </button>
           ))}
         </div>
-        <button className="button secondary" disabled={busy} onClick={() => setRefresh(n => n + 1)}>
-          Refresh tasks
-        </button>
+        <div className="row">
+          <button className="button secondary" disabled={busy} onClick={() => exportTasks('csv')}>
+            Export CSV
+          </button>
+          <button className="button secondary" disabled={busy} onClick={() => exportTasks('xlsx')}>
+            Export Excel
+          </button>
+          <button className="button secondary" disabled={busy} onClick={() => setRefresh(n => n + 1)}>
+            Refresh tasks
+          </button>
+        </div>
       </div>
       {mine && (
         <div className="simple-task-tabs" role="group" aria-label="My task category">
@@ -228,9 +277,9 @@ export default function LiveTasks({
           Status
           <select value={filters.status} onChange={e => filter({status: e.target.value})}>
             <option value="">All statuses</option>
-            {taskStatuses.map(s => (
+            {taskStatusFilters.map(s => (
               <option key={s} value={s}>
-                {statusName(s)}
+                {s === 'open' ? 'Open (not completed or cancelled)' : statusName(s)}
               </option>
             ))}
           </select>

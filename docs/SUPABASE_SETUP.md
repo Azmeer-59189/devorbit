@@ -178,3 +178,9 @@ Kanban columns display accepted tasks from the current page. Column counts inclu
 
 The workspace overview still shows a recent-task preview, while the full Tasks page queries independently across all matching records. Open task links work even when a task is outside the overview's preview. Test list/board behavior in your browser after applying the migration.
 
+
+# Chart drill-down and exports (migration 015)
+
+Run `supabase/migrations/202610160015_task_list_open_and_export.sql` once after migrations 001–014, keeping RLS enabled. Refresh DevOrbit. No environment changes are needed.
+
+The task list gains an **Open** status filter (anything not completed or cancelled), which is how the Home page counts active work, so selecting a workload bar or the Active tasks KPI opens a list with the same count. Exports request up to 5,000 matching tasks in one call; if more match, the app says how many were left out. Until this migration is applied, task exports report that the migration is missing and chart links that use the Open filter show an invalid-filter message. SEO & Website Health exports need no migration.

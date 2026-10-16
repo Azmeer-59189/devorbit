@@ -1554,6 +1554,47 @@ test('transactional creation and assignment RPCs enforce roles, workspace isolat
         await assert.rejects(rpc('workspace_task_list', {}), /Active membership/i);
       },
     );
+    await t.test('dashboard counts reconcile with the task list it drills into; export returns every row', async () => {
+      await db.exec('reset role');
+      await db.exec(await readFile('supabase/migrations/202610160015_task_list_open_and_export.sql', 'utf8'));
+      await db.exec(
+        "update public.tasks set progress='completed',completed_at=now() where title in ('Page fixture 001','Page fixture 002','Page fixture 003')",
+      );
+      await db.exec(
+        "update public.tasks set due_date='2020-01-01' where title in ('Page fixture 004','Page fixture 005')",
+      );
+      const manager = '00000000-0000-4000-8000-000000000006';
+      await asUser(manager);
+      type List = {total: number; page: number; page_size: number; tasks: unknown[]};
+      const list = async (filters: object) => (await rpc('workspace_task_list', filters)) as unknown as List;
+      const dashboard = (await rpc('workspace_dashboard', {
+        start: '2026-10-01',
+        end: '2026-10-16',
+        user_id: null,
+        website_id: null,
+        limit: 50,
+        offset: 0,
+        source: '',
+      })) as unknown as {
+        active_tasks: number;
+        overdue_tasks: number;
+        task_count: number;
+        statuses: {progress: string; count: number}[];
+        workload: {assignee_id: string | null; count: number}[];
+      };
+      assert.equal((await list({status: 'open'})).total, dashboard.active_tasks);
+      assert.equal((await list({overdue: true})).total, dashboard.overdue_tasks);
+      assert.equal((await list({})).total, dashboard.task_count);
+      for (const s of dashboard.statuses) assert.equal((await list({status: s.progress})).total, s.count);
+      for (const w of dashboard.workload)
+        assert.equal((await list({status: 'open', owner: w.assignee_id || 'unassigned'})).total, w.count);
+      assert.equal((await list({q: 'Page fixture', status: 'open'})).total, 57);
+      assert.equal((await list({q: 'Page fixture', status: 'completed'})).total, 3);
+      const all = await list({q: 'Page fixture', export: true, page: 3});
+      assert.deepEqual([all.total, all.page, all.page_size, all.tasks.length], [60, 1, 5000, 60]);
+      assert.equal((await list({q: 'Page fixture'})).page_size, 25);
+      await assert.rejects(rpc('workspace_task_list', {status: 'active'}), /Invalid/i);
+    });
     await t.test('anonymous RPCs are forbidden', async () => {
       await db.exec('reset role;set role anon;');
       await assert.rejects(

@@ -26,10 +26,10 @@ npm run check:supabase   # credential-safe connection check
 
 ## Features
 
-- **Home**: task status, workload, website and SEO charts with date, member and website filters.
+- **Home**: task status, workload, website and SEO charts with date, member and website filters. Select a KPI, status slice, workload bar or legend entry to open the matching tasks; the task list count equals the number selected.
 - **Websites**: registry with add, edit, archive and restore; detail view with linked tasks and reports.
-- **Tasks**: creation, assignment requests the recipient accepts or declines, handover, progress with blocker and reopen reasons, independent review, comments with mentions, collaborators, filters and editing with conflict detection.
-- **SEO reports and form builder**: administrator-defined templates with versioned, immutable published schemas; weekly submissions with append-only revisions; CSV export.
+- **Tasks**: creation, assignment requests the recipient accepts or declines, handover, progress with blocker and reopen reasons, independent review, comments with mentions, collaborators, filters and editing with conflict detection. Filters live in the URL, so a filtered list can be bookmarked or shared. **Export CSV** and **Export Excel** download every matching task (up to 5,000), not just the current page.
+- **SEO & Website Health**: one fixed form per website with dated audits and revision history. **Export CSV** and **Export Excel** download the listed websites with one column per form field; automatically filled maintenance dates are labelled "(automatic reference)". `/workspace/reports?website=<id>` opens a website's form directly. (The earlier template-based reporting tables remain in the database but are no longer shown.)
 - **Team**: email invitations (resend, cancel, expiry), roles and deactivation, with at least one administrator always kept.
 - **Notifications** for assignments, reviews and mentions.
 
@@ -48,7 +48,7 @@ See [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) for the architecture, data 
 
 ## Database setup
 
-Apply the migrations in `supabase/migrations/` in order (001–014) to the Supabase project, then bootstrap the first administrator. [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) has the step-by-step guide, including SMTP and invitation configuration.
+Apply the migrations in `supabase/migrations/` in order (001–015) to the Supabase project, then bootstrap the first administrator. [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) has the step-by-step guide, including SMTP and invitation configuration.
 
 ## Not yet verified
 

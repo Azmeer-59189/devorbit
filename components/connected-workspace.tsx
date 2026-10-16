@@ -142,6 +142,14 @@ export default function ConnectedWorkspace() {
   const openTaskId = (id: string) => go(withTask(pathname, id));
   const closeTask = () => go(withTask(pathname, null));
   const openWebsite = (id: string | null) => go(workspacePath('Websites', id));
+  // Drill-downs open a page with its filters or website already in the URL.
+  const openWith = (next: Page, search: string) => {
+    go(workspacePath(next) + (search ? `?${search}` : ''));
+    setMobile(false);
+    window.scrollTo({top: 0, left: 0, behavior: 'instant'});
+  };
+  const openSeo = (id: string | null) =>
+    openWith('SEO reports', id ? new URLSearchParams({website: id}).toString() : '');
   const navigate = (next: Page) => {
     if (next === page && !selectedWebsite) {
       setMobile(false);
@@ -498,7 +506,12 @@ export default function ConnectedWorkspace() {
                   </button>
                 </section>
               )}
-              <LiveDashboard data={data} onTask={openTaskId} onReports={() => navigate('SEO reports')} />
+              <LiveDashboard
+                data={data}
+                onTask={openTaskId}
+                onTasks={search => openWith('Team tasks', search)}
+                onSeo={openSeo}
+              />
               <section className="card">
                 <div className="card-heading">
                   <div>
@@ -522,7 +535,7 @@ export default function ConnectedWorkspace() {
               onBack={() => openWebsite(null)}
               onChanged={load}
               onTask={openTask}
-              onReports={() => navigate('SEO reports')}
+              onReports={() => openSeo(selectedWebsite)}
             />
           )}
           {page === 'Websites' && !selectedWebsite && (

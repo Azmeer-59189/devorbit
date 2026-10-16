@@ -1,5 +1,7 @@
 # Developer Operations Dashboard
 
+> **SEO scope update:** The product owner has replaced the configurable template workflow with one fixed SEO & Website Health form matching all 33 fields in the supplied International Website's Dashboard. Use the source categories, dated audits, preserved revisions, network summary and reviewed real-data import. Template-management requirements below are historical reference; do not require users to create or publish templates for routine SEO work.
+
 > **Scope update from product owner:** Time management is removed from this version. Work-log entry, timesheets, time exports and all time-based charts are excluded. The historical TIME requirements below are retained as reference only and do not authorize reintroducing these features. Focus on websites, tasks, team collaboration and reporting. Existing historical time records are preserved, with application access disabled by migration 010.
 ## Software Requirements Specification (SRS) & Implementation Handoff
 

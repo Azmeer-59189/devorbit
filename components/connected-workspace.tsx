@@ -26,16 +26,16 @@ import {
 import {createBrowserSupabase} from '@/lib/supabase';
 import {taskInput, websiteInput} from '@/lib/live-validation';
 
-import {Workspace, Task, Assignment, statusName, initials} from '@/lib/live-types';
+import {Workspace, Task, statusName, initials} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
 import {useDialog} from '@/components/live-dialog';
+import LiveTasks from '@/components/live-tasks';
 import LiveTaskPanel from '@/components/live-task-panel';
 import LiveTeam from '@/components/live-team';
 import LiveNotifications from '@/components/live-notifications';
-import LiveReporting from '@/components/live-reporting';
+import LiveSeoHealth from '@/components/live-seo-health';
 import LiveWebsite from '@/components/live-website';
 import LiveDashboard from '@/components/live-dashboard';
-import {taskMatches, TaskFilters} from '@/lib/task-management';
 import {workspaceDate} from '@/lib/dates';
 import {adminPages, parseWorkspacePath, workspacePath, type Page} from '@/lib/workspace-routes';
 
@@ -43,7 +43,8 @@ const pageLabels: Record<string, string> = {
   Overview: 'Home',
   'Team tasks': 'Tasks',
   'Team & roles': 'Team',
-  'SEO reports': 'Reports',
+  'SEO reports': 'SEO & Website Health',
+  'Form builder': 'SEO & Website Health',
 };
 const pageLabel = (page: string) => pageLabels[page] || page;
 // Shallow navigation: updates the URL and history without reloading the workspace.
@@ -63,17 +64,10 @@ export default function ConnectedWorkspace() {
   const taskParam = searchParams.get('task');
   const [query, setQuery] = useState('');
   const [websiteFilter, setWebsiteFilter] = useState('all');
-  const [taskFilters, setTaskFilters] = useState<TaskFilters>({
-    status: 'all',
-    assignee: 'all',
-    priority: 'all',
-    overdue: false,
-  });
   const [websiteView, setWebsiteView] = useState('active');
   const [dialog, setDialog] = useState<'website' | 'task' | null>(null);
   const [fetchedTask, setFetchedTask] = useState<Task | null>(null);
   const [mobile, setMobile] = useState(false);
-  const [responding, setResponding] = useState(false);
   const load = useCallback(async () => {
     try {
       setData(await workspaceFetch('/api/workspace'));
@@ -209,20 +203,7 @@ export default function ConnectedWorkspace() {
   const taskSites = (task: Task) => data.taskWebsites.filter(l => l.task_id === task.id).map(l => l.website_id);
   const myPending = data.assignments.filter(a => a.recipient_id === data.profile.id);
   const active = data.tasks.filter(t => t.assignee_id && !['completed', 'cancelled'].includes(t.progress));
-  const tasks = data.tasks.filter(
-    t =>
-      (page !== 'My tasks' || t.assignee_id === data.profile.id || myPending.some(a => a.task_id === t.id)) &&
-      (websiteFilter === 'all' || taskSites(t).includes(websiteFilter)) &&
-      taskMatches(t, taskFilters, workspaceDate(data.workspace.timezone)) &&
-      `${t.title} ${t.description} ${t.category}`.toLowerCase().includes(query.toLowerCase()),
-  );
-  const filteredTasks =
-    !!query ||
-    websiteFilter !== 'all' ||
-    taskFilters.status !== 'all' ||
-    taskFilters.assignee !== 'all' ||
-    taskFilters.priority !== 'all' ||
-    taskFilters.overdue;
+  const filteredTasks = !!query || websiteFilter !== 'all';
   const websites = data.websites.filter(
     s =>
       (websiteView === 'archived'
@@ -230,27 +211,6 @@ export default function ConnectedWorkspace() {
         : !s.archived_at && s.status !== 'archived') &&
       `${s.name} ${s.country} ${s.canonical_url}`.toLowerCase().includes(query.toLowerCase()),
   );
-  async function respond(assignment: Assignment, accept: boolean) {
-    const reason = accept ? '' : window.prompt('Why are you declining this assignment?');
-    if (!accept && !reason?.trim()) return;
-    setResponding(true);
-    setError('');
-    try {
-      await workspaceFetch('/api/assignments', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({request_id: assignment.id, accept, reason: reason || ''}),
-      });
-      setMessage(
-        accept ? 'Assignment accepted. You now own this task.' : 'Assignment declined. Your reason is preserved.',
-      );
-      await load();
-    } catch (error) {
-      setError((error as Error).message);
-    } finally {
-      setResponding(false);
-    }
-  }
   function tasksTable(items: Task[]) {
     return items.length ? (
       <div className="table-wrap">
@@ -373,6 +333,7 @@ export default function ConnectedWorkspace() {
               ['Overview', LayoutDashboard],
               ['Websites', Globe2],
               ['Team tasks', ListTodo],
+              ['SEO reports', Globe2],
               ['Team & roles', Users],
             ] as const
           )
@@ -393,23 +354,19 @@ export default function ConnectedWorkspace() {
               [
                 ['My tasks', Users],
                 ['Notifications', Bell],
-                ['SEO reports', Globe2],
-                ['Form builder', ListTodo],
                 ['Account', ShieldCheck],
               ] as const
-            )
-              .filter(([label]) => label !== 'Form builder' || data.profile.role === 'administrator')
-              .map(([label, Icon]) => (
-                <button
-                  key={label}
-                  className={`nav-item ${page === label ? 'active' : ''}`}
-                  onClick={() => navigate(label)}
-                >
-                  <Icon size={18} />
-                  <span>{pageLabel(label)}</span>
-                  {label === 'My tasks' && myPending.length > 0 && <em>{myPending.length}</em>}
-                </button>
-              ))}
+            ).map(([label, Icon]) => (
+              <button
+                key={label}
+                className={`nav-item ${page === label ? 'active' : ''}`}
+                onClick={() => navigate(label)}
+              >
+                <Icon size={18} />
+                <span>{pageLabel(label)}</span>
+                {label === 'My tasks' && myPending.length > 0 && <em>{myPending.length}</em>}
+              </button>
+            ))}
           </details>
         </div>
         <div className="sidebar-bottom">
@@ -461,9 +418,9 @@ export default function ConnectedWorkspace() {
                       : page === 'Team & roles'
                         ? 'Add teammates and manage their access.'
                         : page === 'SEO reports'
-                          ? 'Submit a website report or open an earlier report.'
+                          ? 'Update website health, record an SEO audit, and review previous results.'
                           : page === 'Form builder'
-                            ? 'Set up the forms your team uses for website reports.'
+                            ? 'Update website health with your fixed SEO form.'
                             : page === 'Account'
                               ? 'Your profile and workspace details.'
                               : 'Your work and updates.'}
@@ -669,142 +626,19 @@ export default function ConnectedWorkspace() {
             </>
           )}
           {(page === 'Team tasks' || page === 'My tasks') && (
-            <>
-              <div className="simple-task-tabs" role="group" aria-label="Task view">
-                <button
-                  className="button secondary"
-                  aria-pressed={page === 'Team tasks'}
-                  onClick={() => go(workspacePath('Team tasks'))}
-                >
-                  All tasks
-                </button>
-                <button
-                  className="button secondary"
-                  aria-pressed={page === 'My tasks'}
-                  onClick={() => go(workspacePath('My tasks'))}
-                >
-                  My tasks{myPending.length > 0 ? ` (${myPending.length} awaiting response)` : ''}
-                </button>
-              </div>
-              {page === 'My tasks' && myPending.length > 0 && (
-                <div className="request-grid live-requests">
-                  {myPending.map(a => {
-                    const task = data.tasks.find(t => t.id === a.task_id);
-                    return (
-                      task && (
-                        <section className="card request-card" key={a.id}>
-                          <span className="badge pending">Awaiting your acceptance</span>
-                          <h2>{task.title}</h2>
-                          <p>{task.description || 'You have been invited to own this task.'}</p>
-                          <div className="request-actions">
-                            <button className="button primary" disabled={responding} onClick={() => respond(a, true)}>
-                              <Check size={14} />
-                              Accept
-                            </button>
-                            <button
-                              className="button secondary"
-                              disabled={responding}
-                              onClick={() => respond(a, false)}
-                            >
-                              Decline
-                            </button>
-                          </div>
-                        </section>
-                      )
-                    );
-                  })}
-                </div>
-              )}
-              <div className="section-toolbar">
-                <strong>{tasks.length} tasks</strong>
-                <div className="row">
-                  <label className="live-search">
-                    <Search size={15} />
-                    <input
-                      aria-label="Search tasks"
-                      placeholder="Search tasks…"
-                      value={query}
-                      onChange={e => setQuery(e.target.value)}
-                    />
-                  </label>
-                  <select
-                    className="live-select"
-                    aria-label="Filter by website"
-                    value={websiteFilter}
-                    onChange={e => setWebsiteFilter(e.target.value)}
-                  >
-                    <option value="all">All websites</option>
-                    {data.websites.map(site => (
-                      <option key={site.id} value={site.id}>
-                        {site.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="task-filter-panel">
-                {(['status', 'assignee', 'priority'] as const).map(k => (
-                  <label className="field" key={k}>
-                    {k === 'assignee' ? 'Owner' : statusName(k)}
-                    <select
-                      value={taskFilters[k]}
-                      onChange={e => setTaskFilters({...taskFilters, [k]: e.target.value})}
-                    >
-                      <option value="all">
-                        All {k === 'assignee' ? 'owners' : k === 'status' ? 'statuses' : 'priorities'}
-                      </option>
-                      {k === 'assignee' ? (
-                        <>
-                          <option value="unassigned">Unassigned</option>
-                          {data.members.map(m => (
-                            <option key={m.id} value={m.id}>
-                              {m.display_name}
-                              {m.active === false ? ' (inactive)' : ''}
-                            </option>
-                          ))}
-                        </>
-                      ) : (
-                        (k === 'status'
-                          ? ['to_do', 'in_progress', 'blocked', 'in_review', 'completed', 'cancelled']
-                          : ['low', 'medium', 'high', 'urgent']
-                        ).map(v => (
-                          <option key={v} value={v}>
-                            {statusName(v)}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                  </label>
-                ))}
-                <label className="checkbox-field">
-                  <input
-                    type="checkbox"
-                    checked={taskFilters.overdue}
-                    onChange={e => setTaskFilters({...taskFilters, overdue: e.target.checked})}
-                  />
-                  Overdue only
-                </label>
-                {filteredTasks && (
-                  <button
-                    className="text-button"
-                    onClick={() => {
-                      setTaskFilters({status: 'all', assignee: 'all', priority: 'all', overdue: false});
-                      setWebsiteFilter('all');
-                      setQuery('');
-                    }}
-                  >
-                    Clear filters
-                  </button>
-                )}
-              </div>
-              <section className="card">{tasksTable(tasks)}</section>
-              <p className="footnote">
-                Showing up to the latest 100 tasks. Pending requests are separate from accepted ownership.
-              </p>
-            </>
+            <LiveTasks
+              key={page}
+              data={data}
+              mine={page === 'My tasks'}
+              onOpen={openTaskId}
+              onChanged={load}
+              onCreate={() => setDialog('task')}
+            />
           )}
-          {page === 'SEO reports' && <LiveReporting data={data} />}
-          {page === 'Form builder' && data.profile.role === 'administrator' && <LiveReporting data={data} builder />}
+          {page === 'SEO reports' && <LiveSeoHealth data={data} onChanged={load} />}
+          {page === 'Form builder' && data.profile.role === 'administrator' && (
+            <LiveSeoHealth data={data} onChanged={load} />
+          )}
 
           {page === 'Team & roles' && data.profile.role === 'administrator' && (
             <LiveTeam data={data} onChanged={load} />

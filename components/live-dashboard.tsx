@@ -257,7 +257,10 @@ export default function LiveDashboard({
             <div className="analytics-heading">
               <div>
                 <h3>SEO score trend</h3>
-                <p>Latest report revisions only · 0–100 scale · measurements retain their original source.</p>
+                <p>
+                  Current audit observations and latest legacy report revisions · 0–100 scale · measurements retain
+                  their original source.
+                </p>
               </div>
               <button className="text-button" onClick={onReports}>
                 Open reports
@@ -307,7 +310,7 @@ export default function LiveDashboard({
                           <th>Website</th>
                           <th>Score</th>
                           <th>Source</th>
-                          <th>Report ID</th>
+                          <th>Audit / report ID</th>
                         </tr>
                       </thead>
                       <tbody>

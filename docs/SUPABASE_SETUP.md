@@ -143,3 +143,38 @@ Time management has been removed from the current product scope at the owner's r
 
 Menus, website tabs, time charts and time exports are removed. Legacy work-log API routes return 410, and authenticated execution of legacy work-log/timesheet RPCs is revoked. The dashboard now queries tasks and SEO reporting only. Existing time records and historical migrations remain intact; no data is deleted. Older time-related setup instructions below are historical and no longer apply to this version.
 
+# Fixed SEO form (migration 011)
+
+The SEO module now uses one fixed form matching the Google Sheet. No template creation or publication is needed.
+
+1. Run `supabase/migrations/202610160011_fixed_seo_form.sql` once after migrations 001–010, keeping RLS enabled.
+2. Refresh DevOrbit and open **SEO & Website Health** in the main menu.
+3. Select a website to fill the 33 fields. Website URL/CMS remain managed through Websites. Record the audit source when entering a score. Page speed is a duration in seconds, not a score. Notes preserve qualified statuses and original context.
+4. To import the real source snapshot, return to **All websites**, select **Review real-data import**, inspect the fields and existing-website match rules, tick the review checkbox and choose **Import reviewed data**. This is administrator-only. No environment changes are needed.
+
+The import creates missing websites, matches existing sites by URL, keeps existing registry details and SEO profiles, skips archived sites and conflicting audit scores, and retains raw source data/provenance. A clean import contains 14 websites, 33 fields per profile and 27 dated scores. Reruns skip previously imported website source identities. Historical audit authors are unknown; audit attribution identifies the importer and labels imported context. Dates come from the source, not the import date. The original Google Sheet is unchanged and is not automatically synchronized.
+
+All active members may update the checklist and record new dated audits within their workspace. Correcting another person's existing dated score requires administrator access; correcting one's own score requires a reason. Form saves preserve snapshots and use revision checks to reject stale edits. Clearing a form score does not delete earlier audits. History previews show the latest 100 audit rows and 30 form revisions; older records remain stored. Dashboard SEO trends now include the fixed-form observations, preferring them over legacy report observations for the same website/date/source. Form builder navigation is removed; old records and schema remain intact.
+
+# Automatic SEO comments and maintenance references (migration 012)
+
+Apply `supabase/migrations/202610160012_seo_automatic_summary.sql` once after 011, keeping RLS enabled. Refresh **SEO & Website Health**. No environment variables or background scheduler are needed.
+
+The comments/remarks field is generated from the current saved checklist and audit values, including missing/unfinished setup and recommended next actions. It is read-only and refreshes on reload/save. Imported original remarks and earlier saved versions remain in import provenance and history.
+
+Per the owner's preference, every website automatically displays QA and plugin reference dates one calendar month before today and a backup reference date seven days before today. These fields are read-only and explicitly labeled automatic references, not proof of completed work. Dates are derived from the workspace timezone whenever the page loads; saving captures that day's generated values in the revision snapshot. No maintenance work, plugin update, or backup is actually performed by the application. Earlier recorded values are not deleted. For example, October 16, 2026 produces September 16, 2026 and October 9, 2026; March 31 uses February's last valid day for the monthly reference.
+
+# Fixed monthly maintenance dates (migration 013)
+
+Apply `supabase/migrations/202610160013_monthly_maintenance_dates.sql` once after 012, then refresh. QA and plugin reference dates are now the **1st of the current month** for every website and stay unchanged throughout that month. Backup references retain the existing daily behavior: today minus seven days. For example, October 16 and October 17 both show October 1 for QA/plugins, while backups show October 9 and October 10 respectively. November 1 advances QA/plugins to November 1. These remain automatic references, not confirmed completion records. The older monthly-offset behavior described under migration 012 is superseded. No environment changes are needed.
+
+# Task lists and Kanban (migration 014)
+
+Run `supabase/migrations/202610160014_task_lists.sql` once after migrations 001–013, keeping RLS enabled. Refresh DevOrbit. No environment changes are needed.
+
+**Tasks** now offers List and Kanban layouts with server-side search, website/owner/creator/status/priority filters, creation-date filters, overdue-only, sorting and pagination (25 matching tasks per page). Date filters use the workspace timezone. The task list is no longer capped at the latest 100 records. **My tasks** includes Assigned (active accepted ownership), Pending (requests addressed to you), Created (you created it) and Completed (you currently own it and it is completed).
+
+Kanban columns display accepted tasks from the current page. Column counts include all matching pages; use Previous/Next to browse more cards. Unassigned tasks and pending requests are also listed separately. A pending handover keeps the accepted owner/card until acceptance. Drag a permitted card into a column or use its keyboard/touch-friendly Move selector. Blocking and reopening require reasons. Cancelling asks for confirmation. Review-required tasks cannot be completed on the board; use task details for the independent review decision. All moves go through the existing authenticated task mutation API and current revision checks; no optimistic bypass is applied.
+
+The workspace overview still shows a recent-task preview, while the full Tasks page queries independently across all matching records. Open task links work even when a task is outside the overview's preview. Test list/board behavior in your browser after applying the migration.
+

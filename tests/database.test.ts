@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {seoFields} from '../lib/reporting';
+import {prepareSeoImport} from '../lib/seo-import';
 import {PGlite} from '@electric-sql/pglite';
 
 // Real PostgreSQL engine, isolated in memory. No production credentials or records.
@@ -1271,6 +1272,286 @@ test('transactional creation and assignment RPCs enforce roles, workspace isolat
           /permission denied/i,
         );
         await assert.rejects(rpc('save_workspace_work_log', {}), /permission denied/i);
+      },
+    );
+    await t.test('fixed SEO form validates scope, versions, audit corrections and reviewed source import', async () => {
+      await db.exec('reset role');
+      await db.exec(await readFile('supabase/migrations/202610160011_fixed_seo_form.sql', 'utf8'));
+      const manager = '00000000-0000-4000-8000-000000000006';
+      await asUser(manager);
+      const input = {
+        request_id: request(),
+        website_id: siteA,
+        expected_revision: 0,
+        fields: {seo_score: 70, audit_date: '2026-10-15', google_analytics: 'unknown', page_seconds: 0.953},
+        notes: {google_analytics: 'Not checked'},
+        source: 'Manual test',
+        reason: '',
+      };
+      assert.equal(await rpc('save_fixed_seo', input), siteA);
+      assert.equal(await rpc('save_fixed_seo', input), siteA);
+      await assert.rejects(rpc('save_fixed_seo', {...input, request_id: request()}), /changed/i);
+      await assert.rejects(
+        rpc('save_fixed_seo', {
+          ...input,
+          request_id: request(),
+          expected_revision: 1,
+          fields: {...input.fields, seo_score: 101},
+        }),
+        /range/i,
+      );
+      await assert.rejects(
+        rpc('save_fixed_seo', {
+          ...input,
+          request_id: request(),
+          expected_revision: 1,
+          fields: {...input.fields, google_analytics: 'maybe'},
+        }),
+        /status/i,
+      );
+      await assert.rejects(
+        rpc('save_fixed_seo', {
+          ...input,
+          request_id: request(),
+          expected_revision: 1,
+          fields: {...input.fields, seo_score: 72},
+        }),
+        /requires a reason/i,
+      );
+      await rpc('save_fixed_seo', {
+        ...input,
+        request_id: request(),
+        expected_revision: 1,
+        fields: {...input.fields, seo_score: 72},
+        reason: 'Corrected reading',
+      });
+      const catalog = (
+        await db.query<{data: {websites: {revision: number; latest_audit: {score: number}}[]; audits: unknown[]}}>(
+          'select public.fixed_seo_catalog($1) data',
+          [siteA],
+        )
+      ).rows[0].data;
+      assert.equal(catalog.websites[0].revision, 2);
+      assert.equal(Number(catalog.websites[0].latest_audit.score), 72);
+      assert.equal(catalog.audits.length, 2);
+      await asUser('00000000-0000-4000-8000-000000000010');
+      await assert.rejects(
+        rpc('save_fixed_seo', {
+          ...input,
+          request_id: request(),
+          expected_revision: 2,
+          fields: {...input.fields, seo_score: 73},
+          reason: 'Unauthorized correction',
+        }),
+        /audit author or an administrator/i,
+      );
+      await assert.rejects(
+        db.query("select public.append_fixed_seo_audit($1,$2,'2026-10-15',90,'Manual test',$3,'Bypass')", [
+          workspaceA,
+          siteA,
+          admin,
+        ]),
+        /permission denied/i,
+      );
+      await asUser(inactive);
+      await assert.rejects(rpc('save_fixed_seo', {...input, request_id: request()}), /Active membership/i);
+      await asUser(outsider);
+      await assert.rejects(rpc('save_fixed_seo', {...input, request_id: request()}), /not found/i);
+      await assert.rejects(db.query('select public.fixed_seo_catalog($1)', [siteA]), /not found/i);
+      await asUser(manager);
+      await assert.rejects(rpc('import_fixed_seo', prepareSeoImport()), /Administrator/i);
+      await asUser(admin);
+      await rpc('create_workspace_website', {
+        request_id: request(),
+        name: 'Existing US profile',
+        country: 'US',
+        url: 'https://foihus.org',
+        cms: 'Custom CMS',
+      });
+      const imported = (await rpc('import_fixed_seo', prepareSeoImport())) as unknown as {
+        websites_added: number;
+        profiles_added: number;
+        historical_audits_added: number;
+      };
+      assert.equal(imported.websites_added, 13);
+      assert.equal(imported.profiles_added, 14);
+      assert.equal(imported.historical_audits_added, 27);
+      const original = (
+        await db.query<{name: string; cms: string}>(
+          "select name,cms from public.websites where canonical_url='https://foihus.org'",
+        )
+      ).rows[0];
+      assert.equal(original.name, 'Existing US profile');
+      assert.equal(original.cms, 'Custom CMS');
+      const retry = (await rpc('import_fixed_seo', prepareSeoImport())) as unknown as {
+        skipped: number;
+        historical_audits_added: number;
+      };
+      assert.equal(retry.skipped, 14);
+      assert.equal(retry.historical_audits_added, 0);
+      const dashboard = (await rpc('workspace_dashboard', {
+        start: '2026-07-01',
+        end: '2026-10-31',
+        source: 'Rank Math SEO Analyzer',
+      })) as unknown as {seo_count: number};
+      assert.equal(Number(dashboard.seo_count), 27);
+      await db.exec('reset role');
+      await assert.rejects(db.exec('delete from public.website_seo_audits'), /Immutable/i);
+      await assert.rejects(db.exec('update public.website_seo_revisions set revision=999'), /Immutable/i);
+    });
+    await t.test('automatic SEO comments and rolling reference dates preserve history and retries', async () => {
+      await db.exec('reset role');
+      await db.exec(await readFile('supabase/migrations/202610160012_seo_automatic_summary.sql', 'utf8'));
+      const generated = (
+        await db.query<{data: {fields: Record<string, string>}}>(
+          "select public.enrich_fixed_seo($1::jsonb,'{}','2026-03-31','Rank Math') data",
+          [JSON.stringify({seo_score: 80, google_analytics: 'no'})],
+        )
+      ).rows[0].data;
+      assert.equal(generated.fields.plugin_updated, '2026-02-28');
+      assert.equal(generated.fields.backup_date, '2026-03-24');
+      assert.match(generated.fields.remarks, /Google Analytics: No/);
+      assert.match(generated.fields.remarks, /Rank Math/);
+      await asUser(admin);
+      const catalog = (
+        await db.query<{
+          data: {
+            websites: {
+              id: string;
+              revision: number;
+              fields: Record<string, unknown>;
+              notes: Record<string, string>;
+              source: string;
+            }[];
+          };
+        }>('select public.fixed_seo_catalog(null) data')
+      ).rows[0].data;
+      assert.ok(
+        catalog.websites.every(
+          w =>
+            w.fields.plugin_updated && w.fields.backup_date && String(w.fields.remarks).includes('Automatic summary'),
+        ),
+      );
+      const site = catalog.websites.find(w => w.id === siteA)!;
+      const input = {
+        request_id: request(),
+        website_id: site.id,
+        expected_revision: site.revision,
+        fields: site.fields,
+        notes: site.notes,
+        source: site.source,
+        reason: '',
+      };
+      await rpc('save_fixed_seo', input);
+      assert.equal(await rpc('save_fixed_seo', input), site.id);
+      assert.ok((await count('website_seo_revisions')) > 0);
+    });
+    await t.test('monthly QA/plugin references stay fixed while backup references advance daily', async () => {
+      await db.exec('reset role');
+      await db.exec(await readFile('supabase/migrations/202610160013_monthly_maintenance_dates.sql', 'utf8'));
+      async function generated(date: string) {
+        return (
+          await db.query<{value: {fields: Record<string, string>}}>(
+            "select public.enrich_fixed_seo('{}','{}',$1::date,'') value",
+            [date],
+          )
+        ).rows[0].value.fields;
+      }
+      const first = await generated('2026-10-01'),
+        middle = await generated('2026-10-16'),
+        next = await generated('2026-10-17'),
+        last = await generated('2026-10-31'),
+        november = await generated('2026-11-01');
+      for (const fields of [first, middle, next, last]) {
+        assert.equal(fields.plugin_updated, '2026-10-01');
+        assert.equal(fields.qa, 'Automatic QA reference date: 2026-10-01');
+      }
+      assert.equal(middle.backup_date, '2026-10-09');
+      assert.equal(next.backup_date, '2026-10-10');
+      assert.equal(november.plugin_updated, '2026-11-01');
+      assert.equal(november.backup_date, '2026-10-25');
+      assert.equal((await generated('2027-01-01')).plugin_updated, '2027-01-01');
+      assert.equal((await generated('2028-02-29')).plugin_updated, '2028-02-01');
+      await asUser(admin);
+      const catalog = (
+        await db.query<{value: {websites: {fields: Record<string, string>}[]}}>(
+          'select public.fixed_seo_catalog(null) value',
+        )
+      ).rows[0].value;
+      assert.ok(catalog.websites.every(w => w.fields.plugin_updated.endsWith('-01')));
+    });
+    await t.test(
+      'task lists paginate the full dataset with personal scopes, sorting and timezone filters',
+      async () => {
+        await db.exec('reset role');
+        await db.exec(await readFile('supabase/migrations/202610160014_task_lists.sql', 'utf8'));
+        const manager = '00000000-0000-4000-8000-000000000006';
+        await db.query(
+          "insert into public.tasks(workspace_id,creator_id,assignee_id,title,category,priority,created_at) select $1,$2,$2,'Page fixture '||lpad(n::text,3,'0'),'General',case when n=1 then 'urgent' else 'low' end,'2026-09-30 20:00:00+00'::timestamptz from generate_series(1,60) n",
+          [workspaceA, manager],
+        );
+        await asUser(manager);
+        const first = (await rpc('workspace_task_list', {
+          q: 'Page fixture',
+          scope: 'assigned',
+          sort: 'title',
+          page: 1,
+        })) as unknown as {total: number; tasks: {id: string; title: string}[]};
+        assert.equal(first.total, 60);
+        assert.equal(first.tasks.length, 25);
+        assert.equal(first.tasks[0].title, 'Page fixture 001');
+        const second = (await rpc('workspace_task_list', {q: 'Page fixture', sort: 'title', page: 2})) as unknown as {
+          tasks: {id: string; title: string}[];
+        };
+        assert.equal(second.tasks.length, 25);
+        assert.ok(second.tasks.every(t => !first.tasks.some(f => f.id === t.id)));
+        const last = (await rpc('workspace_task_list', {q: 'Page fixture', sort: 'title', page: 3})) as unknown as {
+          tasks: unknown[];
+        };
+        assert.equal(last.tasks.length, 10);
+        const date = (await rpc('workspace_task_list', {
+          q: 'Page fixture',
+          start: '2026-10-01',
+          end: '2026-10-01',
+          creator: manager,
+        })) as unknown as {total: number};
+        assert.equal(date.total, 60);
+        const priority = (await rpc('workspace_task_list', {
+          q: 'Page fixture',
+          priority: 'urgent',
+          sort: 'priority',
+        })) as unknown as {total: number};
+        assert.equal(priority.total, 1);
+        const none = (await rpc('workspace_task_list', {q: 'Page fixture', owner: 'unassigned'})) as unknown as {
+          total: number;
+        };
+        assert.equal(none.total, 0);
+        await rpc('create_workspace_task', {
+          request_id: request(),
+          title: 'Pending fixture',
+          website_ids: [],
+          assignee_id: admin,
+        });
+        await asUser(admin);
+        const pending = (await rpc('workspace_task_list', {q: 'Pending fixture', scope: 'pending'})) as unknown as {
+          total: number;
+          tasks: {assignee_id: string | null; pending_recipient_id: string}[];
+          board_counts: Record<string, number>;
+        };
+        assert.equal(pending.total, 1);
+        assert.equal(pending.tasks[0].assignee_id, null);
+        assert.equal(pending.tasks[0].pending_recipient_id, admin);
+        assert.equal(Object.keys(pending.board_counts).length, 0);
+        const completed = (await rpc('workspace_task_list', {q: 'Page fixture', scope: 'completed'})) as unknown as {
+          total: number;
+        };
+        assert.equal(completed.total, 0);
+        await assert.rejects(rpc('workspace_task_list', {page: 0}), /Invalid/i);
+        await assert.rejects(rpc('workspace_task_list', {website: siteB}), /not found/i);
+        await asUser(outsider);
+        assert.equal(((await rpc('workspace_task_list', {q: 'Page fixture'})) as unknown as {total: number}).total, 0);
+        await asUser(inactive);
+        await assert.rejects(rpc('workspace_task_list', {}), /Active membership/i);
       },
     );
     await t.test('anonymous RPCs are forbidden', async () => {

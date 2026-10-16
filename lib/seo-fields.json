@@ -1,0 +1,200 @@
+[
+  {
+    "group": "Website information",
+    "key": "website_url",
+    "label": "Website URL",
+    "type": "url"
+  },
+  {
+    "group": "Website information",
+    "key": "cms",
+    "label": "CMS Platform",
+    "type": "text"
+  },
+  {
+    "group": "SEO & performance",
+    "key": "seo_implementation",
+    "label": "SEO Implementation",
+    "type": "status"
+  },
+  {
+    "group": "SEO & performance",
+    "key": "seo_score",
+    "label": "SEO Rating",
+    "type": "number"
+  },
+  {
+    "group": "SEO & performance",
+    "key": "audit_date",
+    "label": "Last SEO Audit Date",
+    "type": "date"
+  },
+  {
+    "group": "SEO & performance",
+    "key": "google_analytics",
+    "label": "Google Analytics",
+    "type": "status"
+  },
+  {
+    "group": "SEO & performance",
+    "key": "page_seconds",
+    "label": "Page Speed Score",
+    "type": "duration"
+  },
+  {
+    "group": "Donation & CRM",
+    "key": "donation_crm",
+    "label": "Donation CRM",
+    "type": "text"
+  },
+  {
+    "group": "Donation & CRM",
+    "key": "donation_checkout",
+    "label": "Donation Checkout",
+    "type": "text"
+  },
+  {
+    "group": "Donation & CRM",
+    "key": "recurring_donations",
+    "label": "Recurring Donations",
+    "type": "status"
+  },
+  {
+    "group": "Donation & CRM",
+    "key": "currency",
+    "label": "Currency Supported",
+    "type": "text"
+  },
+  {
+    "group": "Events & ticketing",
+    "key": "event_platform",
+    "label": "Event Ticketing Platform",
+    "type": "text"
+  },
+  {
+    "group": "Email marketing",
+    "key": "mailchimp",
+    "label": "Mailchimp Embedded",
+    "type": "status"
+  },
+  {
+    "group": "Content",
+    "key": "blogs",
+    "label": "Blogs",
+    "type": "status"
+  },
+  {
+    "group": "Content",
+    "key": "news",
+    "label": "News Articles",
+    "type": "status"
+  },
+  {
+    "group": "Content",
+    "key": "financial_reports",
+    "label": "Financial Reports",
+    "type": "status"
+  },
+  {
+    "group": "Content",
+    "key": "impact_reports",
+    "label": "Impact Reports",
+    "type": "status"
+  },
+  {
+    "group": "Content",
+    "key": "directors",
+    "label": "Directors Information",
+    "type": "status"
+  },
+  {
+    "group": "Content",
+    "key": "newsletter",
+    "label": "Newsletter/Email Signup",
+    "type": "status"
+  },
+  {
+    "group": "Content",
+    "key": "video",
+    "label": "Video Content",
+    "type": "status"
+  },
+  {
+    "group": "Security & compliance",
+    "key": "security_plugins",
+    "label": "Security Plugins Installed",
+    "type": "status"
+  },
+  {
+    "group": "Security & compliance",
+    "key": "ssl",
+    "label": "SSL Certificate",
+    "type": "status"
+  },
+  {
+    "group": "Security & compliance",
+    "key": "privacy",
+    "label": "GDPR / Privacy Policy",
+    "type": "status"
+  },
+  {
+    "group": "Security & compliance",
+    "key": "captcha",
+    "label": "Chatbot / Captcha in Forms",
+    "type": "status"
+  },
+  {
+    "group": "Maintenance & QA",
+    "key": "qa",
+    "label": "Website QA",
+    "type": "text"
+  },
+  {
+    "group": "Maintenance & QA",
+    "key": "plugin_updated",
+    "label": "Last Plugin Update",
+    "type": "date"
+  },
+  {
+    "group": "Maintenance & QA",
+    "key": "backup_date",
+    "label": "Backup Status (Server)",
+    "type": "date"
+  },
+  {
+    "group": "Social media",
+    "key": "facebook",
+    "label": "Facebook",
+    "type": "status"
+  },
+  {
+    "group": "Social media",
+    "key": "instagram",
+    "label": "Instagram",
+    "type": "status"
+  },
+  {
+    "group": "Social media",
+    "key": "linkedin",
+    "label": "LinkedIn",
+    "type": "status"
+  },
+  {
+    "group": "Social media",
+    "key": "twitter",
+    "label": "Twitter / X",
+    "type": "status"
+  },
+  {
+    "group": "Social media",
+    "key": "youtube",
+    "label": "YouTube",
+    "type": "status"
+  },
+  {
+    "group": "Notes",
+    "key": "remarks",
+    "label": "General Notes / Remarks",
+    "type": "long_text"
+  }
+]

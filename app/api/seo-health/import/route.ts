@@ -1,4 +1,5 @@
 import {requireWorkspaceUser, AccessError} from '@/lib/live-auth';
+import {readJson} from '@/lib/live-validation';
 import {mutationFailure, rpcFailure} from '@/lib/live-mutations';
 import {prepareSeoImport} from '@/lib/seo-import';
 export async function GET(request: Request) {
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
   try {
     const {supabase, profile} = await requireWorkspaceUser(request);
     if (profile.role !== 'administrator') throw new AccessError(403, 'Administrator required.');
-    const input = await request.json();
+    const input = await readJson(request);
     if (input.confirm !== true) throw new AccessError(400, 'Review the import preview and confirm first.');
     const {data, error} = await supabase.rpc('import_fixed_seo', {p_rows: prepareSeoImport()});
     if (error) throw rpcFailure(error);

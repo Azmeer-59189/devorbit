@@ -1,10 +1,10 @@
 import {requireWorkspaceUser} from '@/lib/live-auth';
-import {InputError, taskActionInput} from '@/lib/live-validation';
+import {InputError, taskActionInput, readJson} from '@/lib/live-validation';
 import {mutationFailure, rpcFailure} from '@/lib/live-mutations';
 export async function POST(request: Request) {
   try {
     const {supabase} = await requireWorkspaceUser(request);
-    const input = taskActionInput(await request.json());
+    const input = taskActionInput(await readJson(request));
     const {data, error} = await supabase.rpc('mutate_workspace_task', {p_input: input});
     if (error) {
       if (['PGRST202', '42883'].includes(error.code))

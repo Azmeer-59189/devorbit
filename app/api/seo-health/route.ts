@@ -1,4 +1,5 @@
 import {requireWorkspaceUser, AccessError} from '@/lib/live-auth';
+import {readJson} from '@/lib/live-validation';
 import {mutationFailure, rpcFailure} from '@/lib/live-mutations';
 import {seoInput} from '@/lib/seo-health';
 import {recordId} from '@/lib/reporting';
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const {supabase} = await requireWorkspaceUser(request);
-    const input = seoInput(await request.json());
+    const input = seoInput(await readJson(request));
     const {data, error} = await supabase.rpc('save_fixed_seo', {p_input: input});
     if (error) {
       if (error.code === '40001')

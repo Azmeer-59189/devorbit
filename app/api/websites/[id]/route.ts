@@ -1,4 +1,5 @@
 import {requireWorkspaceUser, AccessError} from '@/lib/live-auth';
+import {readJson} from '@/lib/live-validation';
 import {mutationFailure, rpcFailure} from '@/lib/live-mutations';
 import {recordId} from '@/lib/reporting';
 import {websiteManagementInput} from '@/lib/website-management';
@@ -52,7 +53,7 @@ export async function PATCH(request: Request, {params}: Context) {
   try {
     const {supabase} = await requireWorkspaceUser(request);
     const id = recordId((await params).id);
-    const input = websiteManagementInput(await request.json());
+    const input = websiteManagementInput(await readJson(request));
     if (input.website_id !== id) throw new AccessError(400, 'Website identity does not match.');
     const {data, error} = await supabase.rpc('manage_workspace_website', {p_input: input});
     if (error) {

@@ -1,4 +1,5 @@
 import {requireWorkspaceUser, AccessError} from '@/lib/live-auth';
+import {readJson} from '@/lib/live-validation';
 import {mutationFailure} from '@/lib/live-mutations';
 import {invitationInput} from '@/lib/invitations';
 import {deliverInvitation, invitationMailConfig} from '@/lib/invitation-mail';
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
   try {
     const {supabase, profile} = await requireWorkspaceUser(request);
     if (profile.role !== 'administrator') throw new AccessError(403, 'Administrator access required.');
-    const input = invitationInput(await request.json());
+    const input = invitationInput(await readJson(request));
     let config: ReturnType<typeof invitationMailConfig> | undefined;
     if (input.action !== 'cancel') {
       try {

@@ -32,3 +32,25 @@ test('live workspace rejects requests without a bearer token before database acc
     else process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = oldKey;
   }
 });
+
+test('malformed bearer tokens are rejected as invalid sessions without contacting Supabase', async () => {
+  const oldUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const oldKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.example.org';
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'test-public-key';
+  try {
+    for (const token of ['abc.def.ghi', 'a.b', 'not-a-jwt']) {
+      await assert.rejects(
+        requireWorkspaceUser(
+          new Request('http://localhost/api/workspace', {headers: {Authorization: `Bearer ${token}`}}),
+        ),
+        error => error instanceof AccessError && error.status === 401,
+      );
+    }
+  } finally {
+    if (oldUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    else process.env.NEXT_PUBLIC_SUPABASE_URL = oldUrl;
+    if (oldKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    else process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = oldKey;
+  }
+});

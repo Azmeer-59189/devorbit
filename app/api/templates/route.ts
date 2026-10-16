@@ -1,4 +1,5 @@
 import {requireWorkspaceUser, AccessError} from '@/lib/live-auth';
+import {readJson} from '@/lib/live-validation';
 import {mutationFailure} from '@/lib/live-mutations';
 import {templateInput} from '@/lib/reporting';
 import {reportingError} from '@/lib/reporting-server';
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
   try {
     const {supabase, profile} = await requireWorkspaceUser(request);
     if (profile.role !== 'administrator') throw new AccessError(403, 'Only administrators can manage templates.');
-    const input = templateInput(await request.json());
+    const input = templateInput(await readJson(request));
     const {data, error} = await supabase.rpc('manage_reporting_template', {p_input: input});
     if (error) throw reportingError(error);
     return Response.json({id: data});

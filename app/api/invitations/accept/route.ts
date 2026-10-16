@@ -1,4 +1,5 @@
 import {requireAuthenticatedUser, AccessError} from '@/lib/live-auth';
+import {readJson} from '@/lib/live-validation';
 import {mutationFailure} from '@/lib/live-mutations';
 import {recordId} from '@/lib/reporting';
 export async function GET(request: Request) {
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const {supabase} = await requireAuthenticatedUser(request);
-    const id = recordId((await request.json()).invitation_id);
+    const id = recordId((await readJson(request)).invitation_id);
     const {data, error} = await supabase.rpc('accept_workspace_invitation', {p_id: id});
     if (error)
       throw new AccessError(

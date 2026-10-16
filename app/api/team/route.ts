@@ -1,5 +1,5 @@
 import {AccessError, requireWorkspaceUser} from '@/lib/live-auth';
-import {InputError, memberInput} from '@/lib/live-validation';
+import {InputError, memberInput, readJson} from '@/lib/live-validation';
 import {mutationFailure, rpcFailure} from '@/lib/live-mutations';
 export async function GET(request: Request) {
   try {
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   try {
     const {supabase, profile} = await requireWorkspaceUser(request);
     if (profile.role !== 'administrator') throw new AccessError(403, 'Administrator access required.');
-    const input = memberInput(await request.json());
+    const input = memberInput(await readJson(request));
     const {data, error} = await supabase.rpc('manage_workspace_member', {p_input: input});
     if (error) {
       if (error.code === 'PGRST202')

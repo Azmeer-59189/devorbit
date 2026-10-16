@@ -33,12 +33,14 @@ export async function requireAuthenticatedUser(request: Request) {
     auth: {persistSession: false, autoRefreshToken: false},
     global: {headers: {Authorization: `Bearer ${token}`}},
   });
-  const {
-    data: {user},
-    error: authError,
-  } = await supabase.auth.getUser(token);
+  // getClaims verifies asymmetric (JWKS-signed) tokens locally with a cached
+  // key set and only calls Supabase Auth for legacy symmetric secrets. Signed-out
+  // tokens stay valid until they expire; membership is still checked per request.
+  // Undecodable tokens throw rather than return an error.
+  const {data, error: authError} = await supabase.auth.getClaims(token).catch(error => ({data: null, error}));
   if (authError) throw authVerificationError(authError);
-  if (!user) throw new AccessError(401, 'Your session has expired or is invalid. Please sign in again.');
+  if (!data?.claims.sub) throw new AccessError(401, 'Your session has expired or is invalid. Please sign in again.');
+  const user = {id: data.claims.sub, email: data.claims.email};
   return {supabase, user};
 }
 export async function requireWorkspaceUser(request: Request) {

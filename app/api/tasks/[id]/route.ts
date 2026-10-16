@@ -1,10 +1,11 @@
 import {AccessError, requireWorkspaceUser} from '@/lib/live-auth';
+import {readJson} from '@/lib/live-validation';
 import {mutationFailure, rpcFailure} from '@/lib/live-mutations';
 import {taskEditInput} from '@/lib/task-management';
 export async function PATCH(request: Request, {params}: {params: Promise<{id: string}>}) {
   try {
     const {supabase} = await requireWorkspaceUser(request);
-    const input = taskEditInput(await request.json());
+    const input = taskEditInput(await readJson(request));
     if (input.task_id !== (await params).id) throw new AccessError(400, 'Task identity does not match.');
     const {data, error} = await supabase.rpc('edit_workspace_task', {p_input: input});
     if (error) throw rpcFailure(error);

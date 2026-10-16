@@ -1,5 +1,5 @@
 import {AccessError, requireWorkspaceUser} from '@/lib/live-auth';
-import {InputError} from '@/lib/live-validation';
+import {InputError, readJson} from '@/lib/live-validation';
 import {mutationFailure, rpcFailure} from '@/lib/live-mutations';
 export async function GET(request: Request) {
   try {
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const {supabase} = await requireWorkspaceUser(request);
-    const {id} = await request.json();
+    const {id} = await readJson(request);
     if (id !== null && (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)))
       throw new InputError('Invalid notification.');
     const {error} = await supabase.rpc('mark_workspace_notifications', {p_id: id});

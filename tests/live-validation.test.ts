@@ -1,6 +1,14 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {assignmentInput, memberInput, taskActionInput, taskInput, websiteInput} from '../lib/live-validation';
+import {
+  assignmentInput,
+  memberInput,
+  readJson,
+  taskActionInput,
+  taskInput,
+  websiteInput,
+  InputError,
+} from '../lib/live-validation';
 const request_id = '00000000-0000-4000-8000-000000000001';
 const valid = {request_id, name: 'UK', country: 'United Kingdom', cms: 'WordPress', url: 'https://EXAMPLE.org/'};
 test('website validation normalizes identity and rejects credentials/unsafe URLs', () => {
@@ -63,4 +71,29 @@ test('member forms accept only explicit workspace roles and correctly typed acti
     {action: 'update', member_id: null},
   ])
     assert.throws(() => memberInput({...input, ...change}));
+});
+test('request bodies must be JSON objects within the size limit, even without Content-Length', async () => {
+  const post = (body: BodyInit, headers: HeadersInit = {}) =>
+    new Request('http://localhost/api', {method: 'POST', body, headers, duplex: 'half'} as RequestInit);
+  assert.deepEqual(await readJson(post('{"a":1}')), {a: 1});
+  for (const body of ['', 'not json', '[]', 'null', '"text"'])
+    await assert.rejects(
+      readJson(post(body)),
+      error => error instanceof InputError && /valid form data/.test(error.message),
+    );
+  const streamed = new ReadableStream({
+    start(controller) {
+      for (let i = 0; i < 4; i++) controller.enqueue(new TextEncoder().encode('x'.repeat(10)));
+      controller.close();
+    },
+  });
+  await assert.rejects(
+    readJson(post(streamed), 30),
+    error => error instanceof InputError && /too large/.test(error.message),
+  );
+  await assert.rejects(readJson(post('{}', {'content-length': '31'}), 30), error => error instanceof InputError);
+  await assert.rejects(
+    readJson(post(JSON.stringify({a: 'x'.repeat(40)}), {'content-length': '2'}), 30),
+    error => error instanceof InputError && /too large/.test(error.message),
+  );
 });

@@ -1,4 +1,5 @@
 import {requireWorkspaceUser} from '@/lib/live-auth';
+import {readJson} from '@/lib/live-validation';
 import {mutationFailure} from '@/lib/live-mutations';
 import {reportInput, validateAnswers} from '@/lib/reporting';
 import {reportingError} from '@/lib/reporting-server';
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const {supabase, profile} = await requireWorkspaceUser(request);
-    const input = reportInput(await request.json());
+    const input = reportInput(await readJson(request));
     const {data: version, error: versionError} = await supabase
       .from('form_template_versions')
       .select('fields')

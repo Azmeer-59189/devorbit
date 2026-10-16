@@ -5,6 +5,33 @@ function object(value: unknown): Input {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new InputError('Enter valid form data.');
   return value as Input;
 }
+// Reads a JSON object body, counting bytes as they stream so a missing or
+// understated Content-Length cannot slip past the limit. The default stays
+// above the largest form the validators accept (a full report template).
+export async function readJson(request: Request, maxBytes = 1_000_000): Promise<Input> {
+  if (Number(request.headers.get('content-length') || 0) > maxBytes)
+    throw new InputError('The submitted form is too large.');
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  if (request.body) {
+    const reader = request.body.getReader();
+    for (let read = await reader.read(); !read.done; read = await reader.read()) {
+      size += read.value.byteLength;
+      if (size > maxBytes) {
+        await reader.cancel();
+        throw new InputError('The submitted form is too large.');
+      }
+      chunks.push(read.value);
+    }
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch {
+    throw new InputError('Enter valid form data.');
+  }
+  return object(value);
+}
 function text(input: Input, key: string, max: number, required = false) {
   const value = input[key];
   if (value !== undefined && value !== null && typeof value !== 'string') throw new InputError(`${key} must be text.`);

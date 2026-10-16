@@ -1,10 +1,10 @@
 import {requireWorkspaceUser} from '@/lib/live-auth';
-import {InputError, assignmentInput} from '@/lib/live-validation';
+import {InputError, assignmentInput, readJson} from '@/lib/live-validation';
 import {mutationFailure, rpcFailure} from '@/lib/live-mutations';
 export async function POST(request: Request) {
   try {
     const {supabase} = await requireWorkspaceUser(request);
-    const input = assignmentInput(await request.json());
+    const input = assignmentInput(await readJson(request));
     const {data, error} = await supabase.rpc('respond_workspace_assignment', {
       p_request_id: input.request_id,
       p_accept: input.accept,

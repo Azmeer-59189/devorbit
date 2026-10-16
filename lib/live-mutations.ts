@@ -1,5 +1,5 @@
 import {AccessError, requireWorkspaceUser} from '@/lib/live-auth';
-import {InputError, taskInput, websiteInput} from '@/lib/live-validation';
+import {InputError, readJson, taskInput, websiteInput} from '@/lib/live-validation';
 
 export function mutationFailure(error: unknown) {
   if (error instanceof InputError)
@@ -51,14 +51,7 @@ export async function createRecord(request: Request, kind: 'website' | 'task') {
     const {supabase, profile} = await requireWorkspaceUser(request);
     if (kind === 'website' && !['administrator', 'manager'].includes(profile.role))
       throw new AccessError(403, 'Only administrators and managers can add websites.');
-    if (Number(request.headers.get('content-length') || 0) > 24000)
-      throw new InputError('The submitted form is too large.');
-    let input;
-    try {
-      input = await request.json();
-    } catch {
-      throw new InputError('Enter valid form data.');
-    }
+    const input = await readJson(request, 24000);
     const values = kind === 'website' ? websiteInput(input) : taskInput(input);
     const {data, error} = await supabase.rpc(
       kind === 'website' ? 'create_workspace_website' : 'create_workspace_task',

@@ -34,13 +34,14 @@ Responsive rules keep their cascade order. See docs/STYLING.md. */
   --font-body: 'DM Sans', Arial, sans-serif;
   --font-display: 'Manrope', Arial, sans-serif;
   --muted: #596579;
-  /* IHHN DevDesk brand palette, inspired by foih.ch. */
-  --brand-red: #c91921;
-  --primary: #12429b;
-  --primary-hover: #0d3278;
+  /* Approximate palette from the supplied Indus logo; the artwork is not used. */
+  --brand-red: #ed1b24;
+  --brand-red-strong: #c41620;
+  --primary: #214b98;
+  --primary-hover: #193b79;
   --primary-surface: #edf3fc;
   --primary-border: #cad9f3;
-  --focus-ring: #12429b;
+  --focus-ring: #214b98;
   --nav-active-text: var(--primary);
   --font-size-body: 14px;
   --font-size-label: 13px;
@@ -211,7 +212,7 @@ small {
   height: 32px;
   border-radius: 7px;
   background: #edf3fc;
-  color: #12429b;
+  color: #214b98;
   font-size: 13.5px;
   font-weight: 700;
 }
@@ -321,7 +322,7 @@ small {
 }
 .avatar.purple {
   background: #e3edfc;
-  color: #12429b;
+  color: #214b98;
 }
 .avatar.orange {
   background: #f7e7d7;
@@ -2449,7 +2450,7 @@ td strong {
 }
 .notification-symbol {
   background: #d9e7fb;
-  color: #12429b;
+  color: #214b98;
 }
 .live-member-row strong {
   color: #3e364b;
@@ -4203,7 +4204,7 @@ button.attention-item:hover {
   min-width: 18px;
   padding: 2px 4px;
   border-radius: 12px;
-  background: var(--brand-red);
+  background: var(--brand-red-strong);
   color: white;
   font-size: 10px;
   line-height: 14px;

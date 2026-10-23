@@ -189,7 +189,7 @@ export default function ConnectedWorkspace() {
         <header>
           <Link className="brand" href="/workspace">
             <Image src="/logo.svg" alt="" width={35} height={35} />
-            <span>DevOrbit.</span>
+            <span>IHHN DevDesk.</span>
           </Link>
           <Link className="button secondary" href="/login">
             Back to sign in
@@ -343,7 +343,7 @@ export default function ConnectedWorkspace() {
         >
           <Image src="/logo.svg" width={35} height={35} alt="" />
           <span>
-            DevOrbit<span className="brand-dot">.</span>
+            IHHN DevDesk<span className="brand-dot">.</span>
           </span>
         </Link>
         <div className="workspace-switch">
@@ -745,7 +745,7 @@ export default function ConnectedWorkspace() {
           <footer className="page-footer">
             <span>
               <Image src="/logo.svg" width={14} height={14} alt="" />
-              DevOrbit · Your connected workspace
+              IHHN DevDesk · Your connected workspace
             </span>
             <span>{data.workspace.timezone}</span>
           </footer>

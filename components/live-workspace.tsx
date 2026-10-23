@@ -48,8 +48,8 @@ export function Login() {
     <div className="auth-shell">
       <section className="auth-story">
         <Link href="/" className="brand">
-          <Image src="/logo.svg" width={42} height={42} alt="DevOrbit" unoptimized />
-          <span>DevOrbit.</span>
+          <Image src="/logo.svg" width={42} height={42} alt="IHHN DevDesk" unoptimized />
+          <span>IHHN DevDesk.</span>
         </Link>
         <div>
           <span className="eyebrow">ONE TEAM. ONE SHARED ORBIT.</span>
@@ -116,7 +116,7 @@ export function Login() {
           <div className="auth-note">
             <ShieldCheck size={17} />
             <p>
-              DevOrbit is an invitation-only workspace.
+              IHHN DevDesk is an invitation-only workspace.
               <br />
               Need access? Contact your administrator.
             </p>

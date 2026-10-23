@@ -209,7 +209,7 @@ export default function LiveReporting({data, builder = false}: {data: Workspace;
     const url = URL.createObjectURL(new Blob(['\ufeff' + csv(rows)], {type: 'text/csv;charset=utf-8'}));
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'devorbit-reports-latest-100.csv';
+    a.download = 'ihhn-devdesk-reports-latest-100.csv';
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }

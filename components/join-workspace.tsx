@@ -60,7 +60,7 @@ export default function JoinWorkspace() {
     <div className="join-shell">
       <section className="card padded join-card">
         <Link className="brand" href="/login">
-          DevOrbit.
+          IHHN DevDesk.
         </Link>
         <h1>Join your team</h1>
         {loading ? (

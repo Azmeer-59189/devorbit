@@ -1,7 +1,7 @@
-// Time management has been removed from DevOrbit. Historical database records are retained.
+// Time management has been removed from IHHN DevDesk. Historical database records are retained.
 function removed() {
   return Response.json(
-    {error: 'Time management is no longer available in DevOrbit.'},
+    {error: 'Time management is no longer available in IHHN DevDesk.'},
     {status: 410, headers: {'Cache-Control': 'no-store'}},
   );
 }

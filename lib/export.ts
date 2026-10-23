@@ -17,7 +17,7 @@ export function downloadRows(rows: Record<string, Cell>[], format: ExportFormat,
   const url = URL.createObjectURL(exportBlob(rows, format, name));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `devorbit-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${date}.${format}`;
+  a.download = `ihhn-devdesk-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${date}.${format}`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

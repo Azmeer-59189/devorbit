@@ -1,6 +1,6 @@
 export function GET() {
   return Response.json({
-    application: 'DevOrbit',
+    application: 'IHHN DevDesk',
     status: 'ok',
     mode: 'connected-workspace',
     supabaseConfigured: Boolean(

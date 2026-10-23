@@ -52,13 +52,13 @@ export async function requireWorkspaceUser(request: Request) {
     .maybeSingle();
   if (error) {
     if (['PGRST205', '42P01'].includes(error.code))
-      throw new AccessError(503, 'Database setup is required. Apply the DevOrbit foundation migration.');
+      throw new AccessError(503, 'Database setup is required. Apply the IHHN DevDesk foundation migration.');
     throw new AccessError(503, 'Unable to verify workspace membership. Please try again.');
   }
   if (!profile?.active)
     throw new AccessError(
       403,
-      'Your account does not have an active DevOrbit workspace membership. Contact your administrator.',
+      'Your account does not have an active IHHN DevDesk workspace membership. Contact your administrator.',
     );
   return {supabase, user, profile};
 }

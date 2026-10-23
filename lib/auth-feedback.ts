@@ -6,7 +6,7 @@ export function signInFeedback(error: AuthFailure) {
     case 'email_not_confirmed':
       return 'Your email is not confirmed. Confirm your account before signing in.';
     case 'invalid_credentials':
-      return 'The email or password was not accepted. Use your DevOrbit application account, not your Supabase dashboard password.';
+      return 'The email or password was not accepted. Use your IHHN DevDesk application account, not your Supabase dashboard password.';
     case 'user_banned':
       return 'This account is disabled. Contact your workspace administrator.';
     case 'over_request_rate_limit':

@@ -62,7 +62,7 @@ export default function SeoTrend({audits}: {audits: TrendAudit[]}) {
                   type="linear"
                   dataKey="score"
                   name="SEO score (0–100)"
-                  stroke="#6d28d9"
+                  stroke="var(--primary)"
                   strokeWidth={2}
                   dot={{r: 4}}
                   isAnimationActive={false}

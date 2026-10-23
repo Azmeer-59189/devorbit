@@ -11,7 +11,7 @@ export function mutationFailure(error: unknown) {
     {status: 500, headers: {'Cache-Control': 'no-store'}},
   );
 }
-// Messages DevOrbit's own SQL raises are written for users and shown as-is.
+// Messages IHHN DevDesk's own SQL raises are written for users and shown as-is.
 // Postgres's built-in messages for the same codes can expose table or
 // constraint names, so those fall back to generic wording.
 const builtInMessage: Record<string, RegExp> = {

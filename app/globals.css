@@ -1,4 +1,4 @@
-/* DevOrbit design system. Imported once by app/layout.tsx.
+/* IHHN DevDesk design system. Imported once by app/layout.tsx.
 Edit the owning component rule here; do not add override/theme stylesheets.
 Responsive rules keep their cascade order. See docs/STYLING.md. */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Manrope:wght@400;500;600;650;700;750;800&display=swap');
@@ -19,7 +19,7 @@ Responsive rules keep their cascade order. See docs/STYLING.md. */
   --chart-teal: #10b9a2;
   --chart-completed: var(--chart-teal);
   --chart-in_progress: var(--chart-blue);
-  --chart-in_review: #9561f5;
+  --chart-in_review: #6092c8;
   --chart-blocked: #ff5964;
   --chart-to_do: #ffbf24;
   --chart-cancelled: #91a3c2;
@@ -34,13 +34,13 @@ Responsive rules keep their cascade order. See docs/STYLING.md. */
   --font-body: 'DM Sans', Arial, sans-serif;
   --font-display: 'Manrope', Arial, sans-serif;
   --muted: #596579;
-  /* Brand indigo, matched to the logo. Kept distinct from the in-progress status blue
-     so actions never read as a task state. */
-  --primary: #4f46d8;
-  --primary-hover: #3f37b8;
-  --primary-surface: #efeefd;
-  --primary-border: #dcd9fb;
-  --focus-ring: #4f46d8;
+  /* IHHN DevDesk brand palette, inspired by foih.ch. */
+  --brand-red: #c91921;
+  --primary: #12429b;
+  --primary-hover: #0d3278;
+  --primary-surface: #edf3fc;
+  --primary-border: #cad9f3;
+  --focus-ring: #12429b;
   --nav-active-text: var(--primary);
   --font-size-body: 14px;
   --font-size-label: 13px;
@@ -180,18 +180,18 @@ small {
   align-items: center;
   gap: 10px;
   padding: 0 12px;
-  color: #26253e;
+  color: #16366b;
   font-family: 'Manrope', sans-serif;
-  font-size: 25px;
+  font-size: 19px;
   font-weight: 800;
-  letter-spacing: -1.3px;
+  letter-spacing: -0.6px;
 }
 .brand img {
   width: 35px;
   height: 35px;
 }
 .brand-dot {
-  color: var(--primary);
+  color: var(--brand-red);
 }
 .workspace-switch {
   display: flex;
@@ -210,8 +210,8 @@ small {
   width: 31px;
   height: 32px;
   border-radius: 7px;
-  background: #f0eefb;
-  color: #422ed8;
+  background: #edf3fc;
+  color: #12429b;
   font-size: 13.5px;
   font-weight: 700;
 }
@@ -320,8 +320,8 @@ small {
   font-size: 12px;
 }
 .avatar.purple {
-  background: #e9e1fd;
-  color: #594487;
+  background: #e3edfc;
+  color: #12429b;
 }
 .avatar.orange {
   background: #f7e7d7;
@@ -375,7 +375,7 @@ small {
   border-radius: var(--radius-sm);
 }
 .icon-button:hover {
-  background: #f0eefb;
+  background: #edf3fc;
   color: var(--primary);
 }
 .mobile-toggle {
@@ -870,7 +870,7 @@ tbody tr:last-child td {
   display: flex;
   align-items: center;
   gap: 12px;
-  border: 1px solid #dcd5ef;
+  border: 1px solid #cad9f3;
   border-radius: var(--radius-panel);
   box-shadow: 0 7px 30px #43355c20;
   background: var(--surface);
@@ -2119,7 +2119,7 @@ main {
   color: #4a356d;
 }
 .button.secondary:hover {
-  background: #eae2f9;
+  background: #e3edfc;
 }
 .button:disabled,
 button:disabled {
@@ -2171,7 +2171,7 @@ button:focus-visible {
   color: #615578;
 }
 thead {
-  background: #eeeaf5;
+  background: #eaf1fc;
 }
 th {
   border-color: #dbd5e7;
@@ -2448,8 +2448,8 @@ td strong {
   color: #635970;
 }
 .notification-symbol {
-  background: #dcd0f1;
-  color: #5f408a;
+  background: #d9e7fb;
+  color: #12429b;
 }
 .live-member-row strong {
   color: #3e364b;
@@ -2458,10 +2458,10 @@ td strong {
   color: #62576f;
 }
 .team-member-form {
-  background: #faf7fc;
+  background: #f8faff;
 }
 .team-member-form:nth-of-type(even) {
-  background: #f3eef8;
+  background: #edf3fc;
 }
 .page-footer {
   color: #5d6175;
@@ -2475,21 +2475,21 @@ td strong {
   color: #3e6050;
 }
 .auth-shell {
-  background: #f0edf5;
+  background: #eef3fa;
 }
 .auth-story {
-  background: linear-gradient(155deg, #ddd2f1, #c7dcd8);
+  background: linear-gradient(155deg, #d9e7fb, #fce8eb);
 }
 .auth-story h1 {
-  color: #32283f;
+  color: #18365f;
 }
 .auth-story p,
 .auth-story .eyebrow,
 .auth-story-footer {
-  color: #504561;
+  color: #475d7a;
 }
 .auth-form-area {
-  background: #f6f3f8;
+  background: #f7f9fc;
 }
 .auth-form > p {
   color: #58536b;
@@ -3357,8 +3357,8 @@ h4 {
 .sidebar .brand {
   color: var(--text);
   font-family: inherit;
-  font-size: 23px;
-  font-weight: 650;
+  font-size: 17px;
+  font-weight: 700;
   letter-spacing: -1px;
   padding: 0 9px;
 }
@@ -3368,7 +3368,7 @@ h4 {
   box-shadow: none;
 }
 .sidebar .brand-dot {
-  color: var(--primary);
+  color: var(--brand-red);
 }
 .sidebar .workspace-switch {
   background: var(--surface);
@@ -4203,7 +4203,7 @@ button.attention-item:hover {
   min-width: 18px;
   padding: 2px 4px;
   border-radius: 12px;
-  background: #6d28d9;
+  background: var(--brand-red);
   color: white;
   font-size: 10px;
   line-height: 14px;
@@ -4234,7 +4234,7 @@ button.attention-item:hover {
   text-align: left;
 }
 .notification-row:not(.read) {
-  border-left: 3px solid #6d28d9;
+  border-left: 3px solid var(--primary);
 }
 .notification-row > div {
   min-width: 0;
@@ -4243,7 +4243,7 @@ button.attention-item:hover {
 button:focus-visible,
 a:focus-visible,
 summary:focus-visible {
-  outline: 2px solid #6d28d9;
+  outline: 2px solid var(--primary);
   outline-offset: 3px;
 }
 @media (max-width: 700px) {
@@ -4317,23 +4317,23 @@ summary:focus-visible {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #eeeaf5;
-  color: #302441;
+  background: #eaf1fc;
+  color: #16366b;
 }
 .website-comparison tr > :first-child {
   position: sticky;
   left: 0;
   z-index: 1;
-  background: #f7f5fa;
+  background: #f1f5fc;
   min-width: 180px;
   text-align: left;
 }
 .website-comparison thead tr > :first-child {
   z-index: 3;
-  background: #eeeaf5;
+  background: #eaf1fc;
 }
 .website-comparison tbody tr:nth-child(even) td {
-  background: #faf9fc;
+  background: #f8faff;
 }
 .matrix-status {
   display: inline-block;

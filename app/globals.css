@@ -7,13 +7,13 @@ Responsive rules keep their cascade order. See docs/STYLING.md. */
   --ink: #25283e;
   --teal: #116d65;
   --amber: #865013;
-  --bg: #eaf0f9;
+  --bg: #f6f7fb;
   --surface: #fff;
   --text: #292d36;
   --border: #e9ebf0;
   --sidebar: 224px;
   --border-control: #e1e5ec;
-  --surface-sidebar: #214b98;
+  --surface-sidebar: #fcfcfe;
   --surface-subtle: #fafbfe;
   --chart-blue: #1683ff;
   --chart-teal: #10b9a2;
@@ -23,7 +23,7 @@ Responsive rules keep their cascade order. See docs/STYLING.md. */
   --chart-blocked: #ff5964;
   --chart-to_do: #ffbf24;
   --chart-cancelled: #91a3c2;
-  --nav-active-bg: #ffffff;
+  --nav-active-bg: var(--primary-surface);
   --auth-accent: var(--primary);
   --auth-accent-hover: var(--primary-hover);
   --radius-sm: 5px;
@@ -348,8 +348,6 @@ small {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #f0f5fd;
-  border-color: #ccd9ed;
 }
 .breadcrumb {
   display: flex;
@@ -2029,8 +2027,6 @@ body {
 }
 .sidebar .workspace-switch {
   color: #f3f3fc;
-  background: #193b79;
-  border: 1px solid #5477b0;
 }
 .sidebar .nav-item {
   color: #dce0f1;
@@ -2651,11 +2647,9 @@ td strong {
 .simple-more {
   border-top: 1px solid #ffffff25;
   padding-top: 14px;
-  border-color: #5477b0;
 }
 .simple-more > summary {
   cursor: pointer;
-  color: #d5e3fb;
 }
 .simple-more[open] > summary {
   margin-bottom: 5px;
@@ -2744,13 +2738,10 @@ html {
   transition:
     background-color 120ms ease,
     color 120ms ease;
-  color: #edf3ff;
 }
 .connected-app .sidebar .nav-item:hover {
   box-shadow: none;
   transform: none;
-  background: #325eaa;
-  color: #ffffff;
 }
 .connected-app .sidebar .nav-item:active {
   transform: none;
@@ -3359,13 +3350,13 @@ h4 {
 /* Workspace shell appearance */
 .connected-app .sidebar {
   background: var(--surface-sidebar);
-  border-right: 1px solid #193b79;
+  border-right: 1px solid var(--border);
   box-shadow: none;
   padding: 25px 14px 0;
-  color: #ffffff;
+  color: var(--text);
 }
 .sidebar .brand {
-  color: #ffffff;
+  color: var(--text);
   font-family: inherit;
   font-size: 17px;
   font-weight: 700;
@@ -3389,12 +3380,12 @@ h4 {
   width: 100%;
 }
 .sidebar .workspace-switch strong {
-  color: #ffffff;
+  color: #383d47;
   font-size: 12px;
   font-weight: 550;
 }
 .sidebar .workspace-switch small {
-  color: #d5e3fb;
+  color: var(--muted);
   font-size: var(--font-size-caption);
 }
 .sidebar .workspace-icon {
@@ -3403,24 +3394,18 @@ h4 {
   border-radius: var(--radius-control);
 }
 .sidebar .workspace-switch > svg {
-  color: #d5e3fb;
+  color: var(--muted);
 }
-.connected-app .sidebar button.sidebar-create {
+.connected-app .sidebar-create {
   width: 100%;
   justify-content: flex-start;
   margin-bottom: 26px;
-  background: #c41620;
-  border-color: #c41620;
+  background: var(--surface);
+  border-color: #e2e5ea;
   box-shadow: 0 1px 2px #18243706;
-  color: #ffffff;
-}
-.connected-app .sidebar button.sidebar-create:hover {
-  background: #a91019;
-  color: #ffffff;
-  border-color: #a91019;
 }
 .sidebar .nav-label {
-  color: #d5e3fb;
+  color: var(--muted);
   font-weight: 500;
   letter-spacing: 1px;
   margin: 0 11px 10px;
@@ -3443,7 +3428,7 @@ h4 {
 .connected-app .sidebar .nav-item.active:hover {
   background: var(--nav-active-bg);
   color: var(--nav-active-text);
-  box-shadow: inset 3px 0 0 var(--brand-red);
+  box-shadow: none;
   font-weight: 550;
 }
 .sidebar .nav-item svg {
@@ -3467,8 +3452,8 @@ h4 {
   padding: 10px 11px;
 }
 .simple-more > summary:hover {
-  background: #325eaa;
-  color: #ffffff;
+  background: #f0f2f6;
+  color: #414854;
 }
 .simple-more > summary::after {
   content: '+';
@@ -3482,7 +3467,7 @@ h4 {
   scrollbar-color: #d7dbe3 transparent;
 }
 .sidebar .live-connection {
-  color: #d5e3fb;
+  color: var(--muted);
   padding: 15px 9px;
   font-size: var(--font-size-caption);
 }
@@ -3493,17 +3478,17 @@ h4 {
   width: calc(100% + 28px);
   margin: 0 -14px;
   padding: 17px 20px;
-  background: #193b79;
-  border-color: #5477b0;
-  color: #ffffff;
+  background: var(--surface-sidebar);
+  border-color: var(--border);
+  color: #353b46;
 }
 .connected-app .sidebar .user-profile strong {
-  color: #ffffff;
+  color: #353b46;
   font-size: 12px;
   font-weight: 550;
 }
 .sidebar .user-profile small {
-  color: #d5e3fb;
+  color: var(--muted);
   font-size: var(--font-size-caption);
 }
 .avatar {
@@ -3550,10 +3535,6 @@ h4 {
 }
 .page-heading {
   margin-bottom: 18px;
-  background: #dce7f8;
-  border-left: 4px solid var(--brand-red);
-  border-radius: 8px;
-  padding: 18px 20px;
 }
 .page-heading h1 {
   font-size: 25px;
@@ -4337,8 +4318,8 @@ summary:focus-visible {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #214b98;
-  color: #ffffff;
+  background: #eaf1fc;
+  color: #16366b;
 }
 .website-comparison tr > :first-child {
   position: sticky;
@@ -4350,7 +4331,7 @@ summary:focus-visible {
 }
 .website-comparison thead tr > :first-child {
   z-index: 3;
-  background: #214b98;
+  background: #eaf1fc;
 }
 .website-comparison tbody tr:nth-child(even) td {
   background: #f8faff;

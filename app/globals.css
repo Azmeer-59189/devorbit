@@ -3787,28 +3787,27 @@ h4 {
   font-variant-numeric: tabular-nums;
   font-size: var(--font-size-caption);
 }
-.completion-content progress {
+.completion-bar {
   display: block;
-  width: 100%;
   height: 5px;
-  border: 0;
   border-radius: var(--radius-sm);
   overflow: hidden;
-  appearance: none;
   background: #e9edf3;
-  color: var(--chart-fill);
 }
-.completion-content progress::-webkit-progress-bar {
-  background: #e9edf3;
-  border-radius: var(--radius-sm);
-}
-.completion-content progress::-moz-progress-bar {
+/* Fills from the left when the chart appears, matching the Recharts animation.
+   The global reduced-motion rule shortens this to an instant fill. */
+.completion-bar > i {
+  display: block;
+  height: 100%;
   border-radius: var(--radius-sm);
   background: var(--chart-fill);
+  transform-origin: left center;
+  animation: chart-fill 700ms ease-out;
 }
-.completion-content progress::-webkit-progress-value {
-  border-radius: var(--radius-sm);
-  background: var(--chart-fill);
+@keyframes chart-fill {
+  from {
+    transform: scaleX(0);
+  }
 }
 /* Dashboard summary: one row of counts that open their task lists; zero counts use the muted cancelled tone. */
 .attention-grid {

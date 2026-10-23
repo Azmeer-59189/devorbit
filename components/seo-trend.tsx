@@ -2,9 +2,11 @@
 import {useState} from 'react';
 import {CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import {seoTrend, TrendAudit} from '@/lib/seo-trend';
+import {useChartAnimation} from '@/lib/motion';
 
 export default function SeoTrend({audits}: {audits: TrendAudit[]}) {
   const sources = [...new Set(audits.map(a => a.source))].sort();
+  const animation = useChartAnimation();
   const [chosenSource, setSource] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
@@ -65,7 +67,7 @@ export default function SeoTrend({audits}: {audits: TrendAudit[]}) {
                   stroke="var(--primary)"
                   strokeWidth={2}
                   dot={{r: 4}}
-                  isAnimationActive={false}
+                  {...animation}
                 />
               </LineChart>
             </ResponsiveContainer>

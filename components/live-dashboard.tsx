@@ -18,6 +18,7 @@ import {
 import {Workspace, statusName} from '@/lib/live-types';
 import {shiftDate, workspaceDate} from '@/lib/dates';
 import {workspaceFetch} from '@/lib/workspace-client';
+import {useChartAnimation} from '@/lib/motion';
 import {taskFiltersToSearch, type TaskFilters} from '@/lib/task-list';
 type Dashboard = {
   today: string;
@@ -129,6 +130,7 @@ export default function LiveDashboard({
   const error = failure?.key === key ? failure.message : '';
   const name = (id: string | null) => data.members.find(m => m.id === id)?.display_name || 'Unassigned';
   const chartStyle = {fontSize: 12, color: 'var(--muted)'};
+  const animation = useChartAnimation();
   // Task charts ignore the date range and filter by website and current owner, exactly
   // like the task list, so the list opened from a chart shows the count that was clicked.
   const drill = (filters: Partial<TaskFilters>) =>
@@ -301,7 +303,7 @@ export default function LiveDashboard({
                           nameKey="label"
                           innerRadius={60}
                           outerRadius={90}
-                          isAnimationActive={false}
+                          {...animation}
                           cursor="pointer"
                           onClick={(_, index) => drill(deadlineSlices[index].open)}
                         >
@@ -375,7 +377,7 @@ export default function LiveDashboard({
                           fill="var(--chart-in_progress)"
                           radius={[0, 4, 4, 0]}
                           maxBarSize={26}
-                          isAnimationActive={false}
+                          {...animation}
                           cursor="pointer"
                           onClick={(_, index) =>
                             drill({status: 'open', owner: dashboard.workload[index].assignee_id || 'unassigned'})
@@ -427,7 +429,10 @@ export default function LiveDashboard({
                               <span>{label}</span>
                               <span>{displayPercentage}%</span>
                             </span>
-                            <progress max={dashboard.task_count} value={count} aria-label={`${label} tasks`} />
+                            {/* Visual only: the button's label already reads the count and share. */}
+                            <span className="completion-bar" aria-hidden="true">
+                              <i style={{width: `${percentage}%`}} />
+                            </span>
                           </span>
                         </button>
                       );
@@ -482,7 +487,7 @@ export default function LiveDashboard({
                         stroke="var(--chart-completed)"
                         strokeWidth={2}
                         dot={{r: 4}}
-                        isAnimationActive={false}
+                        {...animation}
                         connectNulls={false}
                       />
                     </LineChart>

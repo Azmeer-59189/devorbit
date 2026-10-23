@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {fieldsForPage, compareSeo, reviewSeo, seoExportRows} from '../lib/seo-review';
+import {fieldsForPage, compareCells, compareSeo, reviewSeo, seoExportRows} from '../lib/seo-review';
 import {seoFields} from '../lib/seo-health';
 
 test('SEO review distinguishes unknown, missing, negative, and not-applicable statuses', () => {
@@ -60,4 +60,13 @@ test('SEO and website features partition all fields and scope checklist reviews'
   assert.equal(seo.length + features.length, 33);
   assert.equal(reviewSeo({ssl: 'no', seo_implementation: 'yes'}, seo).issues.length, 0);
   assert.equal(reviewSeo({ssl: 'no', seo_implementation: 'yes'}, features).issues[0].key, 'ssl');
+});
+
+test('comparison columns sort by type and always keep blank values last', () => {
+  const sort = (values: (string | number | null)[], type: string, direction: 1 | -1) =>
+    [...values].sort((a, b) => compareCells(a, b, type, direction));
+  assert.deepEqual(sort([74, null, 9, 92], 'number', 1), [9, 74, 92, null]);
+  assert.deepEqual(sort([74, null, 9, 92], 'number', -1), [92, 74, 9, null]);
+  assert.deepEqual(sort(['no', 'unknown', 'yes', 'in_progress'], 'status', 1), ['yes', 'in_progress', 'no', 'unknown']);
+  assert.deepEqual(sort(['2026-10-03', '', '2026-09-13'], 'date', -1), ['2026-10-03', '2026-09-13', '']);
 });

@@ -3851,6 +3851,12 @@ h4 {
   border-left: 3px solid var(--status-color);
   border-radius: var(--radius-card);
 }
+/* A tile that is filtering the table below. */
+button.attention-item[aria-pressed='true'] {
+  background: var(--status-surface, var(--primary-surface));
+  border-color: var(--status-color);
+  box-shadow: inset 0 0 0 1px var(--status-color);
+}
 button.attention-item:hover {
   border-color: var(--primary-border);
   border-left-color: var(--status-color);
@@ -4460,6 +4466,70 @@ summary {
 .matrix-empty {
   color: #b4bcc8;
 }
+/* Website names open that website's form; the pencil hints at it without a separate column. */
+.matrix-site {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  text-underline-offset: 3px;
+}
+/* Tables default to nowrap; long website names wrap beside the pencil instead. */
+.matrix-site {
+  max-width: 100%;
+  white-space: normal;
+}
+.matrix-site strong {
+  min-width: 0;
+}
+.matrix-site svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.matrix-site:hover:not(:disabled) {
+  color: var(--primary);
+  text-decoration: underline;
+}
+.matrix-site:hover:not(:disabled) svg {
+  color: var(--primary);
+}
+/* Column headings sort the table; the arrow shows the current order. */
+.sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  font-weight: 550;
+  color: inherit;
+}
+.sort-button svg {
+  flex-shrink: 0;
+  opacity: 0.45;
+}
+th[aria-sort] .sort-button svg,
+.sort-button:hover svg {
+  opacity: 1;
+}
+.matrix-tabs {
+  flex-wrap: wrap;
+  margin: 0;
+}
+.tab-count {
+  margin-left: 6px;
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--status-surface, #fff8e3);
+  color: var(--status-to_do);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
 /* SEO score pill; bands match the Lighthouse thresholds in live-seo-health. */
 .matrix-score {
   display: inline-block;
@@ -4513,6 +4583,15 @@ summary {
   }
   .attention-item {
     flex-basis: 140px;
+  }
+  /* One swipeable row of field groups instead of several wrapped rows. */
+  .matrix-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .matrix-tabs .button {
+    flex-shrink: 0;
   }
   .attention-item strong {
     font-size: 24px;

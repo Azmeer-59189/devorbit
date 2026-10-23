@@ -4,7 +4,8 @@ import {useSearchParams} from 'next/navigation';
 import {Workspace, statusName} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
 import {seoStatuses, SeoValues, seoInput} from '@/lib/seo-health';
-import {compareSeo, reviewSeo, fieldsForPage} from '@/lib/seo-review';
+import {ArrowDown, ArrowUp, ArrowUpDown, Pencil} from 'lucide-react';
+import {compareCells, compareSeo, fieldsForPage, recordableFields, reviewSeo} from '@/lib/seo-review';
 import {seoTaskDraft, SeoTaskDraft} from '@/lib/seo-task';
 import {displayDate, workspaceDate} from '@/lib/dates';
 import {downloadRows, type ExportFormat} from '@/lib/export';
@@ -60,6 +61,48 @@ type ImportPreview = {
     review: string;
   }[];
 };
+type Tile = {
+  label: string;
+  hint: string;
+  value: number | string;
+  /** Status colour token; zero counts fall back to the muted cancelled tone. */
+  status: string;
+  /** Filter this tile toggles; tiles without one are read-only. */
+  focus?: string;
+  active?: boolean;
+};
+const bandStatus = {good: 'completed', fair: 'to_do', poor: 'blocked'} as const;
+/** The dashboard's summary row, reused so both pages read the same way. */
+function SummaryTiles({tiles, onToggle}: {tiles: Tile[]; onToggle: (tile: Tile) => void}) {
+  return (
+    <section className="attention" aria-label="Summary">
+      <div className="attention-grid">
+        {tiles.map(t => {
+          const status = t.value === 0 ? 'cancelled' : t.status;
+          return t.focus ? (
+            <button
+              key={t.label}
+              className="attention-item"
+              data-status={status}
+              aria-pressed={!!t.active}
+              onClick={() => onToggle(t)}
+            >
+              <strong>{t.value}</strong>
+              <span>{t.label}</span>
+              <small>{t.hint}</small>
+            </button>
+          ) : (
+            <div key={t.label} className="attention-item" data-status={status}>
+              <strong>{t.value}</strong>
+              <span>{t.label}</span>
+              <small>{t.hint}</small>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 export default function LiveSeoHealth({
   data,
   onChanged,
@@ -86,7 +129,9 @@ export default function LiveSeoHealth({
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [search, setSearch] = useState('');
-  const [attentionOnly, setAttentionOnly] = useState(false);
+  // Narrows the table to one summary tile's websites; cleared by selecting the tile again.
+  const [focus, setFocus] = useState<'' | 'issues' | 'gaps' | 'unaudited'>('');
+  const [sort, setSort] = useState<{key: string; direction: 1 | -1}>({key: 'name', direction: 1});
   // ?audit=due (the dashboard's "Websites due for audit") lists only websites due for an audit.
   const searchParams = useSearchParams();
   const [auditDueOnly, setAuditDueOnly] = useState(() => searchParams.get('audit') === 'due');
@@ -184,14 +229,121 @@ export default function LiveSeoHealth({
   }
   const member = (id: string) => data.members.find(m => m.id === id)?.display_name || 'Team member';
   const today = workspaceDate(data.workspace.timezone);
-  const visibleSites = (catalog?.websites || []).filter(w => {
-    const review = reviewPage(w.fields);
-    return (
-      `${w.name} ${w.country}`.toLowerCase().includes(search.toLowerCase()) &&
-      (!attentionOnly || review.issues.length > 0 || review.missing.length > 0 || !w.latest_audit) &&
-      (!auditDueOnly || !!w.audit_due)
+  // Audit-backed fields come from the latest dated audit; the website profile owns URL and CMS.
+  const cellValue = (w: Site, key: string) =>
+    key === 'seo_score'
+      ? w.latest_audit?.score
+      : key === 'audit_date'
+        ? w.latest_audit?.measurement_date
+        : key === 'website_url'
+          ? w.canonical_url
+          : key === 'cms'
+            ? w.cms
+            : w.fields[key];
+  // Reviews count what the table shows, so profile and audit values are not reported as gaps.
+  const reviewSite = (w: Site) =>
+    reviewPage({
+      ...w.fields,
+      ...Object.fromEntries(['seo_score', 'audit_date', 'website_url', 'cms'].map(k => [k, cellValue(w, k) ?? null])),
+    });
+  const sortField = pageFields.find(f => f.key === sort.key);
+  const visibleSites = (catalog?.websites || [])
+    .filter(w => {
+      const review = reviewSite(w);
+      return (
+        `${w.name} ${w.country}`.toLowerCase().includes(search.toLowerCase()) &&
+        (focus !== 'issues' || review.issues.length > 0) &&
+        (focus !== 'gaps' || review.missing.length > 0) &&
+        (focus !== 'unaudited' || !w.latest_audit) &&
+        (!auditDueOnly || !!w.audit_due)
+      );
+    })
+    .sort(
+      (a, b) =>
+        (sortField
+          ? compareCells(cellValue(a, sortField.key), cellValue(b, sortField.key), sortField.type, sort.direction)
+          : 0) || a.name.localeCompare(b.name) * (sortField ? 1 : sort.direction),
     );
-  });
+  const toggleSort = (key: string) =>
+    setSort(current => ({key, direction: current.key === key && current.direction === 1 ? -1 : 1}));
+  const groups = [...new Set(pageFields.map(f => f.group))];
+  /** Unrecorded answers in a field group across the websites currently listed. */
+  const groupGaps = (group: string) =>
+    visibleSites.reduce(
+      (n, w) => n + reviewSite(w).missing.filter(f => group === 'all' || f.group === group).length,
+      0,
+    );
+  // Counts cover every website, so they stay put while a tile filters the table.
+  function summaryTiles(d: Catalog): Tile[] {
+    const reviews = d.websites.map(reviewSite);
+    const issueTile: Tile = {
+      label: 'Checklist issues',
+      hint: 'Websites with a No or In progress answer',
+      value: reviews.filter(r => r.issues.length > 0).length,
+      status: 'blocked',
+      focus: 'issues',
+      active: focus === 'issues',
+    };
+    if (mode === 'seo') {
+      const scores = d.websites.flatMap(w => (w.latest_audit ? [w.latest_audit.score] : []));
+      const average = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+      return [
+        {
+          label: 'Average SEO score',
+          hint: `Latest audit on ${scores.length} of ${d.websites.length} websites`,
+          value: average ?? '—',
+          status: average === null ? 'cancelled' : bandStatus[scoreBand(average)],
+        },
+        {
+          label: 'Not yet audited',
+          hint: 'No dated audit recorded',
+          value: d.websites.length - scores.length,
+          status: 'to_do',
+          focus: 'unaudited',
+          active: focus === 'unaudited',
+        },
+        issueTile,
+        ...(d.audit_interval_days !== undefined
+          ? [
+              {
+                label: 'Due for audit',
+                hint: `No audit in ${d.audit_interval_days} days`,
+                value: d.websites.filter(w => w.audit_due).length,
+                status: 'in_review',
+                focus: 'audit_due',
+                active: auditDueOnly,
+              },
+            ]
+          : []),
+      ];
+    }
+    const total = d.websites.length * recordableFields(pageFields).length;
+    const blank = reviews.reduce((n, r) => n + r.missing.length, 0);
+    const share = total ? Math.round(((total - blank) / total) * 100) : 0;
+    return [
+      {
+        label: 'Fields recorded',
+        hint: `${total - blank} of ${total} answers`,
+        value: `${share}%`,
+        status: total ? bandStatus[scoreBand(share)] : 'cancelled',
+      },
+      {
+        label: 'Websites with gaps',
+        hint: 'At least one answer missing',
+        value: reviews.filter(r => r.missing.length > 0).length,
+        status: 'to_do',
+        focus: 'gaps',
+        active: focus === 'gaps',
+      },
+      issueTile,
+      {
+        label: 'Complete',
+        hint: 'Every field recorded',
+        value: reviews.filter(r => r.missing.length === 0).length,
+        status: 'completed',
+      },
+    ];
+  }
   function showAuditDue(value: boolean) {
     setAuditDueOnly(value);
     const url = new URL(window.location.href);
@@ -227,16 +379,7 @@ export default function LiveSeoHealth({
     const rows = visibleSites.map(w => {
       const row: Record<string, string | number> = {Website: w.name, Country: w.country};
       for (const f of matrixFields) {
-        const value =
-          f.key === 'seo_score'
-            ? w.latest_audit?.score
-            : f.key === 'audit_date'
-              ? w.latest_audit?.measurement_date
-              : f.key === 'website_url'
-                ? w.canonical_url
-                : f.key === 'cms'
-                  ? w.cms
-                  : w.fields[f.key];
+        const value = cellValue(w, f.key);
         row[
           f.label +
             (f.type === 'duration'
@@ -285,11 +428,7 @@ export default function LiveSeoHealth({
             </p>
           </div>
         ) : (
-          <p className="form-hint">
-            {catalog
-              ? `${catalog.websites.length} websites · ${catalog.websites.filter(w => !!w.latest_audit).length} with a dated audit · ${catalog.websites.filter(w => reviewPage(w.fields).issues.length > 0).length} with checklist issues`
-              : ''}
-          </p>
+          <p className="form-hint">{catalog ? `${catalog.websites.length} websites` : ''}</p>
         )}
         <div className="row">
           {site && (
@@ -315,31 +454,21 @@ export default function LiveSeoHealth({
       {!catalog && !error && <p>Loading website health…</p>}
       {!site && catalog && (
         <>
+          <SummaryTiles
+            tiles={summaryTiles(catalog)}
+            onToggle={tile =>
+              tile.focus === 'audit_due'
+                ? showAuditDue(!auditDueOnly)
+                : setFocus(focus === tile.focus ? '' : (tile.focus as typeof focus))
+            }
+          />
           <div className="task-filter-panel seo-filter-panel">
             <label className="field">
               Find a website
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Website or country" />
             </label>
-            <label className="field matrix-group">
-              Field category
-              <select value={fieldGroup} onChange={e => setFieldGroup(e.target.value)}>
-                <option value="all">All fields</option>
-                {[...new Set(pageFields.map(f => f.group))].map(g => (
-                  <option key={g}>{g}</option>
-                ))}
-              </select>
-            </label>
-            <label className="checkbox-field">
-              <input type="checkbox" checked={attentionOnly} onChange={e => setAttentionOnly(e.target.checked)} />
-              Needs attention
-            </label>
             {mode === 'seo' && catalog.audit_interval_days !== undefined && (
               <>
-                <label className="checkbox-field">
-                  <input type="checkbox" checked={auditDueOnly} onChange={e => showAuditDue(e.target.checked)} />
-                  Due for an audit ({catalog.websites.filter(w => w.audit_due).length}; none in the last{' '}
-                  {catalog.audit_interval_days} days)
-                </label>
                 {data.profile.role === 'administrator' && (
                   <form
                     className="row audit-schedule"
@@ -371,46 +500,77 @@ export default function LiveSeoHealth({
               </>
             )}
           </div>
+          {groups.length > 1 && (
+            <div className="simple-task-tabs matrix-tabs" role="group" aria-label="Field group">
+              {['all', ...groups].map(g => {
+                const gaps = groupGaps(g);
+                return (
+                  <button
+                    key={g}
+                    className="button secondary"
+                    aria-pressed={fieldGroup === g}
+                    onClick={() => setFieldGroup(g)}
+                  >
+                    {g === 'all' ? 'All fields' : g}
+                    {gaps > 0 && (
+                      <span className="tab-count">
+                        {gaps}
+                        <span className="sr-only"> gaps</span>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <p className="form-hint">
-            {visibleSites.length} websites / {matrixFields.length} fields. Scroll horizontally to compare every column.
-            Expand a value to read its note.
+            {visibleSites.length} of {catalog.websites.length} websites · {matrixFields.length} fields. Select a column
+            heading to sort, or a website to edit it.
           </p>
           <section className="card comparison-wrap" tabIndex={0} role="region" aria-label="Website field comparison">
             <table className="website-comparison">
               <thead>
                 <tr>
-                  <th scope="col">Website</th>
-                  {matrixFields.map(f => (
-                    <th scope="col" key={f.key}>
-                      {f.label}
-                      {f.type === 'duration' ? ' (seconds)' : ''}
-                      {['qa', 'plugin_updated', 'backup_date'].includes(f.key) ? ' (reference)' : ''}
-                    </th>
-                  ))}
-                  <th scope="col">Actions</th>
+                  {[{key: 'name', label: 'Website', type: 'text'}, ...matrixFields].map(f => {
+                    const sorted = sort.key === f.key;
+                    const Icon = !sorted ? ArrowUpDown : sort.direction === 1 ? ArrowUp : ArrowDown;
+                    return (
+                      <th
+                        scope="col"
+                        key={f.key}
+                        aria-sort={sorted ? (sort.direction === 1 ? 'ascending' : 'descending') : undefined}
+                      >
+                        <button className="sort-button" onClick={() => toggleSort(f.key)}>
+                          {f.label}
+                          {f.type === 'duration' ? ' (seconds)' : ''}
+                          {['qa', 'plugin_updated', 'backup_date'].includes(f.key) ? ' (reference)' : ''}
+                          <Icon size={13} aria-hidden="true" />
+                        </button>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
                 {visibleSites.map(w => (
                   <tr key={w.id}>
                     <th scope="row">
-                      <strong>{w.name}</strong>
+                      <button
+                        className="matrix-site"
+                        disabled={busy}
+                        onClick={() => open(w.id)}
+                        aria-label={`Edit ${mode === 'seo' ? 'SEO' : 'features'} for ${w.name}`}
+                      >
+                        <strong>{w.name}</strong>
+                        <Pencil size={13} aria-hidden="true" />
+                      </button>
                       <small className="block">
                         {w.country}
                         {w.archived_at || w.status === 'archived' ? ' - Archived' : ''}
                       </small>
                     </th>
                     {matrixFields.map(f => {
-                      const value =
-                        f.key === 'seo_score'
-                          ? w.latest_audit?.score
-                          : f.key === 'audit_date'
-                            ? w.latest_audit?.measurement_date
-                            : f.key === 'website_url'
-                              ? w.canonical_url
-                              : f.key === 'cms'
-                                ? w.cms
-                                : w.fields[f.key];
+                      const value = cellValue(w, f.key);
                       const missing = value == null || value === '' || value === 'unknown';
                       const text =
                         f.type === 'status'
@@ -456,11 +616,6 @@ export default function LiveSeoHealth({
                         </td>
                       );
                     })}
-                    <td>
-                      <button className="text-button" disabled={busy} onClick={() => open(w.id)}>
-                        Edit {mode === 'seo' ? 'SEO' : 'features'}
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -483,8 +638,7 @@ export default function LiveSeoHealth({
           <section className="card padded">
             <h3>Latest saved review</h3>
             <p>
-              {reviewPage(site.fields).issues.length} checklist issues · {reviewPage(site.fields).missing.length} fields
-              not recorded.
+              {reviewSite(site).issues.length} checklist issues · {reviewSite(site).missing.length} fields not recorded.
             </p>
             <p className="form-hint">
               Generated maintenance reference dates are excluded from completeness and issue counts.
@@ -492,7 +646,7 @@ export default function LiveSeoHealth({
             <details>
               <summary>Review checklist issues</summary>
               <ul>
-                {reviewPage(site.fields).issues.map(f => (
+                {reviewSite(site).issues.map(f => (
                   <li key={f.key}>
                     {f.label}: {statusName(String(site.fields[f.key]))}
                     {onCreateTask && !site.archived_at && site.status !== 'archived' && (
@@ -508,7 +662,7 @@ export default function LiveSeoHealth({
                   </li>
                 ))}
               </ul>
-              {!reviewPage(site.fields).issues.length && <p>No issues flagged by recorded checklist statuses.</p>}
+              {!reviewSite(site).issues.length && <p>No issues flagged by recorded checklist statuses.</p>}
             </details>
           </section>
           <form

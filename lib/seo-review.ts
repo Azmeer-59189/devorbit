@@ -12,8 +12,10 @@ export const seoPageKeys = new Set([
 export function fieldsForPage(mode: 'seo' | 'features') {
   return seoFields.filter(f => (mode === 'seo' ? seoPageKeys.has(f.key) : !seoPageKeys.has(f.key)));
 }
+/** Fields people fill in; generated reference dates and summaries are left out. */
+export const recordableFields = (selectedFields = seoFields) => selectedFields.filter(f => !generated.has(f.key));
 export function reviewSeo(fields: SeoValues, selectedFields = seoFields) {
-  const recorded = selectedFields.filter(f => !generated.has(f.key));
+  const recorded = recordableFields(selectedFields);
   const missing = recorded.filter(f => fields[f.key] == null || fields[f.key] === '' || fields[f.key] === 'unknown');
   const issues = recorded.filter(
     f => f.type === 'status' && ['no', 'not_yet', 'in_progress'].includes(String(fields[f.key])),
@@ -88,4 +90,23 @@ export function seoExportRows(sites: SeoExportSite[]) {
     row['Fields not recorded'] = missing.map(f => f.label).join(', ');
     return row;
   });
+}
+
+type Cell = string | number | null | undefined;
+const statusRank: Record<string, number> = {yes: 0, in_progress: 1, not_yet: 2, no: 3, not_applicable: 4};
+const isBlank = (value: Cell) => value == null || value === '' || value === 'unknown';
+/**
+ * Orders two comparison-table values of one field type for a column sort. Numbers and
+ * durations compare numerically, statuses from Yes to No, and text and dates naturally.
+ * Blank values always sort last, whichever direction is chosen.
+ */
+export function compareCells(a: Cell, b: Cell, type: string, direction: 1 | -1) {
+  if (isBlank(a) || isBlank(b)) return Number(isBlank(a)) - Number(isBlank(b));
+  const order =
+    type === 'number' || type === 'duration'
+      ? Number(a) - Number(b)
+      : type === 'status'
+        ? (statusRank[String(a)] ?? 9) - (statusRank[String(b)] ?? 9)
+        : String(a).localeCompare(String(b), 'en', {numeric: true, sensitivity: 'base'});
+  return order * direction;
 }

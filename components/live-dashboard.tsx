@@ -133,16 +133,52 @@ export default function LiveDashboard({
   // like the task list, so the list opened from a chart shows the count that was clicked.
   const drill = (filters: Partial<TaskFilters>) =>
     onTasks(taskFiltersToSearch({website, owner: user, ...filters}).toString());
+  // One row of counts, most urgent first. The attention counts need migration 016; overdue
+  // comes from the same open-task query either way. Completed has no task-list filter.
+  const summaryTiles = (d: Dashboard) => [
+    {
+      label: 'Active tasks',
+      hint: 'Open right now',
+      value: d.active_tasks,
+      status: 'in_progress',
+      open: () => drill({status: 'open'}),
+    },
+    {
+      label: 'Overdue',
+      hint: 'Past their due date',
+      value: d.overdue_tasks,
+      status: 'blocked',
+      open: () => drill({overdue: true}),
+    },
+    ...(d.attention
+      ? [
+          {
+            label: 'Blocked',
+            hint: 'Waiting on something',
+            value: d.attention.blocked,
+            status: 'blocked',
+            open: () => drill({status: 'blocked'}),
+          },
+          {
+            label: 'Awaiting acceptance',
+            hint: 'Assigned, not yet accepted',
+            value: d.attention.pending_assignments,
+            status: 'to_do',
+            open: () => drill({pending: true}),
+          },
+          {
+            label: 'Due for SEO audit',
+            hint: `No audit in ${d.attention.audit_interval_days} days`,
+            value: d.attention.audits_due,
+            status: 'in_review',
+            open: () => (website ? onSeo(website) : onAudits()),
+          },
+        ]
+      : []),
+    {label: 'Completed', hint: 'In the selected dates', value: d.completed_tasks, status: 'completed', open: null},
+  ];
   return (
     <section className="live-analytics">
-      <div className="analytics-heading">
-        <div>
-          <h2>Your workspace at a glance</h2>
-        </div>
-        <button className="button secondary" onClick={() => setRefresh(n => n + 1)}>
-          Refresh charts
-        </button>
-      </div>
       <div className="analytics-filters">
         <label className="field">
           From
@@ -200,6 +236,9 @@ export default function LiveDashboard({
         >
           Reset
         </button>
+        <button className="button secondary" onClick={() => setRefresh(n => n + 1)}>
+          Refresh charts
+        </button>
       </div>
       <details className="analytics-scope">
         <summary>About these numbers</summary>
@@ -218,56 +257,62 @@ export default function LiveDashboard({
         </div>
       ) : (
         <>
-          <div className="kpi-grid analytics-kpis dashboard-stat-strip">
-            {[
-              {label: 'Active tasks · now', value: dashboard.active_tasks, open: {status: 'open'}},
-              {label: 'Overdue · now', value: dashboard.overdue_tasks, open: {overdue: true}},
-              // Completion dates are not a task-list filter, so this tile has no drill-down.
-              {label: 'Completed · selected dates', value: dashboard.completed_tasks},
-            ].map(k =>
-              k.open ? (
-                <button
-                  className="kpi kpi-link"
-                  key={k.label}
-                  onClick={() => drill(k.open)}
-                  aria-label={`${k.label}: ${k.value}. View these tasks`}
-                >
-                  <div className="kpi-top">{k.label}</div>
-                  <div className="kpi-value">{k.value}</div>
-                </button>
-              ) : (
-                <div className="kpi" key={k.label}>
-                  <div className="kpi-top">{k.label}</div>
-                  <div className="kpi-value">{k.value}</div>
-                </div>
-              ),
-            )}
-          </div>
+          <section className="attention" aria-label="Summary">
+            <div className="attention-grid">
+              {summaryTiles(dashboard).map(item =>
+                item.open ? (
+                  <button
+                    key={item.label}
+                    className="attention-item"
+                    data-status={item.value ? item.status : 'cancelled'}
+                    onClick={item.open}
+                    aria-label={`${item.label}: ${item.value}. View them`}
+                  >
+                    <strong>{item.value}</strong>
+                    <span>{item.label}</span>
+                    <small>{item.hint}</small>
+                  </button>
+                ) : (
+                  <div key={item.label} className="attention-item" data-status={item.value ? item.status : 'cancelled'}>
+                    <strong>{item.value}</strong>
+                    <span>{item.label}</span>
+                    <small>{item.hint}</small>
+                  </div>
+                ),
+              )}
+            </div>
+          </section>
           <div className="analytics-grid">
             <article className="card analytics-chart">
               <h3>Open task deadlines</h3>
               <p>Open tasks by urgency · {dashboard.active_tasks} open</p>
               {dashboard.deadlines && dashboard.active_tasks > 0 ? (
                 <>
-                  <ResponsiveContainer width="100%" height={240}>
-                    <PieChart accessibilityLayer>
-                      <Pie
-                        data={deadlineSlices.map(s => ({label: s.label, count: dashboard.deadlines![s.key]}))}
-                        dataKey="count"
-                        nameKey="label"
-                        innerRadius={60}
-                        outerRadius={90}
-                        isAnimationActive={false}
-                        cursor="pointer"
-                        onClick={(_, index) => drill(deadlineSlices[index].open)}
-                      >
-                        {deadlineSlices.map(s => (
-                          <Cell key={s.key} fill={s.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div className="donut-wrap">
+                    <div className="donut-total" aria-hidden="true">
+                      <strong>{dashboard.active_tasks}</strong>
+                      <span>open</span>
+                    </div>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <PieChart accessibilityLayer>
+                        <Pie
+                          data={deadlineSlices.map(s => ({label: s.label, count: dashboard.deadlines![s.key]}))}
+                          dataKey="count"
+                          nameKey="label"
+                          innerRadius={60}
+                          outerRadius={90}
+                          isAnimationActive={false}
+                          cursor="pointer"
+                          onClick={(_, index) => drill(deadlineSlices[index].open)}
+                        >
+                          {deadlineSlices.map(s => (
+                            <Cell key={s.key} fill={s.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                   <div className="analytics-legend">
                     {deadlineSlices.map(s => (
                       <button key={s.key} onClick={() => drill(s.open)}>
@@ -395,52 +440,6 @@ export default function LiveDashboard({
               )}
             </article>
           </div>
-          {dashboard.attention && (
-            <section className="attention" aria-labelledby="attention-title">
-              <h3 id="attention-title">Needs attention</h3>
-              <div className="attention-grid">
-                {[
-                  {
-                    label: 'Overdue tasks',
-                    value: dashboard.attention.overdue,
-                    status: 'blocked',
-                    open: () => drill({overdue: true}),
-                  },
-                  {
-                    label: 'Blocked tasks',
-                    value: dashboard.attention.blocked,
-                    status: 'blocked',
-                    open: () => drill({status: 'blocked'}),
-                  },
-                  {
-                    label: 'Awaiting acceptance',
-                    value: dashboard.attention.pending_assignments,
-                    status: 'to_do',
-                    open: () => drill({pending: true}),
-                  },
-                  {
-                    label: 'Websites due for audit',
-                    hint: `No audit in ${dashboard.attention.audit_interval_days} days`,
-                    value: dashboard.attention.audits_due,
-                    status: 'in_progress',
-                    open: () => (website ? onSeo(website) : onAudits()),
-                  },
-                ].map(item => (
-                  <button
-                    key={item.label}
-                    className="attention-item"
-                    data-status={item.value ? item.status : 'cancelled'}
-                    onClick={item.open}
-                    aria-label={`${item.label}: ${item.value}. View them`}
-                  >
-                    <strong>{item.value}</strong>
-                    <span>{item.label}</span>
-                    {item.hint && <small>{item.hint}</small>}
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
           <details className="dashboard-seo-details">
             <summary>SEO trend</summary>
             <article className="card analytics-chart">

@@ -27,7 +27,7 @@ import {createBrowserSupabase} from '@/lib/supabase';
 import {SeoTaskDraft} from '@/lib/seo-task';
 import {taskInput, websiteInput} from '@/lib/live-validation';
 
-import {Workspace, Task, statusName, initials} from '@/lib/live-types';
+import {Workspace, Task, statusName, statusClass, initials} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
 import {useDialog} from '@/components/live-dialog';
 import LiveTasks from '@/components/live-tasks';
@@ -271,9 +271,7 @@ export default function ConnectedWorkspace() {
                   </td>
                   <td>{taskSites(task).map(siteName).join(', ') || 'General work'}</td>
                   <td>
-                    <span
-                      className={`badge ${pending ? 'pending' : statusName(task.progress).toLowerCase().replaceAll(' ', '-')}`}
-                    >
+                    <span className={`badge ${pending ? 'pending' : statusClass(task.progress)}`}>
                       {pending && !task.assignee_id ? 'Pending acceptance' : statusName(task.progress)}
                     </span>
                   </td>

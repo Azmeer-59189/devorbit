@@ -23,9 +23,9 @@ Responsive rules keep their cascade order. See docs/STYLING.md. */
   --chart-blocked: #ff5964;
   --chart-to_do: #ffbf24;
   --chart-cancelled: #91a3c2;
-  --nav-active-bg: #eaf1fc;
-  --auth-accent: #6046cb;
-  --auth-accent-hover: #4f36b2;
+  --nav-active-bg: var(--primary-surface);
+  --auth-accent: var(--primary);
+  --auth-accent-hover: var(--primary-hover);
   --radius-sm: 5px;
   --radius-control: 6px;
   --radius-card: 8px;
@@ -34,10 +34,14 @@ Responsive rules keep their cascade order. See docs/STYLING.md. */
   --font-body: 'DM Sans', Arial, sans-serif;
   --font-display: 'Manrope', Arial, sans-serif;
   --muted: #596579;
-  --primary: #216dcc;
-  --primary-hover: #195bae;
-  --focus-ring: #216dcc;
-  --nav-active-text: #1f68c4;
+  /* Brand indigo, matched to the logo. Kept distinct from the in-progress status blue
+     so actions never read as a task state. */
+  --primary: #4f46d8;
+  --primary-hover: #3f37b8;
+  --primary-surface: #efeefd;
+  --primary-border: #dcd9fb;
+  --focus-ring: #4f46d8;
+  --nav-active-text: var(--primary);
   --font-size-body: 14px;
   --font-size-label: 13px;
   --font-size-caption: 12px;
@@ -117,22 +121,22 @@ button:disabled {
 button {
   cursor: pointer;
   color: inherit;
-  outline-color: #4f46e5;
+  outline-color: var(--focus-ring);
   outline-offset: 3px;
 }
 a,
 input {
-  outline-color: #4f46e5;
+  outline-color: var(--focus-ring);
   outline-offset: 3px;
 }
 textarea {
   font: inherit;
   -webkit-tap-highlight-color: transparent;
-  outline-color: #4f46e5;
+  outline-color: var(--focus-ring);
   outline-offset: 3px;
 }
 select {
-  outline-color: #4f46e5;
+  outline-color: var(--focus-ring);
   outline-offset: 3px;
 }
 button {
@@ -2251,8 +2255,11 @@ td strong {
 .priority.low {
   color: #536074;
 }
-.overdue {
-  color: #953d49;
+/* Scoped like .connected-app td so overdue dates keep their warning colour in tables. */
+.overdue,
+.connected-app td.overdue {
+  color: var(--status-blocked);
+  font-weight: 550;
 }
 .info-callout {
   background: #e9e2f6;
@@ -2891,9 +2898,29 @@ button.website-related-row:hover {
   flex: 1;
   min-width: 140px;
 }
-.task-filter-panel .checkbox-field,
-.task-filter-panel > .text-button {
+.task-filter-panel .checkbox-field {
   padding: 12px 0;
+}
+.task-filter-actions {
+  display: flex;
+  gap: 16px;
+  margin-left: auto;
+  padding: 12px 0;
+}
+/* Advanced filters span their own row under the everyday ones. */
+.task-filter-more {
+  flex: 1 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: inherit;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border-control);
+}
+.task-filter-more .field {
+  flex: 1;
+  min-width: 140px;
+  max-width: 260px;
 }
 .task-edit-form {
   padding: 20px;
@@ -3030,12 +3057,35 @@ button.website-related-row:hover {
 .analytics-filters > .text-button {
   padding: 12px 0;
 }
-.analytics-kpis {
-  margin: 0;
+.analytics-filters > .button {
+  margin-left: auto;
 }
-.analytics-kpis .kpi-value {
-  font-size: 29px;
-  margin: 12px 0 0;
+/* Total open tasks sits in the donut's hole; the chart keeps its own accessible labels. */
+.donut-wrap {
+  position: relative;
+  margin-top: 20px;
+}
+.analytics-chart .donut-wrap .recharts-responsive-container {
+  margin-top: 0;
+}
+.donut-total {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+.donut-total strong {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.1;
+}
+.donut-total span {
+  color: var(--muted);
+  font-size: var(--font-size-caption);
 }
 .analytics-grid {
   display: grid;
@@ -3079,14 +3129,6 @@ button.website-related-row:hover {
 .analytics-legend button:hover {
   text-decoration: underline;
 }
-.kpi-link {
-  width: 100%;
-  font: inherit;
-  color: inherit;
-}
-.kpi-link:hover {
-  border-color: #b9b0d4;
-}
 .analytics-legend i {
   width: 8px;
   height: 8px;
@@ -3121,9 +3163,6 @@ button.website-related-row:hover {
   .analytics-heading {
     align-items: flex-start;
     flex-direction: column;
-  }
-  .analytics-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 .connected-app .simple-start {
@@ -3271,7 +3310,7 @@ button.website-related-row:hover {
   padding: 0;
 }
 .task-card-title:hover {
-  color: #624887;
+  color: var(--primary);
 }
 .live-kanban-card small,
 .live-kanban-card p {
@@ -3349,8 +3388,8 @@ h4 {
   font-size: var(--font-size-caption);
 }
 .sidebar .workspace-icon {
-  background: #eaf2ff;
-  color: #3278ca;
+  background: var(--primary-surface);
+  color: var(--primary);
   border-radius: var(--radius-control);
 }
 .sidebar .workspace-switch > svg {
@@ -3398,7 +3437,7 @@ h4 {
   stroke-width: 1.6;
 }
 .sidebar .nav-item em {
-  background: #dceafe;
+  background: var(--primary-border);
   color: var(--nav-active-text);
   font-size: 11px;
 }
@@ -3754,12 +3793,7 @@ h4 {
   border-radius: var(--radius-sm);
   background: var(--chart-fill);
 }
-/* Needs attention: clickable counts above the KPIs; zero counts use the muted cancelled tone. */
-.attention h3 {
-  margin: 0 0 10px;
-  font-size: var(--font-size-title);
-  font-weight: 600;
-}
+/* Dashboard summary: one row of counts that open their task lists; zero counts use the muted cancelled tone. */
 .attention-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -3775,17 +3809,23 @@ h4 {
   border-left: 3px solid var(--status-color);
   border-radius: var(--radius-card);
 }
-.attention-item:hover {
-  border-color: #b9b0d4;
+button.attention-item:hover {
+  border-color: var(--primary-border);
   border-left-color: var(--status-color);
+  box-shadow: 0 4px 12px #2632470f;
 }
 .attention-item strong {
   color: var(--status-color);
-  font-size: 24px;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
 .attention-item span {
+  color: var(--text);
   font-size: var(--font-size-label);
+  font-weight: 550;
 }
 .attention-item small {
   color: var(--muted);
@@ -3793,6 +3833,15 @@ h4 {
 }
 .audit-schedule {
   align-items: flex-end;
+}
+.seo-filter-panel .audit-schedule {
+  margin-left: auto;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+.seo-filter-panel .audit-schedule .field {
+  flex: 0 0 130px;
+  min-width: 0;
 }
 .kpi-grid .kpi:nth-child(n) {
   background: var(--surface);
@@ -3920,10 +3969,12 @@ h4 {
 .live-search input {
   color: #434d5a;
 }
-.simple-task-tabs button[aria-pressed='true'] {
-  background: #eaf2ff;
-  color: #2875ce;
-  border-color: #d8e7fc;
+/* Doubled class beats .connected-app .button.secondary so the selected tab is visible. */
+.simple-task-tabs .button.secondary[aria-pressed='true'] {
+  background: var(--primary-surface);
+  color: var(--primary);
+  border-color: var(--primary-border);
+  font-weight: 550;
 }
 .live-kanban {
   grid-template-columns: repeat(6, minmax(280px, 1fr));
@@ -3956,17 +4007,28 @@ h4 {
   border-color: var(--status-color, var(--muted));
 }
 .live-kanban-column h3 span {
-  color: var(--muted);
-  font-weight: 400;
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  text-align: center;
+  color: var(--status-color, var(--muted));
+  background: var(--status-surface, var(--surface-subtle));
+  font-size: var(--font-size-caption);
+  font-weight: 550;
 }
 .live-kanban-card {
   background: var(--surface);
   border: 1px solid #eceef3;
   border-radius: var(--radius-control);
-  padding: 18px;
-  gap: 9px;
+  border-top: 3px solid var(--status-color, var(--border));
+  padding: 14px 16px 16px;
+  gap: 6px;
   margin-bottom: 12px;
-  box-shadow: 0 1px 3px #26324702;
+  box-shadow: 0 1px 3px #26324708;
+  transition: box-shadow 120ms ease;
+}
+.live-kanban-card:hover {
+  box-shadow: 0 4px 12px #2632471a;
 }
 .task-card-title {
   font-weight: 500;
@@ -3982,12 +4044,22 @@ h4 {
   color: var(--muted);
   font-size: var(--font-size-caption);
 }
-.live-kanban-card .field {
-  margin-top: 5px;
+.kanban-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
   font-size: var(--font-size-caption);
+  color: var(--muted);
 }
-.live-kanban-card .field select {
-  padding: 6px 8px;
+.connected-app .live-kanban-card .kanban-move {
+  justify-self: start;
+  margin-top: 6px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-sm);
+  background: var(--surface-subtle);
+  color: var(--muted);
   font-size: var(--font-size-caption);
 }
 .website-card:nth-child(n) {
@@ -4298,19 +4370,6 @@ summary:focus-visible {
 .matrix-group {
   max-width: 300px;
 }
-.dashboard-stat-strip {
-  background: var(--card, #fff);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  overflow: hidden;
-}
-.dashboard-stat-strip .kpi {
-  box-shadow: none;
-  border-radius: 0;
-  border: 0;
-  border-right: 1px solid var(--border);
-}
 .dashboard-seo-details {
   margin-top: 16px;
 }
@@ -4338,10 +4397,10 @@ summary:focus-visible {
   .website-comparison td {
     min-width: 145px;
   }
-  .dashboard-stat-strip .kpi {
-    padding: 12px 8px;
+  .attention-item {
+    flex-basis: 140px;
   }
-  .dashboard-stat-strip .kpi-value {
+  .attention-item strong {
     font-size: 24px;
   }
 }

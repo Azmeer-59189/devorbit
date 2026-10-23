@@ -1,7 +1,7 @@
 'use client';
 import {useEffect, useRef, useState} from 'react';
 import {useSearchParams} from 'next/navigation';
-import {Workspace, statusName} from '@/lib/live-types';
+import {Workspace, statusName, statusClass} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
 import {taskActionInput} from '@/lib/live-validation';
 import {workspaceDate} from '@/lib/dates';
@@ -18,6 +18,8 @@ import {
   type TaskListRow as ListTask,
 } from '@/lib/task-list';
 const myScopes = ['assigned', 'pending', 'created', 'completed'];
+/** Filters kept behind "More filters"; the panel opens when a link arrives with one set. */
+const advancedFilters = ['creator', 'start', 'end', 'deadline'] as const;
 type Result = {
   tasks: ListTask[];
   total: number;
@@ -48,6 +50,8 @@ export default function LiveTasks({
     return mine ? (myScopes.includes(value) ? value : 'assigned') : 'all';
   });
   const [view, setView] = useState('list');
+  const [moreFilters, setMoreFilters] = useState(() => advancedFilters.some(k => filters[k] !== defaults[k]));
+  const advancedCount = advancedFilters.filter(k => filters[k] !== defaults[k]).length;
   const [refresh, setRefresh] = useState(0);
   const [snapshot, setSnapshot] = useState<{key: string; value: Result} | null>(null);
   const [failure, setFailure] = useState<{key: string; message: string} | null>(null);
@@ -91,6 +95,27 @@ export default function LiveTasks({
   const result = snapshot?.key === key ? snapshot.value : null;
   const error = failure?.key === key ? failure.message : '';
   const name = (id: string | null) => data.members.find(m => m.id === id)?.display_name || 'Unassigned';
+  const today = workspaceDate(data.workspace.timezone);
+  const overdue = (task: ListTask) =>
+    !!task.due_date && task.due_date < today && !['completed', 'cancelled'].includes(task.progress);
+  const priority = (task: ListTask) => (
+    <span className={`priority ${task.priority}`}>⚑ {statusName(task.priority)}</span>
+  );
+  const people = (k: 'owner' | 'creator') => (
+    <label className="field">
+      {statusName(k)}
+      <select value={filters[k]} onChange={e => filter({[k]: e.target.value})}>
+        <option value="">Everyone</option>
+        {k === 'owner' && <option value="unassigned">Unassigned</option>}
+        {data.members.map(m => (
+          <option key={m.id} value={m.id}>
+            {m.display_name}
+            {m.active === false ? ' (inactive)' : ''}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
   const sites = (task: ListTask) =>
     task.website_ids.map(id => data.websites.find(w => w.id === id)?.name || 'Website').join(', ') || 'General work';
   async function exportTasks(format: ExportFormat) {
@@ -258,21 +283,7 @@ export default function LiveTasks({
             ))}
           </select>
         </label>
-        {(['owner', 'creator'] as const).map(k => (
-          <label className="field" key={k}>
-            {statusName(k)}
-            <select value={filters[k]} onChange={e => filter({[k]: e.target.value})}>
-              <option value="">Everyone</option>
-              {k === 'owner' && <option value="unassigned">Unassigned</option>}
-              {data.members.map(m => (
-                <option key={m.id} value={m.id}>
-                  {m.display_name}
-                  {m.active === false ? ' (inactive)' : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-        ))}
+        {people('owner')}
         <label className="field">
           Status
           <select value={filters.status} onChange={e => filter({status: e.target.value})}>
@@ -295,12 +306,6 @@ export default function LiveTasks({
             ))}
           </select>
         </label>
-        {(['start', 'end'] as const).map(k => (
-          <label className="field" key={k}>
-            Created {k === 'start' ? 'from' : 'through'}
-            <input type="date" value={filters[k]} onChange={e => filter({[k]: e.target.value})} />
-          </label>
-        ))}
         <label className="field">
           Sort
           <select value={filters.sort} onChange={e => filter({sort: e.target.value})}>
@@ -317,14 +322,6 @@ export default function LiveTasks({
             ))}
           </select>
         </label>
-        <label className="field">
-          Due date
-          <select value={filters.deadline} onChange={e => filter({deadline: e.target.value})}>
-            <option value="">Any due date</option>
-            <option value="on_time">Due today or later</option>
-            <option value="none">No due date</option>
-          </select>
-        </label>
         <label className="checkbox-field">
           <input type="checkbox" checked={filters.overdue} onChange={e => filter({overdue: e.target.checked})} />
           Overdue only
@@ -333,9 +330,39 @@ export default function LiveTasks({
           <input type="checkbox" checked={filters.pending} onChange={e => filter({pending: e.target.checked})} />
           Awaiting acceptance
         </label>
-        <button className="text-button" onClick={() => setFilters(defaults)}>
-          Clear filters
-        </button>
+        <div className="task-filter-actions">
+          <button
+            className="text-button"
+            aria-expanded={moreFilters}
+            aria-controls="task-filters-more"
+            onClick={() => setMoreFilters(!moreFilters)}
+          >
+            {moreFilters ? 'Fewer filters' : 'More filters'}
+            {advancedCount > 0 && ` (${advancedCount})`}
+          </button>
+          <button className="text-button" onClick={() => setFilters(defaults)}>
+            Clear filters
+          </button>
+        </div>
+        {moreFilters && (
+          <div className="task-filter-more" id="task-filters-more">
+            {people('creator')}
+            {(['start', 'end'] as const).map(k => (
+              <label className="field" key={k}>
+                Created {k === 'start' ? 'from' : 'through'}
+                <input type="date" value={filters[k]} onChange={e => filter({[k]: e.target.value})} />
+              </label>
+            ))}
+            <label className="field">
+              Due date
+              <select value={filters.deadline} onChange={e => filter({deadline: e.target.value})}>
+                <option value="">Any due date</option>
+                <option value="on_time">Due today or later</option>
+                <option value="none">No due date</option>
+              </select>
+            </label>
+          </div>
+        )}
       </div>
       {actionError && (
         <p role="alert" className="form-error">
@@ -380,19 +407,19 @@ export default function LiveTasks({
                   {result.tasks.map(t => (
                     <tr key={t.id}>
                       <td>
-                        <button className="text-button" onClick={() => onOpen(t.id)}>
+                        <button className="task-card-title" onClick={() => onOpen(t.id)}>
                           {t.title}
                         </button>
                         <small className="block">{t.category}</small>
                       </td>
                       <td>{sites(t)}</td>
                       <td>
-                        {statusName(t.progress)}
+                        <span className={`badge ${statusClass(t.progress)}`}>{statusName(t.progress)}</span>
                         {pending(t)}
                       </td>
-                      <td>{statusName(t.priority)}</td>
+                      <td>{priority(t)}</td>
                       <td>{name(t.assignee_id)}</td>
-                      <td>{t.due_date || 'No due date'}</td>
+                      <td className={overdue(t) ? 'overdue' : undefined}>{t.due_date || 'No due date'}</td>
                       <td>
                         {t.pending_recipient_id === data.profile.id ? (
                           <div className="row">
@@ -474,35 +501,34 @@ export default function LiveTasks({
                             {t.title}
                           </button>
                           <small>{sites(t)}</small>
-                          <p>
-                            {name(t.assignee_id)} · {statusName(t.priority)}
-                          </p>
-                          {t.due_date && <p>Due {t.due_date}</p>}
+                          <div className="kanban-card-meta">
+                            {priority(t)}
+                            {t.due_date && <span className={overdue(t) ? 'overdue' : undefined}>Due {t.due_date}</span>}
+                          </div>
+                          <p>{name(t.assignee_id)}</p>
                           {pending(t)}
-                          <label className="field">
-                            Move
-                            <select
-                              aria-label={`Move ${t.title}`}
-                              value=""
-                              disabled={
-                                busy ||
-                                !(
-                                  t.assignee_id === data.profile.id ||
-                                  ['administrator', 'manager'].includes(data.profile.role)
-                                )
-                              }
-                              onChange={e => move(t, e.target.value)}
-                            >
-                              <option value="">Choose status</option>
-                              {taskStatuses
-                                .filter(s => s !== t.progress && !boardTransition(t, s, data.profile))
-                                .map(s => (
-                                  <option key={s} value={s}>
-                                    {statusName(s)}
-                                  </option>
-                                ))}
-                            </select>
-                          </label>
+                          <select
+                            className="kanban-move"
+                            aria-label={`Move ${t.title}`}
+                            value=""
+                            disabled={
+                              busy ||
+                              !(
+                                t.assignee_id === data.profile.id ||
+                                ['administrator', 'manager'].includes(data.profile.role)
+                              )
+                            }
+                            onChange={e => move(t, e.target.value)}
+                          >
+                            <option value="">Move to…</option>
+                            {taskStatuses
+                              .filter(s => s !== t.progress && !boardTransition(t, s, data.profile))
+                              .map(s => (
+                                <option key={s} value={s}>
+                                  {statusName(s)}
+                                </option>
+                              ))}
+                          </select>
                         </article>
                       ))}
                     {!result.tasks.some(t => t.assignee_id && t.progress === status) && (

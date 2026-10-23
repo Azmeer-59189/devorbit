@@ -271,19 +271,38 @@ export default function LiveSeoHealth({
         </p>
       )}
       <div className="section-toolbar">
-        <div>
-          <h2>{site ? site.name : mode === 'seo' ? 'SEO' : 'Website Features'}</h2>
+        {/* The page heading already names the list, so the title only appears for one website. */}
+        {site ? (
+          <div>
+            <h2>{site.name}</h2>
+            <p className="form-hint">
+              {mode === 'seo'
+                ? 'SEO performance and analytics for this website.'
+                : 'Website capabilities for this website.'}
+            </p>
+          </div>
+        ) : (
           <p className="form-hint">
-            {mode === 'seo'
-              ? 'SEO performance and analytics across every website.'
-              : 'Compare website capabilities across your entire registry.'}
+            {catalog
+              ? `${catalog.websites.length} websites · ${catalog.websites.filter(w => !!w.latest_audit).length} with a dated audit · ${catalog.websites.filter(w => reviewPage(w.fields).issues.length > 0).length} with checklist issues`
+              : ''}
           </p>
-        </div>
+        )}
         <div className="row">
           {site && (
             <button className="button secondary" disabled={busy} onClick={() => open(null)}>
               All websites
             </button>
+          )}
+          {!site && catalog && (
+            <>
+              <button className="button secondary" disabled={!visibleSites.length} onClick={() => exportSites('csv')}>
+                Export CSV
+              </button>
+              <button className="button secondary" disabled={!visibleSites.length} onClick={() => exportSites('xlsx')}>
+                Export Excel
+              </button>
+            </>
           )}
           <button className="button secondary" disabled={busy} onClick={() => open(site?.id || null)}>
             Reload latest
@@ -293,72 +312,62 @@ export default function LiveSeoHealth({
       {!catalog && !error && <p>Loading website health…</p>}
       {!site && catalog && (
         <>
-          <p className="form-hint">
-            {catalog.websites.length} websites · {catalog.websites.filter(w => !!w.latest_audit).length} with a dated
-            audit · {catalog.websites.filter(w => reviewPage(w.fields).issues.length > 0).length} with checklist issues
-          </p>
-          <label className="field">
-            Find a website
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Website or country" />
-          </label>
-          <label className="checkbox-field">
-            <input type="checkbox" checked={attentionOnly} onChange={e => setAttentionOnly(e.target.checked)} />
-            Show websites needing attention
-          </label>
-          {mode === 'seo' && catalog.audit_interval_days !== undefined && (
-            <>
-              <label className="checkbox-field">
-                <input type="checkbox" checked={auditDueOnly} onChange={e => showAuditDue(e.target.checked)} />
-                Due for an audit ({catalog.websites.filter(w => w.audit_due).length}; none in the last{' '}
-                {catalog.audit_interval_days} days)
-              </label>
-              {data.profile.role === 'administrator' && (
-                <form
-                  className="row audit-schedule"
-                  onSubmit={e => {
-                    e.preventDefault();
-                    saveSchedule();
-                  }}
-                >
-                  <label className="field">
-                    Audit every (days)
-                    <input
-                      type="number"
-                      min={7}
-                      max={730}
-                      step={1}
-                      required
-                      value={scheduleDraft ?? catalog.audit_interval_days}
-                      onChange={e => setScheduleDraft(e.target.value)}
-                    />
-                  </label>
-                  <button
-                    className="button secondary"
-                    disabled={busy || scheduleDraft === null || Number(scheduleDraft) === catalog.audit_interval_days}
+          <div className="task-filter-panel seo-filter-panel">
+            <label className="field">
+              Find a website
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Website or country" />
+            </label>
+            <label className="field matrix-group">
+              Field category
+              <select value={fieldGroup} onChange={e => setFieldGroup(e.target.value)}>
+                <option value="all">All fields</option>
+                {[...new Set(pageFields.map(f => f.group))].map(g => (
+                  <option key={g}>{g}</option>
+                ))}
+              </select>
+            </label>
+            <label className="checkbox-field">
+              <input type="checkbox" checked={attentionOnly} onChange={e => setAttentionOnly(e.target.checked)} />
+              Needs attention
+            </label>
+            {mode === 'seo' && catalog.audit_interval_days !== undefined && (
+              <>
+                <label className="checkbox-field">
+                  <input type="checkbox" checked={auditDueOnly} onChange={e => showAuditDue(e.target.checked)} />
+                  Due for an audit ({catalog.websites.filter(w => w.audit_due).length}; none in the last{' '}
+                  {catalog.audit_interval_days} days)
+                </label>
+                {data.profile.role === 'administrator' && (
+                  <form
+                    className="row audit-schedule"
+                    onSubmit={e => {
+                      e.preventDefault();
+                      saveSchedule();
+                    }}
                   >
-                    Save schedule
-                  </button>
-                </form>
-              )}
-            </>
-          )}
-          <div className="row">
-            <button className="button secondary" disabled={!visibleSites.length} onClick={() => exportSites('csv')}>
-              Export CSV
-            </button>
-            <button className="button secondary" disabled={!visibleSites.length} onClick={() => exportSites('xlsx')}>
-              Export Excel
-            </button>
+                    <label className="field">
+                      Audit every (days)
+                      <input
+                        type="number"
+                        min={7}
+                        max={730}
+                        step={1}
+                        required
+                        value={scheduleDraft ?? catalog.audit_interval_days}
+                        onChange={e => setScheduleDraft(e.target.value)}
+                      />
+                    </label>
+                    <button
+                      className="button secondary"
+                      disabled={busy || scheduleDraft === null || Number(scheduleDraft) === catalog.audit_interval_days}
+                    >
+                      Save schedule
+                    </button>
+                  </form>
+                )}
+              </>
+            )}
           </div>
-          <label className="field matrix-group">
-            Field category
-            <select value={fieldGroup} onChange={e => setFieldGroup(e.target.value)}>
-              <option value="all">All fields</option>
-              {[...new Set(pageFields.map(f => f.group))].map(g => (
-                <option key={g}>{g}</option>
-              ))}
-            </select>
-          </label>
           <p className="form-hint">
             {visibleSites.length} websites / {matrixFields.length} fields. Scroll horizontally to compare every column.
             Expand a value to read its note.

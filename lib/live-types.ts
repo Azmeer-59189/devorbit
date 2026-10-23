@@ -44,6 +44,8 @@ export const statusName = (value: string) =>
     .split('_')
     .map(w => w[0].toUpperCase() + w.slice(1))
     .join(' ');
+/** Badge class for a task status, e.g. `in_progress` → `in-progress` (see `.badge.in-progress`). */
+export const statusClass = (value: string) => value.replaceAll('_', '-');
 export const initials = (name: string) =>
   name
     .split(' ')

@@ -1,5 +1,6 @@
 export type Page =
   | 'Form builder'
+  | 'Website features'
   | 'SEO reports'
   | 'Overview'
   | 'Websites'
@@ -18,6 +19,7 @@ const slugs: Record<Page, string> = {
   Notifications: 'notifications',
   Account: 'account',
   'SEO reports': 'reports',
+  'Website features': 'website-features',
   'Form builder': 'forms',
 };
 const pages = Object.fromEntries(Object.entries(slugs).map(([page, slug]) => [slug, page as Page]));

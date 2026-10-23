@@ -12,6 +12,7 @@ test('every workspace page round-trips through its URL', () => {
     'Notifications',
     'Account',
     'SEO reports',
+    'Website features',
     'Form builder',
   ];
   for (const page of pages) assert.deepEqual(parseWorkspacePath(workspacePath(page)), {page, websiteId: null});

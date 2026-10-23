@@ -218,63 +218,16 @@ export default function LiveDashboard({
         </div>
       ) : (
         <>
-          {dashboard.attention && (
-            <section className="attention" aria-labelledby="attention-title">
-              <h3 id="attention-title">Needs attention</h3>
-              <div className="attention-grid">
-                {[
-                  {
-                    label: 'Overdue tasks',
-                    value: dashboard.attention.overdue,
-                    status: 'blocked',
-                    open: () => drill({overdue: true}),
-                  },
-                  {
-                    label: 'Blocked tasks',
-                    value: dashboard.attention.blocked,
-                    status: 'blocked',
-                    open: () => drill({status: 'blocked'}),
-                  },
-                  {
-                    label: 'Awaiting acceptance',
-                    value: dashboard.attention.pending_assignments,
-                    status: 'to_do',
-                    open: () => drill({pending: true}),
-                  },
-                  {
-                    label: 'Websites due for audit',
-                    hint: `No audit in ${dashboard.attention.audit_interval_days} days`,
-                    value: dashboard.attention.audits_due,
-                    status: 'in_progress',
-                    open: () => (website ? onSeo(website) : onAudits()),
-                  },
-                ].map(item => (
-                  <button
-                    key={item.label}
-                    className="attention-item"
-                    data-status={item.value ? item.status : 'cancelled'}
-                    onClick={item.open}
-                    aria-label={`${item.label}: ${item.value}. View them`}
-                  >
-                    <strong>{item.value}</strong>
-                    <span>{item.label}</span>
-                    {item.hint && <small>{item.hint}</small>}
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-          <div className="kpi-grid analytics-kpis">
+          <div className="kpi-grid analytics-kpis dashboard-stat-strip">
             {[
               {label: 'Active tasks · now', value: dashboard.active_tasks, open: {status: 'open'}},
               {label: 'Overdue · now', value: dashboard.overdue_tasks, open: {overdue: true}},
               // Completion dates are not a task-list filter, so this tile has no drill-down.
               {label: 'Completed · selected dates', value: dashboard.completed_tasks},
-              {label: 'Matching tasks', value: dashboard.task_count, open: {}},
             ].map(k =>
               k.open ? (
                 <button
-                  className="card kpi kpi-link"
+                  className="kpi kpi-link"
                   key={k.label}
                   onClick={() => drill(k.open)}
                   aria-label={`${k.label}: ${k.value}. View these tasks`}
@@ -283,7 +236,7 @@ export default function LiveDashboard({
                   <div className="kpi-value">{k.value}</div>
                 </button>
               ) : (
-                <div className="card kpi" key={k.label}>
+                <div className="kpi" key={k.label}>
                   <div className="kpi-top">{k.label}</div>
                   <div className="kpi-value">{k.value}</div>
                 </div>
@@ -442,88 +395,137 @@ export default function LiveDashboard({
               )}
             </article>
           </div>
-          <article className="card analytics-chart">
-            <div className="analytics-heading">
-              <div>
-                <h3>SEO score trend</h3>
-                <p>
-                  Current audit observations and latest legacy report revisions · 0–100 scale · measurements retain
-                  their original source.
-                </p>
-              </div>
-              <button className="text-button" onClick={() => onSeo(website || null)}>
-                {website ? 'Open SEO form' : 'Open reports'}
-              </button>
-            </div>
-            <label className="field analytics-source">
-              Measurement source
-              <select value={source} onChange={e => setSource(e.target.value)}>
-                <option value="">Choose a source</option>
-                {dashboard.sources.map(s => (
-                  <option key={s}>{s}</option>
+          {dashboard.attention && (
+            <section className="attention" aria-labelledby="attention-title">
+              <h3 id="attention-title">Needs attention</h3>
+              <div className="attention-grid">
+                {[
+                  {
+                    label: 'Overdue tasks',
+                    value: dashboard.attention.overdue,
+                    status: 'blocked',
+                    open: () => drill({overdue: true}),
+                  },
+                  {
+                    label: 'Blocked tasks',
+                    value: dashboard.attention.blocked,
+                    status: 'blocked',
+                    open: () => drill({status: 'blocked'}),
+                  },
+                  {
+                    label: 'Awaiting acceptance',
+                    value: dashboard.attention.pending_assignments,
+                    status: 'to_do',
+                    open: () => drill({pending: true}),
+                  },
+                  {
+                    label: 'Websites due for audit',
+                    hint: `No audit in ${dashboard.attention.audit_interval_days} days`,
+                    value: dashboard.attention.audits_due,
+                    status: 'in_progress',
+                    open: () => (website ? onSeo(website) : onAudits()),
+                  },
+                ].map(item => (
+                  <button
+                    key={item.label}
+                    className="attention-item"
+                    data-status={item.value ? item.status : 'cancelled'}
+                    onClick={item.open}
+                    aria-label={`${item.label}: ${item.value}. View them`}
+                  >
+                    <strong>{item.value}</strong>
+                    <span>{item.label}</span>
+                    {item.hint && <small>{item.hint}</small>}
+                  </button>
                 ))}
-              </select>
-            </label>
-            {!website || !source ? (
-              <div className="analytics-empty">
-                Choose one website above and a source here to view a comparable trend.
               </div>
-            ) : dashboard.seo.length ? (
-              <>
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={dashboard.seo} accessibilityLayer style={chartStyle}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e6dfeb" />
-                    <XAxis dataKey="measured_at" />
-                    <YAxis domain={[0, 100]} />
-                    <Tooltip />
-                    <Line
-                      dataKey="value"
-                      name="SEO score (0–100)"
-                      stroke="var(--chart-completed)"
-                      strokeWidth={2}
-                      dot={{r: 4}}
-                      isAnimationActive={false}
-                      connectNulls={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-                <details>
-                  <summary>
-                    View measurements ({dashboard.seo.length} of {dashboard.seo_count}; latest 500 maximum)
-                  </summary>
-                  <div className="table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Measured</th>
-                          <th>Website</th>
-                          <th>Score</th>
-                          <th>Source</th>
-                          <th>Audit / report ID</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {dashboard.seo.map(m => (
-                          <tr key={m.id}>
-                            <td>{m.measured_at}</td>
-                            <td>{m.website}</td>
-                            <td>
-                              {m.value} / {m.scale}
-                            </td>
-                            <td>{m.source}</td>
-                            <td>{m.submission_id}</td>
+            </section>
+          )}
+          <details className="dashboard-seo-details">
+            <summary>SEO trend</summary>
+            <article className="card analytics-chart">
+              <div className="analytics-heading">
+                <div>
+                  <h3>SEO score trend</h3>
+                  <p>
+                    Current audit observations and latest legacy report revisions · 0–100 scale · measurements retain
+                    their original source.
+                  </p>
+                </div>
+                <button className="text-button" onClick={() => onSeo(website || null)}>
+                  {website ? 'Open SEO form' : 'Open reports'}
+                </button>
+              </div>
+              <label className="field analytics-source">
+                Measurement source
+                <select value={source} onChange={e => setSource(e.target.value)}>
+                  <option value="">Choose a source</option>
+                  {dashboard.sources.map(s => (
+                    <option key={s}>{s}</option>
+                  ))}
+                </select>
+              </label>
+              {!website || !source ? (
+                <div className="analytics-empty">
+                  Choose one website above and a source here to view a comparable trend.
+                </div>
+              ) : dashboard.seo.length ? (
+                <>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart data={dashboard.seo} accessibilityLayer style={chartStyle}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e6dfeb" />
+                      <XAxis dataKey="measured_at" />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip />
+                      <Line
+                        dataKey="value"
+                        name="SEO score (0–100)"
+                        stroke="var(--chart-completed)"
+                        strokeWidth={2}
+                        dot={{r: 4}}
+                        isAnimationActive={false}
+                        connectNulls={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <details>
+                    <summary>
+                      View measurements ({dashboard.seo.length} of {dashboard.seo_count}; latest 500 maximum)
+                    </summary>
+                    <div className="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Measured</th>
+                            <th>Website</th>
+                            <th>Score</th>
+                            <th>Source</th>
+                            <th>Audit / report ID</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </details>
-              </>
-            ) : (
-              <Empty />
-            )}
-          </article>
-          <section className="card analytics-records">
+                        </thead>
+                        <tbody>
+                          {dashboard.seo.map(m => (
+                            <tr key={m.id}>
+                              <td>{m.measured_at}</td>
+                              <td>{m.website}</td>
+                              <td>
+                                {m.value} / {m.scale}
+                              </td>
+                              <td>{m.source}</td>
+                              <td>{m.submission_id}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <Empty />
+              )}
+            </article>
+          </details>
+          <section className="analytics-records">
             <h3>Behind the numbers</h3>
             <p>
               Charts use all matching records. The preview below shows up to 50 tasks.{' '}

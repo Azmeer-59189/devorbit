@@ -3,8 +3,8 @@ import {useEffect, useRef, useState} from 'react';
 import {useSearchParams} from 'next/navigation';
 import {Workspace, statusName} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
-import {seoFields, seoStatuses, SeoValues, seoInput} from '@/lib/seo-health';
-import {compareSeo, reviewSeo, seoExportRows} from '@/lib/seo-review';
+import {seoStatuses, SeoValues, seoInput} from '@/lib/seo-health';
+import {compareSeo, reviewSeo, fieldsForPage} from '@/lib/seo-review';
 import {seoTaskDraft, SeoTaskDraft} from '@/lib/seo-task';
 import {workspaceDate} from '@/lib/dates';
 import {downloadRows, type ExportFormat} from '@/lib/export';
@@ -62,11 +62,17 @@ export default function LiveSeoHealth({
   data,
   onChanged,
   onCreateTask,
+  mode = 'seo',
 }: {
+  mode?: 'seo' | 'features';
   data: Workspace;
   onChanged: () => Promise<void>;
   onCreateTask?: (draft: SeoTaskDraft) => void;
 }) {
+  const [fieldGroup, setFieldGroup] = useState('all');
+  const pageFields = fieldsForPage(mode);
+  const reviewPage = (values: SeoValues) => reviewSeo(values, pageFields);
+  const matrixFields = pageFields.filter(f => fieldGroup === 'all' || f.group === fieldGroup);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [site, setSite] = useState<Site | null>(null);
   const [fields, setFields] = useState<SeoValues>({});
@@ -176,7 +182,7 @@ export default function LiveSeoHealth({
   }
   const member = (id: string) => data.members.find(m => m.id === id)?.display_name || 'Team member';
   const visibleSites = (catalog?.websites || []).filter(w => {
-    const review = reviewSeo(w.fields);
+    const review = reviewPage(w.fields);
     return (
       `${w.name} ${w.country}`.toLowerCase().includes(search.toLowerCase()) &&
       (!attentionOnly || review.issues.length > 0 || review.missing.length > 0 || !w.latest_audit) &&
@@ -215,7 +221,32 @@ export default function LiveSeoHealth({
   }
   function exportSites(format: ExportFormat) {
     setError('');
-    downloadRows(seoExportRows(visibleSites), format, 'SEO website health', workspaceDate(data.workspace.timezone));
+    const rows = visibleSites.map(w => {
+      const row: Record<string, string | number> = {Website: w.name, Country: w.country};
+      for (const f of matrixFields) {
+        const value =
+          f.key === 'seo_score'
+            ? w.latest_audit?.score
+            : f.key === 'audit_date'
+              ? w.latest_audit?.measurement_date
+              : f.key === 'website_url'
+                ? w.canonical_url
+                : f.key === 'cms'
+                  ? w.cms
+                  : w.fields[f.key];
+        row[
+          f.label +
+            (f.type === 'duration'
+              ? ' (seconds)'
+              : ['qa', 'plugin_updated', 'backup_date'].includes(f.key)
+                ? ' (automatic reference)'
+                : '')
+        ] = value == null ? '' : f.type === 'status' ? statusName(String(value)) : value;
+        row[f.label + ' note'] = w.notes[f.key] || '';
+      }
+      return row;
+    });
+    downloadRows(rows, format, mode === 'seo' ? 'SEO' : 'Website features', workspaceDate(data.workspace.timezone));
     setMessage(
       `Exported ${visibleSites.length} of ${catalog?.websites.length ?? 0} websites, one column per form field.`,
     );
@@ -241,9 +272,11 @@ export default function LiveSeoHealth({
       )}
       <div className="section-toolbar">
         <div>
-          <h2>{site ? site.name : 'SEO & Website Health'}</h2>
+          <h2>{site ? site.name : mode === 'seo' ? 'SEO' : 'Website Features'}</h2>
           <p className="form-hint">
-            One fixed form based on your website dashboard. No templates or weekly publishing steps.
+            {mode === 'seo'
+              ? 'SEO performance and analytics across every website.'
+              : 'Compare website capabilities across your entire registry.'}
           </p>
         </div>
         <div className="row">
@@ -262,7 +295,7 @@ export default function LiveSeoHealth({
         <>
           <p className="form-hint">
             {catalog.websites.length} websites · {catalog.websites.filter(w => !!w.latest_audit).length} with a dated
-            audit · {catalog.websites.filter(w => reviewSeo(w.fields).issues.length > 0).length} with checklist issues
+            audit · {catalog.websites.filter(w => reviewPage(w.fields).issues.length > 0).length} with checklist issues
           </p>
           <label className="field">
             Find a website
@@ -272,7 +305,7 @@ export default function LiveSeoHealth({
             <input type="checkbox" checked={attentionOnly} onChange={e => setAttentionOnly(e.target.checked)} />
             Show websites needing attention
           </label>
-          {catalog.audit_interval_days !== undefined && (
+          {mode === 'seo' && catalog.audit_interval_days !== undefined && (
             <>
               <label className="checkbox-field">
                 <input type="checkbox" checked={auditDueOnly} onChange={e => showAuditDue(e.target.checked)} />
@@ -317,85 +350,115 @@ export default function LiveSeoHealth({
               Export Excel
             </button>
           </div>
-          <section className="card table-wrap">
-            <table>
+          <label className="field matrix-group">
+            Field category
+            <select value={fieldGroup} onChange={e => setFieldGroup(e.target.value)}>
+              <option value="all">All fields</option>
+              {[...new Set(pageFields.map(f => f.group))].map(g => (
+                <option key={g}>{g}</option>
+              ))}
+            </select>
+          </label>
+          <p className="form-hint">
+            {visibleSites.length} websites / {matrixFields.length} fields. Scroll horizontally to compare every column.
+            Expand a value to read its note.
+          </p>
+          <section className="card comparison-wrap" tabIndex={0} role="region" aria-label="Website field comparison">
+            <table className="website-comparison">
               <thead>
                 <tr>
-                  <th>Website</th>
-                  <th>Latest SEO score</th>
-                  <th>Audit date</th>
-                  <th>Source</th>
-                  <th>Analytics</th>
-                  <th>Page load</th>
-                  <th>Needs attention</th>
-                  <th />
+                  <th scope="col">Website</th>
+                  {matrixFields.map(f => (
+                    <th scope="col" key={f.key}>
+                      {f.label}
+                      {f.type === 'duration' ? ' (seconds)' : ''}
+                      {['qa', 'plugin_updated', 'backup_date'].includes(f.key) ? ' (reference)' : ''}
+                    </th>
+                  ))}
+                  <th scope="col">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleSites.map(w => (
                   <tr key={w.id}>
-                    <td>
+                    <th scope="row">
                       <strong>{w.name}</strong>
                       <small className="block">
                         {w.country}
-                        {w.archived_at || w.status === 'archived' ? ' · Archived' : ''}
+                        {w.archived_at || w.status === 'archived' ? ' - Archived' : ''}
                       </small>
-                    </td>
-                    <td>{w.latest_audit ? `${w.latest_audit.score}/100` : 'Not recorded'}</td>
-                    <td>{w.latest_audit?.measurement_date || 'Not recorded'}</td>
-                    <td>{w.latest_audit?.source || '—'}</td>
-                    <td>{statusName(String(w.fields.google_analytics || 'unknown'))}</td>
-                    <td>{typeof w.fields.page_seconds === 'number' ? `${w.fields.page_seconds} s` : 'Not recorded'}</td>
-                    <td>
-                      <details>
-                        <summary>
-                          {reviewSeo(w.fields).issues.length} issues · {reviewSeo(w.fields).missing.length} missing
-                          fields
-                        </summary>
-                        <ul>
-                          {reviewSeo(w.fields).issues.map(f => (
-                            <li key={f.key}>
-                              {f.label}: {statusName(String(w.fields[f.key]))}
-                            </li>
-                          ))}
-                        </ul>
-                        <p>
-                          Not recorded:{' '}
-                          {reviewSeo(w.fields)
-                            .missing.map(f => f.label)
-                            .join(', ') || 'None'}
-                        </p>
-                      </details>
-                    </td>
+                    </th>
+                    {matrixFields.map(f => {
+                      const value =
+                        f.key === 'seo_score'
+                          ? w.latest_audit?.score
+                          : f.key === 'audit_date'
+                            ? w.latest_audit?.measurement_date
+                            : f.key === 'website_url'
+                              ? w.canonical_url
+                              : f.key === 'cms'
+                                ? w.cms
+                                : w.fields[f.key];
+                      const missing = value == null || value === '' || value === 'unknown';
+                      const text = missing
+                        ? 'Not recorded'
+                        : f.type === 'status'
+                          ? statusName(String(value))
+                          : String(value);
+                      return (
+                        <td key={f.key}>
+                          <span
+                            className={f.type === 'status' ? 'matrix-status' : 'matrix-value'}
+                            data-value={missing ? 'unknown' : String(value)}
+                          >
+                            {f.type === 'long_text' && text.length > 120 ? (
+                              <details>
+                                <summary>{text.slice(0, 100)}...</summary>
+                                <p>{text}</p>
+                              </details>
+                            ) : (
+                              text
+                            )}
+                            {!missing && f.type === 'duration' ? ' s' : ''}
+                            {!missing && f.key === 'seo_score' ? '/100' : ''}
+                          </span>
+                          {w.notes[f.key] && (
+                            <details className="matrix-note">
+                              <summary>Note</summary>
+                              <p>{w.notes[f.key]}</p>
+                            </details>
+                          )}
+                        </td>
+                      );
+                    })}
                     <td>
                       <button className="text-button" disabled={busy} onClick={() => open(w.id)}>
-                        Open SEO form
+                        Edit {mode === 'seo' ? 'SEO' : 'features'}
                       </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {!catalog.websites.length && (
-              <p className="padded">Add a website or import the source sheet below to get started.</p>
-            )}
-            {!!catalog.websites.length && !visibleSites.length && (
-              <p className="padded">No websites match these filters.</p>
+            {!visibleSites.length && (
+              <p className="padded">No websites match. Clear your filters or add websites to your registry.</p>
             )}
           </section>
           <p className="form-hint">
-            Latest SEO score is selected by audit date. Page-load values are durations, not SEO scores; their
-            method/date may be unspecified.
+            {mode === 'seo'
+              ? 'Latest SEO score is selected by audit date.'
+              : 'Maintenance dates are automatic references, not confirmed completion records.'}{' '}
+            Page-load values are durations, not SEO scores; their method/date may be unspecified.
           </p>
         </>
       )}
       {site && catalog && (
         <>
-          <SeoTrend key={site.id} audits={catalog.audits} />
+          {mode === 'seo' && <SeoTrend key={site.id} audits={catalog.audits} />}
           <section className="card padded">
             <h3>Latest saved review</h3>
             <p>
-              {reviewSeo(site.fields).issues.length} checklist issues · {reviewSeo(site.fields).missing.length} fields
+              {reviewPage(site.fields).issues.length} checklist issues · {reviewPage(site.fields).missing.length} fields
               not recorded.
             </p>
             <p className="form-hint">
@@ -404,7 +467,7 @@ export default function LiveSeoHealth({
             <details>
               <summary>Review checklist issues</summary>
               <ul>
-                {reviewSeo(site.fields).issues.map(f => (
+                {reviewPage(site.fields).issues.map(f => (
                   <li key={f.key}>
                     {f.label}: {statusName(String(site.fields[f.key]))}
                     {onCreateTask && !site.archived_at && site.status !== 'archived' && (
@@ -420,7 +483,7 @@ export default function LiveSeoHealth({
                   </li>
                 ))}
               </ul>
-              {!reviewSeo(site.fields).issues.length && <p>No issues flagged by recorded checklist statuses.</p>}
+              {!reviewPage(site.fields).issues.length && <p>No issues flagged by recorded checklist statuses.</p>}
             </details>
           </section>
           <form
@@ -434,11 +497,11 @@ export default function LiveSeoHealth({
               className="live-form-fieldset"
               disabled={busy || !!site.archived_at || site.status === 'archived'}
             >
-              {[...new Set(seoFields.map(f => f.group))].map(group => (
+              {[...new Set(pageFields.map(f => f.group))].map(group => (
                 <fieldset className="seo-field-group" key={group}>
                   <legend>{group}</legend>
                   <div className="seo-form-grid">
-                    {seoFields
+                    {pageFields
                       .filter(f => f.group === group)
                       .map(f => (
                         <div key={f.key}>
@@ -525,18 +588,20 @@ export default function LiveSeoHealth({
                 </fieldset>
               ))}
               <div className="seo-form-grid">
-                <label className="field">
-                  SEO audit source / tool
-                  <input
-                    maxLength={500}
-                    value={source}
-                    placeholder="e.g. Rank Math SEO Analyzer"
-                    onChange={e => {
-                      setSource(e.target.value);
-                      setDirty(true);
-                    }}
-                  />
-                </label>
+                {mode === 'seo' && (
+                  <label className="field">
+                    SEO audit source / tool
+                    <input
+                      maxLength={500}
+                      value={source}
+                      placeholder="e.g. Rank Math SEO Analyzer"
+                      onChange={e => {
+                        setSource(e.target.value);
+                        setDirty(true);
+                      }}
+                    />
+                  </label>
+                )}
                 <label className="field">
                   Correction reason
                   <textarea
@@ -555,7 +620,7 @@ export default function LiveSeoHealth({
                 credentials. Scores require an audit date and source.
               </p>
               <button className="button primary" disabled={!dirty} type="submit">
-                {busy ? 'Saving…' : 'Save SEO form'}
+                {busy ? 'Saving...' : mode === 'seo' ? 'Save SEO' : 'Save features'}
               </button>
             </fieldset>
             {(site.archived_at || site.status === 'archived') && (
@@ -563,39 +628,43 @@ export default function LiveSeoHealth({
             )}
           </form>
           <section className="card padded">
-            <h3>Dated SEO audits</h3>
-            <p className="form-hint">
-              Latest 100 audit records, including corrections. Imported audit authors are not known; the shown actor
-              performed the import.
-            </p>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Audit date</th>
-                    <th>Score</th>
-                    <th>Source</th>
-                    <th>Recorded by</th>
-                    <th>Context</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {catalog.audits.map(a => (
-                    <tr key={a.id}>
-                      <td>{a.measurement_date}</td>
-                      <td>{a.score}/100</td>
-                      <td>{a.source}</td>
-                      <td>{member(a.actor_id)}</td>
-                      <td>
-                        {catalog.audits.some(n => n.supersedes_id === a.id) ? 'Superseded · ' : ''}
-                        {a.reason || 'Recorded audit'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {!catalog.audits.length && <p>No audits recorded yet.</p>}
+            {mode === 'seo' && (
+              <>
+                <h3>Dated SEO audits</h3>
+                <p className="form-hint">
+                  Latest 100 audit records, including corrections. Imported audit authors are not known; the shown actor
+                  performed the import.
+                </p>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Audit date</th>
+                        <th>Score</th>
+                        <th>Source</th>
+                        <th>Recorded by</th>
+                        <th>Context</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {catalog.audits.map(a => (
+                        <tr key={a.id}>
+                          <td>{a.measurement_date}</td>
+                          <td>{a.score}/100</td>
+                          <td>{a.source}</td>
+                          <td>{member(a.actor_id)}</td>
+                          <td>
+                            {catalog.audits.some(n => n.supersedes_id === a.id) ? 'Superseded · ' : ''}
+                            {a.reason || 'Recorded audit'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {!catalog.audits.length && <p>No audits recorded yet.</p>}
+              </>
+            )}
             <h3>Form change history</h3>
             <p className="form-hint">Latest 30 saved versions. Every save preserves the previous version.</p>
             <label className="field">
@@ -624,18 +693,20 @@ export default function LiveSeoHealth({
                     </tr>
                   </thead>
                   <tbody>
-                    {compareSeo(selectedVersion, latestVersion).map(f => (
-                      <tr key={f.key}>
-                        <th>{f.label}</th>
-                        {[selectedVersion, latestVersion].map(r => (
-                          <td key={r.id}>
-                            {String(r.fields[f.key] ?? 'Not recorded') || 'Not recorded'}
-                            {r.notes[f.key] && <small className="block">Note: {r.notes[f.key]}</small>}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                    {selectedVersion.source !== latestVersion.source && (
+                    {compareSeo(selectedVersion, latestVersion)
+                      .filter(f => pageFields.some(p => p.key === f.key))
+                      .map(f => (
+                        <tr key={f.key}>
+                          <th>{f.label}</th>
+                          {[selectedVersion, latestVersion].map(r => (
+                            <td key={r.id}>
+                              {String(r.fields[f.key] ?? 'Not recorded') || 'Not recorded'}
+                              {r.notes[f.key] && <small className="block">Note: {r.notes[f.key]}</small>}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    {mode === 'seo' && selectedVersion.source !== latestVersion.source && (
                       <tr>
                         <th>Audit source</th>
                         <td>{selectedVersion.source || 'Not recorded'}</td>
@@ -644,8 +715,8 @@ export default function LiveSeoHealth({
                     )}
                   </tbody>
                 </table>
-                {!compareSeo(selectedVersion, latestVersion).length &&
-                  selectedVersion.source === latestVersion.source && (
+                {!compareSeo(selectedVersion, latestVersion).some(f => pageFields.some(p => p.key === f.key)) &&
+                  (mode !== 'seo' || selectedVersion.source === latestVersion.source) && (
                     <p>No recorded field or note changes between these versions.</p>
                   )}
               </div>
@@ -658,7 +729,7 @@ export default function LiveSeoHealth({
                 </summary>
                 <p>{r.reason || 'Form updated'}</p>
                 <dl>
-                  {seoFields.map(f => (
+                  {pageFields.map(f => (
                     <div key={f.key}>
                       <dt>{f.label}</dt>
                       <dd>
@@ -675,7 +746,7 @@ export default function LiveSeoHealth({
           </section>
         </>
       )}
-      {!site && data.profile.role === 'administrator' && (
+      {!site && mode === 'features' && data.profile.role === 'administrator' && (
         <section className="card padded">
           <h3>Import your Google Sheet data</h3>
           <p className="form-hint">
@@ -731,7 +802,7 @@ export default function LiveSeoHealth({
                           <details>
                             <summary>Review 33 fields</summary>
                             <dl>
-                              {seoFields.map(f => (
+                              {pageFields.map(f => (
                                 <div key={f.key}>
                                   <dt>{f.label}</dt>
                                   <dd>

@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {compareSeo, reviewSeo, seoExportRows} from '../lib/seo-review';
+import {fieldsForPage, compareSeo, reviewSeo, seoExportRows} from '../lib/seo-review';
 import {seoFields} from '../lib/seo-health';
 
 test('SEO review distinguishes unknown, missing, negative, and not-applicable statuses', () => {
@@ -47,4 +47,17 @@ test('SEO exports have one labelled column per form field and flag automatic dat
   assert.equal(row['Latest audit score'], 71);
   assert.equal(row['Field notes'], 'SEO Implementation: Schema pending');
   assert.match(String(row['Checklist issues']), /SEO Implementation/);
+});
+
+test('SEO and website features partition all fields and scope checklist reviews', () => {
+  const seo = fieldsForPage('seo');
+  const features = fieldsForPage('features');
+  assert.deepEqual(
+    seo.map(f => f.key),
+    ['seo_implementation', 'seo_score', 'audit_date', 'google_analytics', 'page_seconds'],
+  );
+  assert.equal(new Set([...seo, ...features].map(f => f.key)).size, 33);
+  assert.equal(seo.length + features.length, 33);
+  assert.equal(reviewSeo({ssl: 'no', seo_implementation: 'yes'}, seo).issues.length, 0);
+  assert.equal(reviewSeo({ssl: 'no', seo_implementation: 'yes'}, features).issues[0].key, 'ssl');
 });

@@ -2,8 +2,18 @@ import {seoFields, SeoValues} from './seo-health';
 
 // Generated reference dates and summaries are not evidence of checklist completion.
 const generated = new Set(['qa', 'plugin_updated', 'backup_date', 'remarks']);
-export function reviewSeo(fields: SeoValues) {
-  const recorded = seoFields.filter(f => !generated.has(f.key));
+export const seoPageKeys = new Set([
+  'seo_implementation',
+  'seo_score',
+  'audit_date',
+  'google_analytics',
+  'page_seconds',
+]);
+export function fieldsForPage(mode: 'seo' | 'features') {
+  return seoFields.filter(f => (mode === 'seo' ? seoPageKeys.has(f.key) : !seoPageKeys.has(f.key)));
+}
+export function reviewSeo(fields: SeoValues, selectedFields = seoFields) {
+  const recorded = selectedFields.filter(f => !generated.has(f.key));
   const missing = recorded.filter(f => fields[f.key] == null || fields[f.key] === '' || fields[f.key] === 'unknown');
   const issues = recorded.filter(
     f => f.type === 'status' && ['no', 'not_yet', 'in_progress'].includes(String(fields[f.key])),

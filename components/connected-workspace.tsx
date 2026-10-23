@@ -44,8 +44,8 @@ const pageLabels: Record<string, string> = {
   Overview: 'Home',
   'Team tasks': 'Tasks',
   'Team & roles': 'Team',
-  'SEO reports': 'SEO & Website Health',
-  'Form builder': 'SEO & Website Health',
+  'SEO reports': 'SEO',
+  'Form builder': 'Website Features',
 };
 const pageLabel = (page: string) => pageLabels[page] || page;
 // Shallow navigation: updates the URL and history without reloading the workspace.
@@ -366,6 +366,7 @@ export default function ConnectedWorkspace() {
               ['Websites', Globe2],
               ['Team tasks', ListTodo],
               ['SEO reports', Globe2],
+              ['Website features', ListTodo],
               ['Team & roles', Users],
             ] as const
           )
@@ -466,12 +467,14 @@ export default function ConnectedWorkspace() {
                       : page === 'Team & roles'
                         ? 'Add teammates and manage their access.'
                         : page === 'SEO reports'
-                          ? 'Update website health, record an SEO audit, and review previous results.'
-                          : page === 'Form builder'
-                            ? 'Update website health with your fixed SEO form.'
-                            : page === 'Account'
-                              ? 'Your profile and workspace details.'
-                              : 'Your work and updates.'}
+                          ? 'Compare SEO implementation, ratings, audit dates, analytics and page speed.'
+                          : page === 'Website features'
+                            ? 'Compare all website capabilities, integrations, content and maintenance in one view.'
+                            : page === 'Form builder'
+                              ? 'Update website health with your fixed SEO form.'
+                              : page === 'Account'
+                                ? 'Your profile and workspace details.'
+                                : 'Your work and updates.'}
               </p>
             </div>
             <div className="heading-actions">
@@ -499,18 +502,14 @@ export default function ConnectedWorkspace() {
           )}
           {page === 'Overview' && (
             <>
-              <section className="simple-start">
-                <button className="card simple-start-item" onClick={() => navigate('Websites')}>
-                  <Globe2 size={23} />
-                  <strong>Websites</strong>
-                  <span>{data.counts.websites} websites in your registry</span>
-                </button>
-                <button className="card simple-start-item" onClick={() => navigate('Team tasks')}>
-                  <ListTodo size={23} />
-                  <strong>Tasks</strong>
-                  <span>{data.counts.open_tasks} active tasks</span>
-                </button>
-              </section>
+              <LiveDashboard
+                data={data}
+                onTask={openTaskId}
+                onTasks={search => openWith('Team tasks', search)}
+                onSeo={openSeo}
+                onAudits={() => openWith('SEO reports', 'audit=due')}
+              />
+
               {myPending.length > 0 && (
                 <section className="simple-pending">
                   <span>
@@ -541,13 +540,6 @@ export default function ConnectedWorkspace() {
                   </button>
                 </section>
               )}
-              <LiveDashboard
-                data={data}
-                onTask={openTaskId}
-                onTasks={search => openWith('Team tasks', search)}
-                onSeo={openSeo}
-                onAudits={() => openWith('SEO reports', 'audit=due')}
-              />
               <section className="card">
                 <div className="card-heading">
                   <div>
@@ -684,8 +676,10 @@ export default function ConnectedWorkspace() {
               onCreate={() => setDialog('task')}
             />
           )}
-          {page === 'SEO reports' && (
+          {(page === 'SEO reports' || page === 'Website features') && (
             <LiveSeoHealth
+              key={page}
+              mode={page === 'Website features' ? 'features' : 'seo'}
               data={data}
               onChanged={load}
               onCreateTask={draft => {
@@ -695,7 +689,7 @@ export default function ConnectedWorkspace() {
             />
           )}
           {page === 'Form builder' && data.profile.role === 'administrator' && (
-            <LiveSeoHealth data={data} onChanged={load} />
+            <LiveSeoHealth mode="features" data={data} onChanged={load} />
           )}
 
           {page === 'Team & roles' && data.profile.role === 'administrator' && (

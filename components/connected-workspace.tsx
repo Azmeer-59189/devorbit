@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react';
 import {createBrowserSupabase} from '@/lib/supabase';
+import {SeoTaskDraft} from '@/lib/seo-task';
 import {taskInput, websiteInput} from '@/lib/live-validation';
 
 import {Workspace, Task, statusName, initials} from '@/lib/live-types';
@@ -66,6 +67,27 @@ export default function ConnectedWorkspace() {
   const [websiteFilter, setWebsiteFilter] = useState('all');
   const [websiteView, setWebsiteView] = useState('active');
   const [dialog, setDialog] = useState<'website' | 'task' | null>(null);
+  const [seoDraft, setSeoDraft] = useState<SeoTaskDraft | null>(null);
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = () =>
+      workspaceFetch('/api/notifications')
+        .then(r => {
+          if (!cancelled) setUnread(r.unread || 0);
+        })
+        .catch(() => {});
+    refresh();
+    const timer = setInterval(refresh, 60000);
+    window.addEventListener('notifications-changed', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      window.removeEventListener('notifications-changed', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, []);
   const [fetchedTask, setFetchedTask] = useState<Task | null>(null);
   const [mobile, setMobile] = useState(false);
   const load = useCallback(async () => {
@@ -210,7 +232,6 @@ export default function ConnectedWorkspace() {
   const siteName = (id: string) => data.websites.find(s => s.id === id)?.name || 'Website';
   const taskSites = (task: Task) => data.taskWebsites.filter(l => l.task_id === task.id).map(l => l.website_id);
   const myPending = data.assignments.filter(a => a.recipient_id === data.profile.id);
-  const active = data.tasks.filter(t => t.assignee_id && !['completed', 'cancelled'].includes(t.progress));
   const filteredTasks = !!query || websiteFilter !== 'all';
   const websites = data.websites.filter(
     s =>
@@ -335,7 +356,10 @@ export default function ConnectedWorkspace() {
           </span>
         </div>
         <div className="nav-groups">
-          <div className="nav-label">DAILY WORK</div>
+          <button className="button secondary sidebar-create" onClick={() => setDialog('task')}>
+            <Plus size={16} /> New task
+          </button>
+          <div className="nav-label">WORKSPACE</div>
           {(
             [
               ['Overview', LayoutDashboard],
@@ -356,7 +380,7 @@ export default function ConnectedWorkspace() {
                 <span>{pageLabel(label)}</span>
               </button>
             ))}
-          <details className="simple-more">
+          <details className="simple-more" open>
             <summary>More tools</summary>
             {(
               [
@@ -380,7 +404,7 @@ export default function ConnectedWorkspace() {
         <div className="sidebar-bottom">
           <div className="live-connection">
             <i />
-            <span>Connected to Supabase</span>
+            <span>Workspace connected</span>
           </div>
           <button className="user-profile" onClick={() => navigate('Account')}>
             <span className="avatar purple">{initials(data.profile.display_name)}</span>
@@ -402,6 +426,22 @@ export default function ConnectedWorkspace() {
             <strong>{pageLabel(page)}</strong>
           </div>
           <div className="topbar-actions">
+            <span className="workspace-date">
+              {new Intl.DateTimeFormat('en', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                timeZone: data.workspace.timezone,
+              }).format(new Date())}
+            </span>
+            <button
+              className="icon-button notification-bell"
+              aria-label={`Notifications, ${unread} unread`}
+              onClick={() => navigate('Notifications')}
+            >
+              <Bell size={18} />
+              {unread > 0 && <span className="unread-badge">{unread > 99 ? '99+' : unread}</span>}
+            </button>
             <button className="icon-button" aria-label="Refresh workspace" onClick={load}>
               <RefreshCw size={17} />
             </button>
@@ -414,8 +454,8 @@ export default function ConnectedWorkspace() {
         <main data-page={page}>
           <div className="page-heading">
             <div>
-              <div className="eyebrow">{data.workspace.name.toUpperCase()} / LIVE WORKSPACE</div>
-              <h1>{page === 'Overview' ? 'Your workspace' : pageLabel(page)}</h1>
+              <div className="eyebrow">{data.workspace.name}</div>
+              <h1>{page === 'Overview' ? `Welcome, ${data.profile.display_name.split(' ')[0]}!` : pageLabel(page)}</h1>
               <p>
                 {page === 'Overview'
                   ? 'Manage your websites, assign work, and track progress.'
@@ -462,18 +502,13 @@ export default function ConnectedWorkspace() {
               <section className="simple-start">
                 <button className="card simple-start-item" onClick={() => navigate('Websites')}>
                   <Globe2 size={23} />
-                  <strong>1. Websites</strong>
-                  <span>
-                    {data.websites.filter(s => !s.archived_at && s.status !== 'archived').length} websites in your
-                    registry
-                  </span>
-                  <small>View websites and their tasks</small>
+                  <strong>Websites</strong>
+                  <span>{data.counts.websites} websites in your registry</span>
                 </button>
                 <button className="card simple-start-item" onClick={() => navigate('Team tasks')}>
                   <ListTodo size={23} />
-                  <strong>2. Tasks</strong>
-                  <span>{active.length} active tasks</span>
-                  <small>Create work and choose an owner</small>
+                  <strong>Tasks</strong>
+                  <span>{data.counts.open_tasks} active tasks</span>
                 </button>
               </section>
               {myPending.length > 0 && (
@@ -511,6 +546,7 @@ export default function ConnectedWorkspace() {
                 onTask={openTaskId}
                 onTasks={search => openWith('Team tasks', search)}
                 onSeo={openSeo}
+                onAudits={() => openWith('SEO reports', 'audit=due')}
               />
               <section className="card">
                 <div className="card-heading">
@@ -648,7 +684,16 @@ export default function ConnectedWorkspace() {
               onCreate={() => setDialog('task')}
             />
           )}
-          {page === 'SEO reports' && <LiveSeoHealth data={data} onChanged={load} />}
+          {page === 'SEO reports' && (
+            <LiveSeoHealth
+              data={data}
+              onChanged={load}
+              onCreateTask={draft => {
+                setSeoDraft(draft);
+                setDialog('task');
+              }}
+            />
+          )}
           {page === 'Form builder' && data.profile.role === 'administrator' && (
             <LiveSeoHealth data={data} onChanged={load} />
           )}
@@ -656,7 +701,7 @@ export default function ConnectedWorkspace() {
           {page === 'Team & roles' && data.profile.role === 'administrator' && (
             <LiveTeam data={data} onChanged={load} />
           )}
-          {page === 'Notifications' && <LiveNotifications onOpenTask={openTaskId} />}
+          {page === 'Notifications' && <LiveNotifications onOpenTask={openTaskId} timezone={data.workspace.timezone} />}
           {page === 'Account' && (
             <div className="settings-grid">
               <section className="card padded">
@@ -717,10 +762,15 @@ export default function ConnectedWorkspace() {
       {dialog && (
         <CreationDialog
           kind={dialog}
+          draft={seoDraft}
           data={data}
-          onClose={() => setDialog(null)}
+          onClose={() => {
+            setDialog(null);
+            setSeoDraft(null);
+          }}
           onSaved={async () => {
             setDialog(null);
+            setSeoDraft(null);
             setMessage(dialog === 'website' ? 'Website added to your workspace.' : 'Task created and saved.');
             await load();
           }}
@@ -742,11 +792,13 @@ export default function ConnectedWorkspace() {
 
 function CreationDialog({
   kind,
+  draft,
   data,
   onClose,
   onSaved,
 }: {
   kind: 'website' | 'task';
+  draft?: SeoTaskDraft | null;
   data: Workspace;
   onClose: () => void;
   onSaved: () => Promise<void>;
@@ -855,12 +907,20 @@ function CreationDialog({
               ) : (
                 <>
                   <label className="field">
-                    Task title *<input name="title" required maxLength={200} placeholder="What needs to be done?" />
+                    Task title *
+                    <input
+                      name="title"
+                      defaultValue={draft?.title}
+                      required
+                      maxLength={200}
+                      placeholder="What needs to be done?"
+                    />
                   </label>
                   <label className="field">
                     Description
                     <textarea
                       name="description"
+                      defaultValue={draft?.description}
                       maxLength={10000}
                       rows={3}
                       placeholder="Context, expected outcome, and any useful details…"
@@ -899,11 +959,22 @@ function CreationDialog({
                       .filter(site => !site.archived_at && site.status !== 'archived')
                       .map(site => (
                         <label key={site.id}>
-                          <input name="website_ids" type="checkbox" value={site.id} />
+                          <input
+                            name="website_ids"
+                            type="checkbox"
+                            value={site.id}
+                            defaultChecked={site.id === draft?.websiteId}
+                          />
                           {site.name}
                         </label>
                       ))}
-                    {!data.websites.length && (
+                    {draft && !data.websites.some(w => w.id === draft.websiteId) && (
+                      <label>
+                        <input name="website_ids" type="checkbox" value={draft.websiteId} defaultChecked />
+                        {draft.websiteName}
+                      </label>
+                    )}
+                    {!data.websites.length && !draft && (
                       <span className="form-hint">No websites yet. You can still create a general task.</span>
                     )}
                   </fieldset>
@@ -913,7 +984,7 @@ function CreationDialog({
                       <div className="form-row">
                         <label className="field">
                           Category *
-                          <select name="category" defaultValue="Development">
+                          <select name="category" defaultValue={draft ? 'SEO' : 'Development'}>
                             {['Development', 'Bug fix', 'SEO', 'Content', 'Maintenance', 'Meeting', 'General'].map(
                               category => (
                                 <option key={category}>{category}</option>

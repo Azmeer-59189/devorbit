@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {seoFields, seoInput, validateSeo} from '../lib/seo-health';
+import {auditScheduleInput, seoFields, seoInput, validateSeo} from '../lib/seo-health';
 import {prepareSeoImport} from '../lib/seo-import';
 test('fixed SEO form covers the 33 worksheet fields and preserves real-data distinctions', () => {
   assert.equal(seoFields.length, 33);
@@ -46,4 +46,9 @@ test('SEO form validates numeric units, dates, statuses and source before submis
   assert.throws(() => seoInput({...input, fields: {audit_date: '2026-02-30'}}));
   assert.throws(() => seoInput({...input, fields: {password: 'secret'}}));
   assert.throws(() => seoInput({...input, fields: {ssl: 'maybe'}}));
+});
+test('audit schedule accepts whole days from 7 to 730', () => {
+  assert.deepEqual(auditScheduleInput({interval_days: 90}), {interval_days: 90});
+  for (const interval_days of [6, 731, 30.5, '30', null]) assert.throws(() => auditScheduleInput({interval_days}));
+  assert.throws(() => auditScheduleInput(null));
 });

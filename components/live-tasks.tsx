@@ -317,9 +317,21 @@ export default function LiveTasks({
             ))}
           </select>
         </label>
+        <label className="field">
+          Due date
+          <select value={filters.deadline} onChange={e => filter({deadline: e.target.value})}>
+            <option value="">Any due date</option>
+            <option value="on_time">Due today or later</option>
+            <option value="none">No due date</option>
+          </select>
+        </label>
         <label className="checkbox-field">
           <input type="checkbox" checked={filters.overdue} onChange={e => filter({overdue: e.target.checked})} />
           Overdue only
+        </label>
+        <label className="checkbox-field">
+          <input type="checkbox" checked={filters.pending} onChange={e => filter({pending: e.target.checked})} />
+          Awaiting acceptance
         </label>
         <button className="text-button" onClick={() => setFilters(defaults)}>
           Clear filters
@@ -422,6 +434,7 @@ export default function LiveTasks({
                 {taskStatuses.map(status => (
                   <section
                     className="live-kanban-column"
+                    data-status={status}
                     key={status}
                     aria-label={`${statusName(status)} column`}
                     onDragOver={e => {

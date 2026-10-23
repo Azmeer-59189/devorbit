@@ -53,6 +53,15 @@ test('task filters round-trip through the page URL and drop invalid values', () 
     {...taskFilterDefaults, priority: 'urgent'},
   );
   assert.equal(taskFiltersFromSearch(new URLSearchParams('owner=unassigned')).owner, 'unassigned');
+  const due = {...taskFilterDefaults, status: 'open', deadline: 'on_time', pending: true};
+  assert.deepEqual(taskFiltersFromSearch(taskFiltersToSearch(due)), due);
+  assert.equal(taskFiltersFromSearch(new URLSearchParams('deadline=late')).deadline, '');
+});
+test('the server validates deadline and pending-assignment filters', () => {
+  const value = taskListFilters(new URLSearchParams('deadline=none&pending=true'));
+  assert.equal(value.deadline, 'none');
+  assert.equal(value.pending, true);
+  assert.throws(() => taskListFilters(new URLSearchParams('deadline=late')));
 });
 test('the server accepts the open status and export mode', () => {
   const value = taskListFilters(new URLSearchParams('status=open&export=true'));

@@ -5,6 +5,7 @@ import {Workspace, statusName} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
 import {seoFields, seoStatuses, SeoValues, seoInput} from '@/lib/seo-health';
 import {compareSeo, reviewSeo, seoExportRows} from '@/lib/seo-review';
+import {seoTaskDraft, SeoTaskDraft} from '@/lib/seo-task';
 import {workspaceDate} from '@/lib/dates';
 import {downloadRows, type ExportFormat} from '@/lib/export';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -32,6 +33,8 @@ type Site = {
   source: string;
   revision: number;
   latest_audit: Audit | null;
+  /** Current website with no dated audit within the workspace schedule (migration 016). */
+  audit_due?: boolean;
 };
 type Revision = {
   id: string;
@@ -43,7 +46,7 @@ type Revision = {
   reason: string;
   created_at: string;
 };
-type Catalog = {websites: Site[]; audits: Audit[]; revisions: Revision[]};
+type Catalog = {websites: Site[]; audits: Audit[]; revisions: Revision[]; audit_interval_days?: number};
 type ImportPreview = {
   notice: string;
   rows: {
@@ -55,7 +58,15 @@ type ImportPreview = {
     review: string;
   }[];
 };
-export default function LiveSeoHealth({data, onChanged}: {data: Workspace; onChanged: () => Promise<void>}) {
+export default function LiveSeoHealth({
+  data,
+  onChanged,
+  onCreateTask,
+}: {
+  data: Workspace;
+  onChanged: () => Promise<void>;
+  onCreateTask?: (draft: SeoTaskDraft) => void;
+}) {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [site, setSite] = useState<Site | null>(null);
   const [fields, setFields] = useState<SeoValues>({});
@@ -68,13 +79,17 @@ export default function LiveSeoHealth({data, onChanged}: {data: Workspace; onCha
   const [dirty, setDirty] = useState(false);
   const [search, setSearch] = useState('');
   const [attentionOnly, setAttentionOnly] = useState(false);
+  // ?audit=due (the dashboard's "Websites due for audit") lists only websites due for an audit.
+  const searchParams = useSearchParams();
+  const [auditDueOnly, setAuditDueOnly] = useState(() => searchParams.get('audit') === 'due');
+  const [scheduleDraft, setScheduleDraft] = useState<string | null>(null);
   const [versionId, setVersionId] = useState('');
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const lock = useRef(false);
   const pending = useRef<{key: string; id: string} | null>(null);
   // ?website=<id> opens that website's form, so dashboard links and shared URLs land on it.
-  const initialSite = useRef(useSearchParams().get('website'));
+  const initialSite = useRef(searchParams.get('website'));
   function show(d: Catalog, id: string | null) {
     setCatalog(d);
     const selected = id ? d.websites[0] || null : null;
@@ -164,9 +179,40 @@ export default function LiveSeoHealth({data, onChanged}: {data: Workspace; onCha
     const review = reviewSeo(w.fields);
     return (
       `${w.name} ${w.country}`.toLowerCase().includes(search.toLowerCase()) &&
-      (!attentionOnly || review.issues.length > 0 || review.missing.length > 0 || !w.latest_audit)
+      (!attentionOnly || review.issues.length > 0 || review.missing.length > 0 || !w.latest_audit) &&
+      (!auditDueOnly || !!w.audit_due)
     );
   });
+  function showAuditDue(value: boolean) {
+    setAuditDueOnly(value);
+    const url = new URL(window.location.href);
+    if (value) url.searchParams.set('audit', 'due');
+    else url.searchParams.delete('audit');
+    window.history.replaceState(window.history.state, '', url);
+  }
+  async function saveSchedule() {
+    if (lock.current || scheduleDraft === null) return;
+    const days = Number(scheduleDraft);
+    lock.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      await workspaceFetch('/api/seo-health/schedule', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({interval_days: days}),
+      });
+      setCatalog(await workspaceFetch('/api/seo-health'));
+      setScheduleDraft(null);
+      setMessage(`Audit reminders now flag websites with no audit in the last ${days} days.`);
+      await onChanged();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      lock.current = false;
+      setBusy(false);
+    }
+  }
   function exportSites(format: ExportFormat) {
     setError('');
     downloadRows(seoExportRows(visibleSites), format, 'SEO website health', workspaceDate(data.workspace.timezone));
@@ -226,6 +272,43 @@ export default function LiveSeoHealth({data, onChanged}: {data: Workspace; onCha
             <input type="checkbox" checked={attentionOnly} onChange={e => setAttentionOnly(e.target.checked)} />
             Show websites needing attention
           </label>
+          {catalog.audit_interval_days !== undefined && (
+            <>
+              <label className="checkbox-field">
+                <input type="checkbox" checked={auditDueOnly} onChange={e => showAuditDue(e.target.checked)} />
+                Due for an audit ({catalog.websites.filter(w => w.audit_due).length}; none in the last{' '}
+                {catalog.audit_interval_days} days)
+              </label>
+              {data.profile.role === 'administrator' && (
+                <form
+                  className="row audit-schedule"
+                  onSubmit={e => {
+                    e.preventDefault();
+                    saveSchedule();
+                  }}
+                >
+                  <label className="field">
+                    Audit every (days)
+                    <input
+                      type="number"
+                      min={7}
+                      max={730}
+                      step={1}
+                      required
+                      value={scheduleDraft ?? catalog.audit_interval_days}
+                      onChange={e => setScheduleDraft(e.target.value)}
+                    />
+                  </label>
+                  <button
+                    className="button secondary"
+                    disabled={busy || scheduleDraft === null || Number(scheduleDraft) === catalog.audit_interval_days}
+                  >
+                    Save schedule
+                  </button>
+                </form>
+              )}
+            </>
+          )}
           <div className="row">
             <button className="button secondary" disabled={!visibleSites.length} onClick={() => exportSites('csv')}>
               Export CSV
@@ -324,6 +407,16 @@ export default function LiveSeoHealth({data, onChanged}: {data: Workspace; onCha
                 {reviewSeo(site.fields).issues.map(f => (
                   <li key={f.key}>
                     {f.label}: {statusName(String(site.fields[f.key]))}
+                    {onCreateTask && !site.archived_at && site.status !== 'archived' && (
+                      <button
+                        className="button secondary"
+                        onClick={() =>
+                          onCreateTask(seoTaskDraft(site, f.label, String(site.fields[f.key]), site.notes[f.key]))
+                        }
+                      >
+                        Create task
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>

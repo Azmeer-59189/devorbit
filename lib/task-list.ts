@@ -8,6 +8,8 @@ export const taskStatusFilters = ['open', ...taskStatuses];
 const scopes = ['all', 'assigned', 'pending', 'created', 'completed'];
 const sorts = ['newest', 'oldest', 'due', 'priority', 'title'];
 const priorities = ['low', 'medium', 'high', 'urgent'];
+/** Due-date filters (migration 016): 'on_time' is due today or later, 'none' has no due date. */
+export const taskDeadlines = ['on_time', 'none'];
 export const taskFilterDefaults = {
   q: '',
   website: '',
@@ -18,6 +20,9 @@ export const taskFilterDefaults = {
   start: '',
   end: '',
   overdue: false,
+  deadline: '',
+  /** Only tasks with an assignment request awaiting acceptance. */
+  pending: false,
   sort: 'newest',
   page: 1,
 };
@@ -49,6 +54,8 @@ export function taskFiltersFromSearch(p: URLSearchParams): TaskFilters {
     start: validDate(p.get('start') || ''),
     end: validDate(p.get('end') || ''),
     overdue: p.get('overdue') === 'true',
+    deadline: pick('deadline', taskDeadlines),
+    pending: p.get('pending') === 'true',
     sort: pick('sort', sorts) || 'newest',
     page: Number.isInteger(page) && page >= 1 && page <= 1000000 ? page : 1,
   };
@@ -65,6 +72,7 @@ export function taskListFilters(p: URLSearchParams) {
     sort = p.get('sort') || 'newest',
     status = p.get('status') || '',
     priority = p.get('priority') || '',
+    deadline = p.get('deadline') || '',
     page = Number(p.get('page') || 1),
     q = (p.get('q') || '').trim();
   if (
@@ -72,6 +80,7 @@ export function taskListFilters(p: URLSearchParams) {
     !sorts.includes(sort) ||
     (status && !taskStatusFilters.includes(status)) ||
     (priority && !priorities.includes(priority)) ||
+    (deadline && !taskDeadlines.includes(deadline)) ||
     !Number.isInteger(page) ||
     page < 1 ||
     page > 1000000 ||
@@ -98,6 +107,8 @@ export function taskListFilters(p: URLSearchParams) {
     creator: recordId(p.get('creator'), false),
     website: recordId(p.get('website'), false),
     overdue: p.get('overdue') === 'true',
+    deadline,
+    pending: p.get('pending') === 'true',
     export: p.get('export') === 'true',
   };
 }

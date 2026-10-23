@@ -36,6 +36,8 @@ export type Workspace = {
   tasks: Task[];
   assignments: Assignment[];
   taskWebsites: {task_id: string; website_id: string}[];
+  /** Database totals; websites and tasks above are capped lists. */
+  counts: {open_tasks: number; websites: number};
 };
 export const statusName = (value: string) =>
   value

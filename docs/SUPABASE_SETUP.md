@@ -69,7 +69,7 @@ Report/template workflows, attachments and advanced analytics remain later slice
 
 ## Theme and verification
 
-`app/theme.css` provides the current warm-neutral/violet/teal/amber design over the existing styles, preserving previous font-size improvements. It adds an ink sidebar, tinted workspace and cards, darker text, clear field borders, and readable semantic badges. Selected primary/sidebar/secondary/badge text pairs were checked above WCAG's 4.5:1 normal-text contrast threshold. This does not claim a complete accessibility audit. No browser is connected for screenshot/mobile visual inspection; browser layout and hosted work-log flows still need verification after the migration is applied.
+The current light workspace design is maintained in `app/globals.css`, imported once by the root layout. Shared colors, fonts, and corner radii use design tokens; the old theme and workspace override files have been consolidated. See [Styling](STYLING.md) for editing rules and responsive verification. Representative workspace and authentication layouts were compared with the previous styles across seven screen widths. This is a styling check, not a complete accessibility audit or verification of hosted database workflows.
 
 ## Verification remaining
 
@@ -184,3 +184,12 @@ The workspace overview still shows a recent-task preview, while the full Tasks p
 Run `supabase/migrations/202610160015_task_list_open_and_export.sql` once after migrations 001–014, keeping RLS enabled. Refresh DevOrbit. No environment changes are needed.
 
 The task list gains an **Open** status filter (anything not completed or cancelled), which is how the Home page counts active work, so selecting a workload bar or the Active tasks KPI opens a list with the same count. Exports request up to 5,000 matching tasks in one call; if more match, the app says how many were left out. Until this migration is applied, task exports report that the migration is missing and chart links that use the Open filter show an invalid-filter message. SEO & Website Health exports need no migration.
+
+
+# Needs attention, deadlines and audit schedule (migration 016)
+
+Run `supabase/migrations/202610180016_dashboard_attention.sql` once after migrations 001–015, keeping RLS enabled. Refresh DevOrbit. No environment changes are needed.
+
+The Home dashboard gains a **Needs attention** row (overdue tasks, blocked tasks, assignments awaiting acceptance, websites due for an audit) and an **Open task deadlines** donut (Overdue / On time / No deadline). Every count opens a task list or SEO list that returns the same number; the task list gains a **Due date** filter and an **Awaiting acceptance** checkbox for this. Charts now refresh automatically after any task, assignment or SEO change.
+
+A website is due for an audit when it is current (not archived) and has no dated SEO audit within the workspace schedule, 90 days by default. Administrators change the schedule (7–730 days) on **SEO & Website Health**; each change is recorded in the audit log. Until this migration is applied, the dashboard shows a migration notice in place of these counts and the rest of the app keeps working.

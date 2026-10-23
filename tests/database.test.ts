@@ -1595,6 +1595,79 @@ test('transactional creation and assignment RPCs enforce roles, workspace isolat
       assert.equal((await list({q: 'Page fixture'})).page_size, 25);
       await assert.rejects(rpc('workspace_task_list', {status: 'active'}), /Invalid/i);
     });
+    await t.test(
+      'attention counts and the deadline split match the lists they open; audit schedule is admin-only',
+      async () => {
+        await db.exec('reset role');
+        await db.exec(await readFile('supabase/migrations/202610180016_dashboard_attention.sql', 'utf8'));
+        await db.exec("update public.tasks set due_date='2999-01-01' where title='Page fixture 006'");
+        await db.exec(
+          "update public.tasks set progress='blocked',blocker_reason='Waiting on hosting' where title='Page fixture 007'",
+        );
+        const manager = '00000000-0000-4000-8000-000000000006';
+        type Dashboard = {
+          active_tasks: number;
+          deadlines: {on_time: number; overdue: number; no_deadline: number};
+          attention: {
+            overdue: number;
+            blocked: number;
+            pending_assignments: number;
+            audits_due: number;
+            audit_interval_days: number;
+          };
+        };
+        const filters = {start: '2026-10-01', end: '2026-10-16', user_id: null, website_id: null, source: ''};
+        const list = async (value: object) =>
+          ((await rpc('workspace_task_list', value)) as unknown as {total: number}).total;
+        const catalog = async () =>
+          (
+            await db.query<{value: {audit_interval_days: number; websites: {audit_due: boolean}[]}}>(
+              'select public.fixed_seo_catalog(null) value',
+            )
+          ).rows[0].value;
+        await asUser(manager);
+        const dashboard = (await rpc('workspace_dashboard', filters)) as unknown as Dashboard;
+        const {on_time, overdue, no_deadline} = dashboard.deadlines;
+        assert.equal(on_time + overdue + no_deadline, dashboard.active_tasks);
+        assert.ok(on_time >= 1 && overdue >= 2 && no_deadline >= 1);
+        assert.equal(await list({overdue: true}), overdue);
+        assert.equal(await list({status: 'open', deadline: 'on_time'}), on_time);
+        assert.equal(await list({status: 'open', deadline: 'none'}), no_deadline);
+        assert.equal(dashboard.attention.overdue, overdue);
+        assert.ok(dashboard.attention.blocked >= 1);
+        assert.equal(await list({status: 'blocked'}), dashboard.attention.blocked);
+        assert.ok(dashboard.attention.pending_assignments >= 1);
+        assert.equal(await list({pending: true}), dashboard.attention.pending_assignments);
+        assert.equal(dashboard.attention.audit_interval_days, 90);
+        const before = await catalog();
+        assert.equal(before.audit_interval_days, 90);
+        assert.equal(before.websites.filter(w => w.audit_due).length, dashboard.attention.audits_due);
+        await assert.rejects(rpc('workspace_task_list', {deadline: 'late'}), /Invalid/i);
+        await assert.rejects(rpc('set_audit_schedule', {interval_days: 30}), /administrators/i);
+        await asUser(admin);
+        for (const interval_days of [6, 731, 30.5, '30'])
+          await assert.rejects(rpc('set_audit_schedule', {interval_days}), /between 7 and 730/);
+        // A one-week schedule makes every current website without an audit this week due.
+        assert.equal(await rpc('set_audit_schedule', {interval_days: 7}), 7);
+        const weekly = (await rpc('workspace_dashboard', filters)) as unknown as Dashboard;
+        const after = await catalog();
+        assert.equal(after.audit_interval_days, 7);
+        assert.equal(weekly.attention.audit_interval_days, 7);
+        assert.equal(after.websites.filter(w => w.audit_due).length, weekly.attention.audits_due);
+        assert.ok(weekly.attention.audits_due >= dashboard.attention.audits_due);
+        await db.exec('reset role');
+        assert.equal(
+          Number(
+            (
+              await db.query<{n: number}>(
+                "select count(*) n from public.audit_events where action='audit_schedule.changed'",
+              )
+            ).rows[0].n,
+          ),
+          1,
+        );
+      },
+    );
     await t.test('anonymous RPCs are forbidden', async () => {
       await db.exec('reset role;set role anon;');
       await assert.rejects(

@@ -2,6 +2,8 @@
 import {useEffect, useRef, useState} from 'react';
 import {Workspace, Task, statusName} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
+import {reviewSeo} from '@/lib/seo-review';
+import {SeoValues} from '@/lib/seo-health';
 import {websiteConfig, websiteManagementInput} from '@/lib/website-management';
 type Site = {
   id: string;
@@ -41,9 +43,31 @@ export default function LiveWebsite({
   onTask: (task: Task) => void;
   onReports: () => void;
 }) {
+  const [health, setHealth] = useState<{
+    fields: SeoValues;
+    latest_audit: {score: number; measurement_date: string; source: string} | null;
+  } | null>(null);
+  const [healthError, setHealthError] = useState('');
+  const [healthRetry, setHealthRetry] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    workspaceFetch(`/api/seo-health?website=${id}`)
+      .then(d => {
+        if (!cancelled) {
+          setHealth(d.websites[0] || null);
+          setHealthError('');
+        }
+      })
+      .catch(e => {
+        if (!cancelled) setHealthError(e.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, healthRetry]);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [form, setForm] = useState<Site | null>(null);
-  const [tab, setTab] = useState('Details');
+  const [tab, setTab] = useState('Overview');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -187,12 +211,76 @@ export default function LiveWebsite({
               </a>
             </div>
             <div className="simple-task-tabs website-detail-tabs" role="group" aria-label="Website sections">
-              {['Details', 'Tasks', 'Reports'].map(t => (
+              {['Overview', 'Details', 'Tasks', 'Reports'].map(t => (
                 <button className="button secondary" key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>
                   {t}
                 </button>
               ))}
             </div>
+            {tab === 'Overview' && (
+              <div className="website-overview">
+                <section>
+                  <h3>SEO health</h3>
+                  {healthError ? (
+                    <p role="alert">
+                      {healthError}{' '}
+                      <button className="text-button" onClick={() => setHealthRetry(n => n + 1)}>
+                        Retry SEO summary
+                      </button>
+                    </p>
+                  ) : health ? (
+                    <>
+                      <p>
+                        <strong>{health.latest_audit ? `${health.latest_audit.score}/100` : 'No dated audit'}</strong>
+                      </p>
+                      {health.latest_audit && (
+                        <p>
+                          Last audit: {health.latest_audit.measurement_date} ? {health.latest_audit.source}
+                        </p>
+                      )}
+                      <p>
+                        {reviewSeo(health.fields).issues.length} checklist issues ?{' '}
+                        {reviewSeo(health.fields).missing.length} missing fields
+                      </p>
+                    </>
+                  ) : (
+                    <p role="status">Loading SEO summary?</p>
+                  )}
+                  <button className="button secondary" onClick={onReports}>
+                    Open SEO form & history
+                  </button>
+                </section>
+                <section>
+                  <h3>Open tasks</h3>
+                  <p className="form-hint">From up to 100 linked tasks.</p>
+                  {detail.tasks
+                    .filter(t => !['completed', 'cancelled'].includes(t.progress))
+                    .slice(0, 5)
+                    .map(t => (
+                      <button key={t.id} className="website-related-row" onClick={() => onTask(t)}>
+                        <strong>{t.title}</strong>
+                        <span>
+                          {statusName(t.progress)} ? {t.due_date ? `Due ${t.due_date}` : 'No deadline'}
+                        </span>
+                      </button>
+                    ))}
+                  {!detail.tasks.some(t => !['completed', 'cancelled'].includes(t.progress)) && (
+                    <p>No open tasks in the loaded list.</p>
+                  )}
+                  <button className="text-button" onClick={() => setTab('Tasks')}>
+                    View linked tasks
+                  </button>
+                </section>
+                <section>
+                  <h3>Website information</h3>
+                  <p>{detail.website.canonical_url}</p>
+                  <p>CMS: {detail.website.cms || 'Not recorded'}</p>
+                  <button className="text-button" onClick={() => setTab('Details')}>
+                    View website settings
+                  </button>
+                </section>
+              </div>
+            )}
             {tab === 'Details' && (
               <form
                 onSubmit={e => {

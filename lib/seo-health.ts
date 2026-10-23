@@ -74,3 +74,10 @@ export function seoInput(raw: unknown) {
     reason,
   };
 }
+/** Audit reminder schedule: websites with no dated audit in this many days are due (migration 016). */
+export function auditScheduleInput(raw: unknown) {
+  const days = raw && typeof raw === 'object' ? (raw as Record<string, unknown>).interval_days : undefined;
+  if (!Number.isInteger(days) || Number(days) < 7 || Number(days) > 730)
+    throw new InputError('Choose an audit interval between 7 and 730 days.');
+  return {interval_days: days as number};
+}

@@ -1,6 +1,5 @@
 import type {Metadata} from 'next';
 import './globals.css';
-import './theme.css';
 export const metadata: Metadata = {
   title: 'DevOrbit — Developer operations',
   description: 'Your team, websites, and work. In one orbit.',

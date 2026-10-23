@@ -11,7 +11,16 @@ export async function GET(request: Request) {
       .order('created_at', {ascending: false})
       .limit(100);
     if (error) throw new AccessError(503, 'Notifications need the new task-workflows-and-team migration.');
-    return Response.json({notifications: data}, {headers: {'Cache-Control': 'private, no-store'}});
+    const unread = await supabase
+      .from('notifications')
+      .select('id', {count: 'exact', head: true})
+      .eq('recipient_id', user.id)
+      .is('read_at', null);
+    if (unread.error) throw new AccessError(503, 'Unable to count unread notifications.');
+    return Response.json(
+      {notifications: data, unread: unread.count || 0},
+      {headers: {'Cache-Control': 'private, no-store'}},
+    );
   } catch (error) {
     return mutationFailure(error);
   }

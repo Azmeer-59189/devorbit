@@ -6,6 +6,8 @@ import {workspaceFetch} from '@/lib/workspace-client';
 import {taskActionInput} from '@/lib/live-validation';
 import TaskEditor from '@/components/live-task-editor';
 import {useDialog} from '@/components/live-dialog';
+import DueDate from '@/components/due-date';
+import {workspaceDate} from '@/lib/dates';
 
 type Detail = {
   task: Task;
@@ -184,7 +186,13 @@ export default function LiveTaskPanel({
               {statusName(current.priority)} · {current.category}
             </strong>
             <span>Due date</span>
-            <strong>{current.due_date || 'No due date'}</strong>
+            <strong>
+              <DueDate
+                date={current.due_date}
+                today={workspaceDate(data.workspace.timezone)}
+                open={!['completed', 'cancelled'].includes(current.progress)}
+              />
+            </strong>
             <span>Websites</span>
             <strong>{linkedSites.join(', ') || 'General work'}</strong>
             <span>Review</span>

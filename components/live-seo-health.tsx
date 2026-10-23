@@ -6,8 +6,10 @@ import {workspaceFetch} from '@/lib/workspace-client';
 import {seoStatuses, SeoValues, seoInput} from '@/lib/seo-health';
 import {compareSeo, reviewSeo, fieldsForPage} from '@/lib/seo-review';
 import {seoTaskDraft, SeoTaskDraft} from '@/lib/seo-task';
-import {workspaceDate} from '@/lib/dates';
+import {displayDate, workspaceDate} from '@/lib/dates';
 import {downloadRows, type ExportFormat} from '@/lib/export';
+/** Lighthouse-style score bands: 90+ good, 50–89 needs work, under 50 poor. */
+const scoreBand = (score: number) => (score >= 90 ? 'good' : score >= 50 ? 'fair' : 'poor');
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import SeoTrend from '@/components/seo-trend';
 type Audit = {
@@ -181,6 +183,7 @@ export default function LiveSeoHealth({
     }
   }
   const member = (id: string) => data.members.find(m => m.id === id)?.display_name || 'Team member';
+  const today = workspaceDate(data.workspace.timezone);
   const visibleSites = (catalog?.websites || []).filter(w => {
     const review = reviewPage(w.fields);
     return (
@@ -409,28 +412,41 @@ export default function LiveSeoHealth({
                                 ? w.cms
                                 : w.fields[f.key];
                       const missing = value == null || value === '' || value === 'unknown';
-                      const text = missing
-                        ? 'Not recorded'
-                        : f.type === 'status'
+                      const text =
+                        f.type === 'status'
                           ? statusName(String(value))
-                          : String(value);
+                          : f.type === 'date'
+                            ? displayDate(String(value), today)
+                            : String(value);
                       return (
                         <td key={f.key}>
-                          <span
-                            className={f.type === 'status' ? 'matrix-status' : 'matrix-value'}
-                            data-value={missing ? 'unknown' : String(value)}
-                          >
-                            {f.type === 'long_text' && text.length > 120 ? (
-                              <details>
-                                <summary>{text.slice(0, 100)}...</summary>
-                                <p>{text}</p>
-                              </details>
-                            ) : (
-                              text
-                            )}
-                            {!missing && f.type === 'duration' ? ' s' : ''}
-                            {!missing && f.key === 'seo_score' ? '/100' : ''}
-                          </span>
+                          {missing ? (
+                            // A faint dash keeps recorded values prominent; screen readers still hear the state.
+                            <span className="matrix-empty" title="Not recorded">
+                              <span aria-hidden="true">—</span>
+                              <span className="sr-only">Not recorded</span>
+                            </span>
+                          ) : f.key === 'seo_score' ? (
+                            <span className="matrix-score" data-band={scoreBand(Number(value))}>
+                              {String(value)}/100
+                            </span>
+                          ) : (
+                            <span
+                              className={f.type === 'status' ? 'matrix-status' : 'matrix-value'}
+                              data-value={String(value)}
+                              title={f.type === 'date' ? String(value) : undefined}
+                            >
+                              {f.type === 'long_text' && text.length > 120 ? (
+                                <details>
+                                  <summary>{text.slice(0, 100)}...</summary>
+                                  <p>{text}</p>
+                                </details>
+                              ) : (
+                                text
+                              )}
+                              {f.type === 'duration' ? ' s' : ''}
+                            </span>
+                          )}
                           {w.notes[f.key] && (
                             <details className="matrix-note">
                               <summary>Note</summary>

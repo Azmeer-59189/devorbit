@@ -5,6 +5,7 @@ import {Workspace, statusName, statusClass} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
 import {taskActionInput} from '@/lib/live-validation';
 import {workspaceDate} from '@/lib/dates';
+import DueDate from '@/components/due-date';
 import {downloadRows, type ExportFormat} from '@/lib/export';
 import {
   boardTransition,
@@ -96,8 +97,7 @@ export default function LiveTasks({
   const error = failure?.key === key ? failure.message : '';
   const name = (id: string | null) => data.members.find(m => m.id === id)?.display_name || 'Unassigned';
   const today = workspaceDate(data.workspace.timezone);
-  const overdue = (task: ListTask) =>
-    !!task.due_date && task.due_date < today && !['completed', 'cancelled'].includes(task.progress);
+  const isOpen = (task: ListTask) => !['completed', 'cancelled'].includes(task.progress);
   const priority = (task: ListTask) => (
     <span className={`priority ${task.priority}`}>⚑ {statusName(task.priority)}</span>
   );
@@ -419,7 +419,9 @@ export default function LiveTasks({
                       </td>
                       <td>{priority(t)}</td>
                       <td>{name(t.assignee_id)}</td>
-                      <td className={overdue(t) ? 'overdue' : undefined}>{t.due_date || 'No due date'}</td>
+                      <td>
+                        <DueDate date={t.due_date} today={today} open={isOpen(t)} />
+                      </td>
                       <td>
                         {t.pending_recipient_id === data.profile.id ? (
                           <div className="row">
@@ -503,7 +505,7 @@ export default function LiveTasks({
                           <small>{sites(t)}</small>
                           <div className="kanban-card-meta">
                             {priority(t)}
-                            {t.due_date && <span className={overdue(t) ? 'overdue' : undefined}>Due {t.due_date}</span>}
+                            {t.due_date && <DueDate date={t.due_date} today={today} open={isOpen(t)} inline />}
                           </div>
                           <p>{name(t.assignee_id)}</p>
                           {pending(t)}

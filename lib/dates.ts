@@ -79,3 +79,31 @@ export function workspaceTimestamp(value: string | null, timezone: string) {
   const part = (type: string) => parts.find(p => p.type === type)!.value;
   return `${part('year')}-${part('month')}-${part('day')} ${part('hour')}:${part('minute')}`;
 }
+
+/** Short display form of a calendar date, e.g. "Oct 21"; the year appears only when it differs from today's.
+ * Anything that is not a YYYY-MM-DD date is returned unchanged. */
+export function displayDate(date: string, today: string) {
+  // Imported or free-text values (e.g. "2026-10" or a note) are shown as entered.
+  // Round-trips like calendarDate, since Date.parse rolls 2026-02-30 over to March.
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+    Number.isNaN(Date.parse(date)) ||
+    new Date(date).toISOString().slice(0, 10) !== date
+  )
+    return date;
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+    year: date.slice(0, 4) === today.slice(0, 4) ? undefined : 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(date + 'T12:00:00Z'));
+}
+
+/** How close a due date is, for open work: "2 days overdue", "Due today", up to "Due in 7 days"; otherwise empty. */
+export function dueHint(date: string, today: string) {
+  const days = Math.round((Date.parse(date) - Date.parse(today)) / 86400000);
+  if (days < 0) return `${-days} day${days === -1 ? '' : 's'} overdue`;
+  if (days === 0) return 'Due today';
+  if (days === 1) return 'Due tomorrow';
+  return days <= 7 ? `Due in ${days} days` : '';
+}

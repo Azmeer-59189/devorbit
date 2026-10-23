@@ -18,7 +18,10 @@ import {
   Plus,
   RefreshCw,
   Search,
+  SearchCheck,
   ShieldCheck,
+  SlidersHorizontal,
+  UserCheck,
   Bell,
   Users,
   X,
@@ -37,6 +40,7 @@ import LiveNotifications from '@/components/live-notifications';
 import LiveSeoHealth from '@/components/live-seo-health';
 import LiveWebsite from '@/components/live-website';
 import LiveDashboard from '@/components/live-dashboard';
+import DueDate from '@/components/due-date';
 import {workspaceDate} from '@/lib/dates';
 import {adminPages, parseWorkspacePath, workspacePath, type Page} from '@/lib/workspace-routes';
 
@@ -262,7 +266,6 @@ export default function ConnectedWorkspace() {
                 <tr key={task.id}>
                   <td>
                     <button className="live-task-name" onClick={() => openTask(task)}>
-                      <span className="task-check" />
                       <span>
                         <strong>{task.title}</strong>
                         <small>{task.category}</small>
@@ -292,16 +295,13 @@ export default function ConnectedWorkspace() {
                       'Unassigned'
                     )}
                   </td>
-                  <td
-                    className={
-                      task.due_date &&
-                      task.due_date < workspaceDate(data!.workspace.timezone) &&
-                      !['completed', 'cancelled'].includes(task.progress)
-                        ? 'overdue'
-                        : undefined
-                    }
-                  >
-                    {task.due_date || '—'}
+                  <td>
+                    <DueDate
+                      date={task.due_date}
+                      today={workspaceDate(data!.workspace.timezone)}
+                      open={!['completed', 'cancelled'].includes(task.progress)}
+                      empty="—"
+                    />
                   </td>
                   <td>
                     <button className="icon-button" aria-label={`Open ${task.title}`} onClick={() => openTask(task)}>
@@ -366,8 +366,8 @@ export default function ConnectedWorkspace() {
               ['Overview', LayoutDashboard],
               ['Websites', Globe2],
               ['Team tasks', ListTodo],
-              ['SEO reports', Globe2],
-              ['Website features', ListTodo],
+              ['SEO reports', SearchCheck],
+              ['Website features', SlidersHorizontal],
               ['Team & roles', Users],
             ] as const
           )
@@ -386,7 +386,7 @@ export default function ConnectedWorkspace() {
             <summary>More tools</summary>
             {(
               [
-                ['My tasks', Users],
+                ['My tasks', UserCheck],
                 ['Notifications', Bell],
                 ['Account', ShieldCheck],
               ] as const
@@ -505,7 +505,6 @@ export default function ConnectedWorkspace() {
             <>
               <LiveDashboard
                 data={data}
-                onTask={openTaskId}
                 onTasks={search => openWith('Team tasks', search)}
                 onSeo={openSeo}
                 onAudits={() => openWith('SEO reports', 'audit=due')}

@@ -15,7 +15,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import {Workspace, statusName} from '@/lib/live-types';
+import {Workspace} from '@/lib/live-types';
 import {shiftDate, workspaceDate} from '@/lib/dates';
 import {workspaceFetch} from '@/lib/workspace-client';
 import {useChartAnimation} from '@/lib/motion';
@@ -85,13 +85,11 @@ function Empty() {
 }
 export default function LiveDashboard({
   data,
-  onTask,
   onTasks,
   onSeo,
   onAudits,
 }: {
   data: Workspace;
-  onTask: (id: string) => void;
   /** Opens the task list with these URL filters. */
   onTasks: (search: string) => void;
   onSeo: (websiteId: string | null) => void;
@@ -128,7 +126,6 @@ export default function LiveDashboard({
   }, [key, data]);
   const dashboard = result?.key === key ? result.value : null;
   const error = failure?.key === key ? failure.message : '';
-  const name = (id: string | null) => data.members.find(m => m.id === id)?.display_name || 'Unassigned';
   const chartStyle = {fontSize: 12, color: 'var(--muted)'};
   const animation = useChartAnimation();
   // Task charts ignore the date range and filter by website and current owner, exactly
@@ -532,42 +529,11 @@ export default function LiveDashboard({
           <section className="analytics-records">
             <h3>Behind the numbers</h3>
             <p>
-              Charts use all matching records. The preview below shows up to 50 tasks.{' '}
+              Charts use all matching records.{' '}
               <button className="text-button" onClick={() => drill({})}>
                 Open all {dashboard.task_count} in Tasks
               </button>
             </p>
-            <details>
-              <summary>
-                Task records ({dashboard.tasks.length} of {dashboard.task_count})
-              </summary>
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Task</th>
-                      <th>Owner</th>
-                      <th>Status</th>
-                      <th>Due</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dashboard.tasks.map(t => (
-                      <tr key={t.id}>
-                        <td>
-                          <button className="text-button" onClick={() => onTask(t.id)}>
-                            {t.title}
-                          </button>
-                        </td>
-                        <td>{name(t.assignee_id)}</td>
-                        <td>{statusName(t.progress)}</td>
-                        <td>{t.due_date || 'No due date'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </details>
           </section>
         </>
       )}

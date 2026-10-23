@@ -13,6 +13,7 @@ import {
   validateAnswers,
 } from '@/lib/reporting';
 import {workspaceFetch} from '@/lib/workspace-client';
+import {confirmAction} from '@/components/confirm-dialog';
 import {weekRange, workspaceDate} from '@/lib/dates';
 import ReportFields from './live-report-fields';
 import {csv} from '@/lib/csv';
@@ -101,8 +102,9 @@ export default function LiveReporting({data, builder = false}: {data: Workspace;
     setDraft({...draft, ...p});
     setDirty(true);
   }
-  function pick(t: Template) {
-    if (dirty && !window.confirm('Discard unsaved changes?')) return;
+  async function pick(t: Template) {
+    if (dirty && !(await confirmAction({title: 'Discard unsaved changes?', confirmLabel: 'Discard', danger: true})))
+      return;
     setDraft(t);
     setDirty(false);
     setPreview(false);
@@ -294,8 +296,14 @@ export default function LiveReporting({data, builder = false}: {data: Workspace;
                 </button>
                 <button
                   className="button secondary"
-                  onClick={() => {
-                    if (!draft.draft_fields.length || window.confirm('Replace the draft fields with the SEO preset?'))
+                  onClick={async () => {
+                    if (
+                      !draft.draft_fields.length ||
+                      (await confirmAction({
+                        title: 'Replace the draft fields with the SEO preset?',
+                        confirmLabel: 'Replace',
+                      }))
+                    )
                       change({type: 'seo', draft_fields: structuredClone(seoFields)});
                   }}
                 >
@@ -451,8 +459,16 @@ export default function LiveReporting({data, builder = false}: {data: Workspace;
                 {draft.id && (
                   <button
                     className="button secondary"
-                    onClick={() => {
-                      if (window.confirm('Archive this template and stop new submissions?')) templateAction('archive');
+                    onClick={async () => {
+                      if (
+                        await confirmAction({
+                          title: 'Archive this template?',
+                          message: 'New submissions will stop. Existing reports are kept.',
+                          confirmLabel: 'Archive',
+                          danger: true,
+                        })
+                      )
+                        templateAction('archive');
                     }}
                   >
                     Archive
@@ -541,8 +557,12 @@ export default function LiveReporting({data, builder = false}: {data: Workspace;
             ) : (
               <button
                 className="button secondary"
-                onClick={() => {
-                  if (dirty && !window.confirm('Discard unsaved report changes?')) return;
+                onClick={async () => {
+                  if (
+                    dirty &&
+                    !(await confirmAction({title: 'Discard unsaved changes?', confirmLabel: 'Discard', danger: true}))
+                  )
+                    return;
                   setSelected(null);
                   setEditing(false);
                   setAnswers({});
@@ -651,8 +671,12 @@ export default function LiveReporting({data, builder = false}: {data: Workspace;
                 <button
                   className="report-template"
                   key={r.id}
-                  onClick={() => {
-                    if (dirty && !window.confirm('Discard unsaved changes?')) return;
+                  onClick={async () => {
+                    if (
+                      dirty &&
+                      !(await confirmAction({title: 'Discard unsaved changes?', confirmLabel: 'Discard', danger: true}))
+                    )
+                      return;
                     setSelected(r);
                     setEditing(false);
                     setDirty(false);

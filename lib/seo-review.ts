@@ -110,3 +110,14 @@ export function compareCells(a: Cell, b: Cell, type: string, direction: 1 | -1) 
         : String(a).localeCompare(String(b), 'en', {numeric: true, sensitivity: 'base'});
   return order * direction;
 }
+
+type DatedAudit = {id: string; measurement_date: string; score: number; source: string; supersedes_id: string | null};
+/**
+ * The current audit a new score for this date and source would correct, matching the
+ * database (exact date and source, ignoring superseded records); undefined if none.
+ */
+export function auditToCorrect<A extends DatedAudit>(audits: A[], date: string, source: string) {
+  return audits.find(
+    a => a.measurement_date === date && a.source === source && !audits.some(n => n.supersedes_id === a.id),
+  );
+}

@@ -2,6 +2,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {Workspace, Task, statusName} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
+import {confirmAction} from '@/components/confirm-dialog';
 import {reviewSeo} from '@/lib/seo-review';
 import {SeoValues} from '@/lib/seo-health';
 import {websiteConfig, websiteManagementInput} from '@/lib/website-management';
@@ -101,7 +102,15 @@ export default function LiveWebsite({
     return () => window.removeEventListener('beforeunload', warn);
   }, [dirty]);
   async function reload() {
-    if (dirty && !window.confirm('Discard your unsaved website changes and load the latest version?')) return;
+    if (
+      dirty &&
+      !(await confirmAction({
+        title: 'Discard your changes and load the latest version?',
+        confirmLabel: 'Discard',
+        danger: true,
+      }))
+    )
+      return;
     try {
       const d = await workspaceFetch(`/api/websites/${id}`);
       setDetail(d);
@@ -114,7 +123,15 @@ export default function LiveWebsite({
   }
   async function save(action: string) {
     if (!form || saving.current) return;
-    if (action === 'archive' && !window.confirm('Archive this website? Its tasks and reports will be preserved.'))
+    if (
+      action === 'archive' &&
+      !(await confirmAction({
+        title: 'Archive this website?',
+        message: 'Its tasks and reports will be kept.',
+        confirmLabel: 'Archive',
+        danger: true,
+      }))
+    )
       return;
     setError('');
     try {
@@ -167,8 +184,12 @@ export default function LiveWebsite({
         <button
           className="button secondary"
           disabled={busy}
-          onClick={() => {
-            if (!dirty || window.confirm('Discard unsaved website changes?')) onBack();
+          onClick={async () => {
+            if (
+              !dirty ||
+              (await confirmAction({title: 'Discard unsaved changes?', confirmLabel: 'Discard', danger: true}))
+            )
+              onBack();
           }}
         >
           Back to websites
@@ -410,8 +431,16 @@ export default function LiveWebsite({
                   <h3>Report history</h3>
                   <button
                     className="button secondary"
-                    onClick={() => {
-                      if (!dirty || window.confirm('Discard unsaved website changes?')) onReports();
+                    onClick={async () => {
+                      if (
+                        !dirty ||
+                        (await confirmAction({
+                          title: 'Discard unsaved changes?',
+                          confirmLabel: 'Discard',
+                          danger: true,
+                        }))
+                      )
+                        onReports();
                     }}
                   >
                     Open reporting

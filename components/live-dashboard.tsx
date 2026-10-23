@@ -371,7 +371,7 @@ export default function LiveDashboard({
                         <Bar
                           dataKey="count"
                           name="Active tasks"
-                          fill="var(--chart-in_progress)"
+                          fill="var(--primary)"
                           radius={[0, 4, 4, 0]}
                           maxBarSize={26}
                           {...animation}

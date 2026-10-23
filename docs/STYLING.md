@@ -28,13 +28,15 @@ The light workspace uses 14px navigation, table content, and form inputs;
 13px labels; 12px supporting captions; and 16px card headings. Shared muted
 text and primary actions use the contrast-adjusted tokens at the top of the
 stylesheet. Task statuses have permanent colors through `--status-*` tokens:
-teal for completed, blue for in progress, purple for review, red for blocked,
+teal for completed, sky blue for in progress (kept distinct from the navy
+primary), purple for review, red for blocked,
 ochre for not started, and slate for cancelled. Bind board/chart elements with
 `data-status`; task badges use the corresponding status class. Do not assign
 status colors by array index.
 
-Dashboard shortcuts are compact, and the explanation of date/filter scope is
-available in the “About these numbers” disclosure. Workload charts use horizontal
+The dashboard opens with one row of summary tiles that link to filtered task
+lists, and the explanation of date/filter scope is available in the “About these
+numbers” disclosure. Workload charts use horizontal
 bars and scroll vertically for larger teams; full owner names remain available
 in the clickable list below the chart.
 
@@ -50,8 +52,12 @@ than introducing another breakpoint to counter an earlier rule.
 
 ## Verification
 
-Run `npm run typecheck`, `npm run lint`, and `npm run build` after changes that
-affect shared styles or imports. Inspect the dashboard, task board, SEO forms,
+Run `npm run typecheck`, `npm run lint`, `npm run build`, and `npm run test:e2e`
+after changes that affect shared styles or imports. The browser tests in `e2e/`
+open every workspace page with mocked data at desktop and phone width, fail on
+uncaught errors or a page wider than the window, and cover the main workflows.
+For a change meant to be invisible, such as removing unused selectors, compare
+full-page screenshots before and after with Playwright's `toHaveScreenshot`. Inspect the dashboard, task board, SEO forms,
 dialogs, and sign-in flow at mobile, tablet, and desktop widths. Include keyboard
 focus, active navigation, disabled controls, expanded details, and reduced motion.
 

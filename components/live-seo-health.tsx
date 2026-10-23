@@ -3,113 +3,21 @@ import {useEffect, useRef, useState} from 'react';
 import {useSearchParams} from 'next/navigation';
 import {Workspace, statusName} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
+import {confirmAction} from '@/components/confirm-dialog';
 import {seoStatuses, SeoValues, seoInput} from '@/lib/seo-health';
 import {ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Pencil} from 'lucide-react';
-import {compareCells, compareSeo, fieldsForPage, recordableFields, reviewSeo} from '@/lib/seo-review';
+import {compareCells, fieldsForPage, recordableFields, reviewSeo} from '@/lib/seo-review';
 import {seoTaskDraft, SeoTaskDraft} from '@/lib/seo-task';
 import {displayDate, workspaceDate} from '@/lib/dates';
 import {downloadRows, type ExportFormat} from '@/lib/export';
-/** Lighthouse-style score bands: 90+ good, 50–89 needs work, under 50 poor. */
-const scoreBand = (score: number) => (score >= 90 ? 'good' : score >= 50 ? 'fair' : 'poor');
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import SeoTrend from '@/components/seo-trend';
-type Audit = {
-  id: string;
-  measurement_date: string;
-  score: number;
-  source: string;
-  actor_id: string;
-  reason: string | null;
-  created_at: string;
-  supersedes_id: string | null;
-};
-type Site = {
-  id: string;
-  name: string;
-  country: string;
-  canonical_url: string;
-  cms: string;
-  archived_at: string | null;
-  status: string;
-  fields: SeoValues;
-  notes: Record<string, string>;
-  source: string;
-  revision: number;
-  latest_audit: Audit | null;
-  /** Current website with no dated audit within the workspace schedule (migration 016). */
-  audit_due?: boolean;
-};
-type Revision = {
-  id: string;
-  revision: number;
-  fields: SeoValues;
-  notes: Record<string, string>;
-  source: string;
-  actor_id: string;
-  reason: string;
-  created_at: string;
-};
-type Catalog = {websites: Site[]; audits: Audit[]; revisions: Revision[]; audit_interval_days?: number};
-type ImportPreview = {
-  notice: string;
-  rows: {
-    name: string;
-    url: string;
-    fields: SeoValues;
-    notes: Record<string, string>;
-    audits: {score: number; measurement_date: string}[];
-    review: string;
-  }[];
-};
-/** Profile URL and CMS sit alongside the saved answers, as the form shows them. */
-const formValues = (w: {fields: SeoValues; canonical_url: string; cms: string}): SeoValues => ({
-  ...w.fields,
-  website_url: w.canonical_url,
-  cms: w.cms || '',
-});
+import SummaryTiles, {type Tile} from '@/components/seo/summary-tiles';
+import SeoHistory from '@/components/seo/seo-history';
+import SeoImport from '@/components/seo/seo-import';
+import {bandStatus, formValues, scoreBand, type Catalog, type Site} from '@/components/seo/types';
+import RecordAuditDialog, {type NewAudit} from '@/components/seo/record-audit-dialog';
 const sectionId = (group: string) => 'section-' + group.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-type Tile = {
-  label: string;
-  hint: string;
-  value: number | string;
-  /** Status colour token; zero counts fall back to the muted cancelled tone. */
-  status: string;
-  /** Filter this tile toggles; tiles without one are read-only. */
-  focus?: string;
-  active?: boolean;
-};
-const bandStatus = {good: 'completed', fair: 'to_do', poor: 'blocked'} as const;
-/** The dashboard's summary row, reused so both pages read the same way. */
-function SummaryTiles({tiles, onToggle}: {tiles: Tile[]; onToggle: (tile: Tile) => void}) {
-  return (
-    <section className="attention" aria-label="Summary">
-      <div className="attention-grid">
-        {tiles.map(t => {
-          const status = t.value === 0 ? 'cancelled' : t.status;
-          return t.focus ? (
-            <button
-              key={t.label}
-              className="attention-item"
-              data-status={status}
-              aria-pressed={!!t.active}
-              onClick={() => onToggle(t)}
-            >
-              <strong>{t.value}</strong>
-              <span>{t.label}</span>
-              <small>{t.hint}</small>
-            </button>
-          ) : (
-            <div key={t.label} className="attention-item" data-status={status}>
-              <strong>{t.value}</strong>
-              <span>{t.label}</span>
-              <small>{t.hint}</small>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
 export default function LiveSeoHealth({
   data,
   onChanged,
@@ -129,8 +37,7 @@ export default function LiveSeoHealth({
   const [site, setSite] = useState<Site | null>(null);
   const [fields, setFields] = useState<SeoValues>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
-  const [source, setSource] = useState('');
-  const [reason, setReason] = useState('');
+  const [recording, setRecording] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -143,9 +50,6 @@ export default function LiveSeoHealth({
   const searchParams = useSearchParams();
   const [auditDueOnly, setAuditDueOnly] = useState(() => searchParams.get('audit') === 'due');
   const [scheduleDraft, setScheduleDraft] = useState<string | null>(null);
-  const [versionId, setVersionId] = useState('');
-  const [preview, setPreview] = useState<ImportPreview | null>(null);
-  const [confirmed, setConfirmed] = useState(false);
   const lock = useRef(false);
   const pending = useRef<{key: string; id: string} | null>(null);
   // ?website=<id> opens that website's form, so dashboard links and shared URLs land on it.
@@ -156,9 +60,6 @@ export default function LiveSeoHealth({
     setSite(selected);
     setFields(selected ? formValues(selected) : {});
     setNotes(selected?.notes || {});
-    setSource(selected?.source || '');
-    setReason('');
-    setVersionId('');
     setDirty(false);
     pending.current = null;
     const url = new URL(window.location.href);
@@ -191,7 +92,8 @@ export default function LiveSeoHealth({
   }, [dirty]);
   async function open(id: string | null) {
     if (lock.current) return;
-    if (dirty && !window.confirm('Discard your unsaved SEO form?')) return;
+    if (dirty && !(await confirmAction({title: 'Discard unsaved changes?', confirmLabel: 'Discard', danger: true})))
+      return;
     setBusy(true);
     setError('');
     try {
@@ -202,16 +104,20 @@ export default function LiveSeoHealth({
       setBusy(false);
     }
   }
-  async function save() {
-    if (!site || lock.current) return;
-    setError('');
+  /** Saves the form and, when it carries a new score, the dated audit; then reloads the website. */
+  async function submit(
+    values: {fields: SeoValues; notes: Record<string, string>; source: string; reason: string},
+    done: string,
+  ) {
+    if (!site) return;
+    if (lock.current) throw new Error('Wait for the current save to finish.');
+    const payload = {website_id: site.id, expected_revision: site.revision, ...values};
+    const key = JSON.stringify(payload);
+    if (pending.current?.key !== key) pending.current = {key, id: crypto.randomUUID()};
+    const input = seoInput({...payload, request_id: pending.current.id});
+    lock.current = true;
+    setBusy(true);
     try {
-      const values = {website_id: site.id, expected_revision: site.revision, fields, notes, source, reason};
-      const key = JSON.stringify(values);
-      if (pending.current?.key !== key) pending.current = {key, id: crypto.randomUUID()};
-      const input = seoInput({...values, request_id: pending.current.id});
-      lock.current = true;
-      setBusy(true);
       await workspaceFetch('/api/seo-health', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -220,27 +126,50 @@ export default function LiveSeoHealth({
       const d: Catalog = await workspaceFetch(`/api/seo-health?website=${site.id}`);
       setCatalog(d);
       setSite(d.websites[0]);
-      // Keep profile URL and CMS in the form after a save, as on open.
+      // Keep profile URL, CMS and the latest audit in the form after a save, as on open.
       setFields(formValues(d.websites[0]));
       setNotes(d.websites[0].notes);
       setDirty(false);
-      setReason('');
       pending.current = null;
-      setMessage('SEO form saved. Previous values and dated audits are preserved.');
+      setMessage(done);
       await onChanged();
-    } catch (e) {
-      setError((e as Error).message);
     } finally {
       lock.current = false;
       setBusy(false);
     }
   }
+  async function save() {
+    if (!site || lock.current) return;
+    setError('');
+    try {
+      // Re-sending the latest audit unchanged records nothing new, so a form save never
+      // creates or corrects an audit; that happens only through Record audit.
+      await submit(
+        {fields, notes, source: site.latest_audit?.source ?? site.source ?? '', reason: ''},
+        mode === 'seo'
+          ? 'SEO form saved. Previous values and dated audits are preserved.'
+          : 'Website features saved. Previous values are preserved.',
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+  async function recordAudit(audit: NewAudit) {
+    if (!site) return;
+    await submit(
+      {
+        fields: {...formValues(site), seo_score: audit.score, audit_date: audit.date},
+        notes: site.notes,
+        source: audit.source,
+        reason: audit.reason,
+      },
+      `Audit recorded: ${audit.score}/100 on ${displayDate(audit.date, today)}.`,
+    );
+  }
   function discard() {
     if (!site) return;
     setFields(formValues(site));
     setNotes(site.notes);
-    setSource(site.source || '');
-    setReason('');
     setDirty(false);
     pending.current = null;
   }
@@ -284,12 +213,9 @@ export default function LiveSeoHealth({
   const toggleSort = (key: string) =>
     setSort(current => ({key, direction: current.key === key && current.direction === 1 ? -1 : 1}));
   const groups = [...new Set(pageFields.map(f => f.group))];
-  // A blank score or audit date in the form falls back to the latest audit, as the header shows.
-  const liveReview = reviewPage({
-    ...fields,
-    seo_score: fields.seo_score ?? site?.latest_audit?.score ?? null,
-    audit_date: fields.audit_date || site?.latest_audit?.measurement_date || null,
-  });
+  const liveReview = reviewPage(fields);
+  const currentAudits = (catalog?.audits || []).filter(a => !catalog?.audits.some(n => n.supersedes_id === a.id));
+  const trendReady = currentAudits.some((a, i) => currentAudits.findIndex(b => b.source === a.source) !== i);
   /** Recorded answers in a form section as the user edits; generated fields are not counted. */
   const groupProgress = (group: string) => {
     const total = recordableFields(pageFields).filter(f => f.group === group).length;
@@ -300,7 +226,7 @@ export default function LiveSeoHealth({
   const changes = site
     ? pageFields.filter(
         f => blankish(fields[f.key]) !== blankish(saved[f.key]) || (notes[f.key] || '') !== (site.notes[f.key] || ''),
-      ).length + (source !== (site.source || '') ? 1 : 0)
+      ).length
     : 0;
   /** Unrecorded answers in a field group across the websites currently listed. */
   const groupGaps = (group: string) =>
@@ -432,8 +358,6 @@ export default function LiveSeoHealth({
       `Exported ${visibleSites.length} of ${catalog?.websites.length ?? 0} websites, one column per form field.`,
     );
   }
-  const selectedVersion = catalog?.revisions.find(r => r.id === versionId);
-  const latestVersion = catalog?.revisions[0];
   function change(key: string, value: string | number | null) {
     setFields({...fields, [key]: value});
     setDirty(true);
@@ -496,6 +420,16 @@ export default function LiveSeoHealth({
           {site && (
             <button className="button secondary" disabled={busy} onClick={() => open(null)}>
               All websites
+            </button>
+          )}
+          {site && mode === 'seo' && (
+            <button
+              className="button primary"
+              disabled={busy || dirty || !!site.archived_at || site.status === 'archived'}
+              title={dirty ? 'Save or discard your changes first' : undefined}
+              onClick={() => setRecording(true)}
+            >
+              Record audit
             </button>
           )}
           {!site && catalog && (
@@ -694,9 +628,20 @@ export default function LiveSeoHealth({
           </p>
         </>
       )}
+      {recording && site && catalog && (
+        <RecordAuditDialog
+          websiteName={site.name}
+          audits={catalog.audits}
+          today={today}
+          defaultSource={site.latest_audit?.source ?? site.source ?? ''}
+          onSubmit={recordAudit}
+          onClose={() => setRecording(false)}
+        />
+      )}
       {site && catalog && (
         <>
-          {mode === 'seo' && <SeoTrend key={site.id} audits={catalog.audits} />}
+          {/* A trend needs two audits from one source; until then the header shows the latest. */}
+          {mode === 'seo' && trendReady && <SeoTrend key={site.id} audits={catalog.audits} />}
           <section className="card padded">
             <h3>Latest saved review</h3>
             <p>
@@ -809,9 +754,15 @@ export default function LiveSeoHealth({
                                     step="any"
                                     min={0}
                                     max={f.type === 'number' ? 100 : f.type === 'duration' ? 3600 : undefined}
-                                    readOnly={['website_url', 'cms', 'qa', 'plugin_updated', 'backup_date'].includes(
-                                      f.key,
-                                    )}
+                                    readOnly={[
+                                      'website_url',
+                                      'cms',
+                                      'seo_score',
+                                      'audit_date',
+                                      'qa',
+                                      'plugin_updated',
+                                      'backup_date',
+                                    ].includes(f.key)}
                                     value={fields[f.key] ?? ''}
                                     maxLength={5000}
                                     onChange={e =>
@@ -838,19 +789,26 @@ export default function LiveSeoHealth({
                               ) : ['website_url', 'cms'].includes(f.key) ? (
                                 <small className="form-hint">Managed in the website profile.</small>
                               ) : (
-                                <details className="seo-field-note" open={!!notes[f.key] || undefined}>
-                                  <summary>{notes[f.key] ? 'Note' : 'Add note'}</summary>
-                                  <textarea
-                                    aria-label={`${f.label} note`}
-                                    maxLength={2000}
-                                    rows={2}
-                                    value={notes[f.key] || ''}
-                                    onChange={e => {
-                                      setNotes({...notes, [f.key]: e.target.value});
-                                      setDirty(true);
-                                    }}
-                                  />
-                                </details>
+                                <>
+                                  {['seo_score', 'audit_date'].includes(f.key) && (
+                                    <small className="form-hint">
+                                      From the latest audit. Use Record audit to add one.
+                                    </small>
+                                  )}
+                                  <details className="seo-field-note" open={!!notes[f.key] || undefined}>
+                                    <summary>{notes[f.key] ? 'Note' : 'Add note'}</summary>
+                                    <textarea
+                                      aria-label={`${f.label} note`}
+                                      maxLength={2000}
+                                      rows={2}
+                                      value={notes[f.key] || ''}
+                                      onChange={e => {
+                                        setNotes({...notes, [f.key]: e.target.value});
+                                        setDirty(true);
+                                      }}
+                                    />
+                                  </details>
+                                </>
                               )}
                             </div>
                           ))}
@@ -859,39 +817,9 @@ export default function LiveSeoHealth({
                   ))}
                 </div>
               </div>
-              {mode === 'seo' && (
-                <div className="seo-form-grid">
-                  {mode === 'seo' && (
-                    <label className="field">
-                      SEO audit source / tool
-                      <input
-                        maxLength={500}
-                        value={source}
-                        placeholder="e.g. Rank Math SEO Analyzer"
-                        onChange={e => {
-                          setSource(e.target.value);
-                          setDirty(true);
-                        }}
-                      />
-                    </label>
-                  )}
-                  <label className="field">
-                    Correction reason
-                    <textarea
-                      maxLength={2000}
-                      value={reason}
-                      onChange={e => {
-                        setReason(e.target.value);
-                        setDirty(true);
-                      }}
-                      placeholder="Required when correcting an existing score for the same date and source"
-                    />
-                  </label>
-                </div>
-              )}
               <p className="form-hint">
                 Leave unmeasured fields blank. Unknown is different from No. Do not enter passwords, API keys or payment
-                credentials.{mode === 'seo' && ' Scores require an audit date and source.'}
+                credentials.
               </p>
               {/* Stays in view while editing a long form; Discard restores the last saved values. */}
               <div className="form-savebar" data-dirty={dirty || undefined}>
@@ -918,235 +846,30 @@ export default function LiveSeoHealth({
               <p className="form-hint">Restore this website from Websites before editing.</p>
             )}
           </form>
-          <section className="card padded">
-            {mode === 'seo' && (
-              <>
-                <h3>Dated SEO audits</h3>
-                <p className="form-hint">
-                  Latest 100 audit records, including corrections. Imported audit authors are not known; the shown actor
-                  performed the import.
-                </p>
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Audit date</th>
-                        <th>Score</th>
-                        <th>Source</th>
-                        <th>Recorded by</th>
-                        <th>Context</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {catalog.audits.map(a => (
-                        <tr key={a.id}>
-                          <td>{a.measurement_date}</td>
-                          <td>{a.score}/100</td>
-                          <td>{a.source}</td>
-                          <td>{member(a.actor_id)}</td>
-                          <td>
-                            {catalog.audits.some(n => n.supersedes_id === a.id) ? 'Superseded · ' : ''}
-                            {a.reason || 'Recorded audit'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {!catalog.audits.length && <p>No audits recorded yet.</p>}
-              </>
-            )}
-            <h3>Form change history</h3>
-            <p className="form-hint">Latest 30 saved versions. Every save preserves the previous version.</p>
-            <label className="field">
-              Compare a saved version with the latest saved version
-              <select value={versionId} onChange={e => setVersionId(e.target.value)}>
-                <option value="">Choose a version</option>
-                {catalog.revisions.slice(1).map(r => (
-                  <option key={r.id} value={r.id}>
-                    Version {r.revision}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {selectedVersion && latestVersion && (
-              <div className="table-wrap">
-                <p>
-                  Version {selectedVersion.revision} → Version {latestVersion.revision}. Automatic maintenance
-                  references and summaries are excluded.
-                </p>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Field</th>
-                      <th>Previous</th>
-                      <th>Latest saved</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {compareSeo(selectedVersion, latestVersion)
-                      .filter(f => pageFields.some(p => p.key === f.key))
-                      .map(f => (
-                        <tr key={f.key}>
-                          <th>{f.label}</th>
-                          {[selectedVersion, latestVersion].map(r => (
-                            <td key={r.id}>
-                              {String(r.fields[f.key] ?? 'Not recorded') || 'Not recorded'}
-                              {r.notes[f.key] && <small className="block">Note: {r.notes[f.key]}</small>}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    {mode === 'seo' && selectedVersion.source !== latestVersion.source && (
-                      <tr>
-                        <th>Audit source</th>
-                        <td>{selectedVersion.source || 'Not recorded'}</td>
-                        <td>{latestVersion.source || 'Not recorded'}</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-                {!compareSeo(selectedVersion, latestVersion).some(f => pageFields.some(p => p.key === f.key)) &&
-                  (mode !== 'seo' || selectedVersion.source === latestVersion.source) && (
-                    <p>No recorded field or note changes between these versions.</p>
-                  )}
-              </div>
-            )}
-            {catalog.revisions.map(r => (
-              <details key={r.id} className="seo-history">
-                <summary>
-                  Version {r.revision} · {member(r.actor_id)} ·{' '}
-                  {new Date(r.created_at).toLocaleString('en-GB', {timeZone: data.workspace.timezone})}
-                </summary>
-                <p>{r.reason || 'Form updated'}</p>
-                <dl>
-                  {pageFields.map(f => (
-                    <div key={f.key}>
-                      <dt>{f.label}</dt>
-                      <dd>
-                        {r.fields[f.key] === null || r.fields[f.key] === undefined
-                          ? 'Not recorded'
-                          : String(r.fields[f.key])}
-                        {r.notes[f.key] ? ` · ${r.notes[f.key]}` : ''}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </details>
-            ))}
-          </section>
+          <SeoHistory
+            key={site.id}
+            catalog={catalog}
+            mode={mode}
+            pageFields={pageFields}
+            member={member}
+            today={today}
+            timezone={data.workspace.timezone}
+          />
         </>
       )}
       {!site && mode === 'features' && data.profile.role === 'administrator' && (
-        <section className="card padded">
-          <h3>Import your Google Sheet data</h3>
-          <p className="form-hint">
-            Saved source snapshot: 14 websites, all 33 fields and 27 July/October SEO audits. This leaves the original
-            Google Sheet unchanged.
-          </p>
-          <button
-            className="button secondary"
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              setError('');
-              try {
-                setPreview(await workspaceFetch('/api/seo-health/import'));
-                setConfirmed(false);
-              } catch (e) {
-                setError((e as Error).message);
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            Review real-data import
-          </button>
-          {preview && (
-            <>
-              <p className="seo-import-notice">{preview.notice}</p>
-              <p className="form-hint">
-                Known conflicts: some remarks quote older speed values; Norway Analytics and UAE YouTube remarks
-                disagree with their structured cells. Preserve both, then review them. Finland has no July score or
-                remarks.
-              </p>
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Website</th>
-                      <th>Source URL</th>
-                      <th>Audits</th>
-                      <th>Source fields</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.rows.map(w => (
-                      <tr key={w.url}>
-                        <td>
-                          {w.name}
-                          <small className="block">{w.review}</small>
-                        </td>
-                        <td>{w.url}</td>
-                        <td>{w.audits.map(a => `${a.measurement_date}: ${a.score}/100`).join('; ')}</td>
-                        <td>
-                          <details>
-                            <summary>Review 33 fields</summary>
-                            <dl>
-                              {pageFields.map(f => (
-                                <div key={f.key}>
-                                  <dt>{f.label}</dt>
-                                  <dd>
-                                    {String(w.fields[f.key] ?? 'Not recorded')}
-                                    {w.notes[f.key] ? ` · ${w.notes[f.key]}` : ''}
-                                  </dd>
-                                </div>
-                              ))}
-                            </dl>
-                          </details>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <label className="checkbox-field">
-                <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />I reviewed
-                the snapshot and conflict rules. Import missing data without overwriting existing profiles.
-              </label>
-              <button
-                className="button primary"
-                disabled={!confirmed || busy}
-                onClick={async () => {
-                  if (lock.current) return;
-                  lock.current = true;
-                  setBusy(true);
-                  setError('');
-                  try {
-                    const r = await workspaceFetch('/api/seo-health/import', {
-                      method: 'POST',
-                      headers: {'Content-Type': 'application/json'},
-                      body: JSON.stringify({confirm: true}),
-                    });
-                    setMessage(
-                      `Import finished: ${r.websites_added} websites added, ${r.profiles_added} SEO forms added, ${r.historical_audits_added} audit records added; ${r.conflicts} conflicts preserved, ${r.skipped} already imported websites skipped.`,
-                    );
-                    setPreview(null);
-                    setCatalog(await workspaceFetch('/api/seo-health'));
-                    await onChanged();
-                  } catch (e) {
-                    setError((e as Error).message);
-                  } finally {
-                    setBusy(false);
-                    lock.current = false;
-                  }
-                }}
-              >
-                Import reviewed data
-              </button>
-            </>
-          )}
-        </section>
+        <SeoImport
+          pageFields={pageFields}
+          busy={busy}
+          lockRef={lock}
+          onBusy={setBusy}
+          onError={setError}
+          onMessage={setMessage}
+          onImported={async () => {
+            setCatalog(await workspaceFetch('/api/seo-health'));
+            await onChanged();
+          }}
+        />
       )}
     </div>
   );

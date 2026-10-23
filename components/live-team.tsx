@@ -3,6 +3,7 @@ import {FormEvent, useEffect, useRef, useState} from 'react';
 import {LoaderCircle, Plus, RefreshCw, ShieldCheck} from 'lucide-react';
 import {Workspace, Member, initials, statusName} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
+import {confirmAction} from '@/components/confirm-dialog';
 import {memberInput} from '@/lib/live-validation';
 import LiveInvitations from '@/components/live-invitations';
 type TeamMember = Member & {email: string; active: boolean};
@@ -44,7 +45,14 @@ export default function LiveTeam({data, onChanged}: {data: Workspace; onChanged:
     if (
       action === 'update' &&
       (!active || role !== member?.role) &&
-      !window.confirm(`Save this access change for ${member?.display_name}?`)
+      !(await confirmAction({
+        title: `Change access for ${member?.display_name}?`,
+        message: active
+          ? `Their role becomes ${role.replaceAll('_', ' ')}.`
+          : 'They will lose access to this workspace.',
+        confirmLabel: 'Save access',
+        danger: !active,
+      }))
     )
       return;
     setError('');

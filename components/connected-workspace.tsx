@@ -32,6 +32,7 @@ import {taskInput, websiteInput} from '@/lib/live-validation';
 
 import {Workspace, Task, statusName, statusClass, initials} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
+import {ConfirmHost, confirmAction} from '@/components/confirm-dialog';
 import {useDialog} from '@/components/live-dialog';
 import LiveTasks from '@/components/live-tasks';
 import LiveTaskPanel from '@/components/live-task-panel';
@@ -340,6 +341,7 @@ export default function ConnectedWorkspace() {
   }
   return (
     <div className="app-shell connected-app">
+      <ConfirmHost />
       <a className="skip-link" href="#workspace-main">
         Skip to content
       </a>
@@ -615,7 +617,10 @@ export default function ConnectedWorkspace() {
                         <span className="live-site-icon">
                           <Globe2 size={24} />
                         </span>
-                        <span className="badge healthy">{statusName(site.status)}</span>
+                        {/* Active is green; maintenance and needs attention amber; inactive neutral. */}
+                        <span className={`badge ${site.status === 'active' ? 'healthy' : statusClass(site.status)}`}>
+                          {statusName(site.status)}
+                        </span>
                       </div>
                       <h2>
                         <button className="website-name-button" onClick={() => openWebsite(site.id)}>
@@ -820,8 +825,10 @@ function CreationDialog({
   const [review, setReview] = useState(false);
   const [assignee, setAssignee] = useState(data.profile.id);
   const busyRef = useRef(false);
-  const close = () => {
-    if (!busy && (!dirty || window.confirm('Discard your unsaved form?'))) onClose();
+  const close = async () => {
+    if (busy) return;
+    if (!dirty || (await confirmAction({title: 'Discard unsaved changes?', confirmLabel: 'Discard', danger: true})))
+      onClose();
   };
   useDialog(close);
   useEffect(() => {

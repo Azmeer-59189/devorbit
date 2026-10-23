@@ -1,6 +1,7 @@
 'use client';
 import {useEffect, useRef, useState} from 'react';
 import {workspaceFetch} from '@/lib/workspace-client';
+import {confirmAction} from '@/components/confirm-dialog';
 import {invitationInput} from '@/lib/invitations';
 import {statusName} from '@/lib/live-types';
 type Invitation = {
@@ -173,8 +174,15 @@ export default function LiveInvitations() {
                 <button
                   className="text-button"
                   disabled={busy}
-                  onClick={() => {
-                    if (window.confirm(`Cancel the invitation for ${i.email}?`))
+                  onClick={async () => {
+                    if (
+                      await confirmAction({
+                        title: `Cancel the invitation for ${i.email}?`,
+                        message: 'The invitation link will stop working.',
+                        confirmLabel: 'Cancel invitation',
+                        danger: true,
+                      })
+                    )
                       act({action: 'cancel', invitation_id: i.id});
                   }}
                 >

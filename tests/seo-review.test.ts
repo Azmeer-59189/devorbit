@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {fieldsForPage, compareCells, compareSeo, reviewSeo, seoExportRows} from '../lib/seo-review';
+import {auditToCorrect, fieldsForPage, compareCells, compareSeo, reviewSeo, seoExportRows} from '../lib/seo-review';
 import {seoFields} from '../lib/seo-health';
 
 test('SEO review distinguishes unknown, missing, negative, and not-applicable statuses', () => {
@@ -69,4 +69,15 @@ test('comparison columns sort by type and always keep blank values last', () => 
   assert.deepEqual(sort([74, null, 9, 92], 'number', -1), [92, 74, 9, null]);
   assert.deepEqual(sort(['no', 'unknown', 'yes', 'in_progress'], 'status', 1), ['yes', 'in_progress', 'no', 'unknown']);
   assert.deepEqual(sort(['2026-10-03', '', '2026-09-13'], 'date', -1), ['2026-10-03', '2026-09-13', '']);
+});
+
+test('a new score corrects only the current audit with the same date and source', () => {
+  const audits = [
+    {id: 'b', measurement_date: '2026-10-23', score: 90, source: 'PageSpeed', supersedes_id: 'a'},
+    {id: 'a', measurement_date: '2026-10-23', score: 80, source: 'PageSpeed', supersedes_id: null},
+    {id: 'c', measurement_date: '2026-10-01', score: 70, source: 'Rank Math', supersedes_id: null},
+  ];
+  assert.equal(auditToCorrect(audits, '2026-10-23', 'PageSpeed')?.id, 'b');
+  assert.equal(auditToCorrect(audits, '2026-10-23', 'Rank Math'), undefined);
+  assert.equal(auditToCorrect(audits, '2026-10-02', 'Rank Math'), undefined);
 });

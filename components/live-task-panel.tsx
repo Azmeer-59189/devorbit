@@ -3,6 +3,7 @@ import {useEffect, useRef, useState} from 'react';
 import {Check, LoaderCircle, MessageSquare, RefreshCw, UserPlus, X} from 'lucide-react';
 import {Workspace, Task, statusName} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
+import {confirmAction} from '@/components/confirm-dialog';
 import {taskActionInput} from '@/lib/live-validation';
 import TaskEditor from '@/components/live-task-editor';
 import {useDialog} from '@/components/live-dialog';
@@ -43,8 +44,12 @@ export default function LiveTaskPanel({
   const [reviewer, setReviewer] = useState('');
   const pendingAction = useRef<{key: string; id: string} | null>(null);
   const [reload, setReload] = useState(0);
-  const close = () => {
-    if (!busy && (!(body.trim() || reason.trim() || editDirty) || window.confirm('Discard your unsaved changes?')))
+  const close = async () => {
+    if (busy) return;
+    if (
+      !(body.trim() || reason.trim() || editDirty) ||
+      (await confirmAction({title: 'Discard unsaved changes?', confirmLabel: 'Discard', danger: true}))
+    )
       onClose();
   };
   useDialog(close);
@@ -154,8 +159,15 @@ export default function LiveTaskPanel({
               className="icon-button"
               aria-label="Refresh task"
               disabled={busy}
-              onClick={() => {
-                if (!editDirty || window.confirm('Discard unsaved task edits and reload?')) {
+              onClick={async () => {
+                if (
+                  !editDirty ||
+                  (await confirmAction({
+                    title: 'Discard your edits and reload?',
+                    confirmLabel: 'Discard',
+                    danger: true,
+                  }))
+                ) {
                   setEditing(false);
                   setEditDirty(false);
                   setReload(n => n + 1);
@@ -234,8 +246,11 @@ export default function LiveTaskPanel({
                   data={data}
                   onDirty={setEditDirty}
                   onBusy={setBusy}
-                  onCancel={() => {
-                    if (!editDirty || window.confirm('Discard unsaved task edits?')) {
+                  onCancel={async () => {
+                    if (
+                      !editDirty ||
+                      (await confirmAction({title: 'Discard unsaved changes?', confirmLabel: 'Discard', danger: true}))
+                    ) {
                       setEditing(false);
                       setEditDirty(false);
                     }
@@ -320,8 +335,15 @@ export default function LiveTaskPanel({
                 {editable && !current.assignee_id && !terminal && (
                   <button
                     className="button secondary"
-                    onClick={() => {
-                      if (window.confirm('Cancel this unassigned task? Its history will remain.'))
+                    onClick={async () => {
+                      if (
+                        await confirmAction({
+                          title: 'Cancel this task?',
+                          message: 'It is unassigned. Its history will be kept.',
+                          confirmLabel: 'Cancel task',
+                          danger: true,
+                        })
+                      )
                         act('status', {status: 'cancelled'});
                     }}
                   >
@@ -362,8 +384,15 @@ export default function LiveTaskPanel({
                 {canProgress && current.progress === 'in_review' && (
                   <button
                     className="button secondary"
-                    onClick={() => {
-                      if (window.confirm('Cancel this task? History will be preserved.'))
+                    onClick={async () => {
+                      if (
+                        await confirmAction({
+                          title: 'Cancel this task?',
+                          message: 'Its history will be kept.',
+                          confirmLabel: 'Cancel task',
+                          danger: true,
+                        })
+                      )
                         act('status', {status: 'cancelled'});
                     }}
                   >

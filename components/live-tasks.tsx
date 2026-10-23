@@ -3,6 +3,7 @@ import {useEffect, useRef, useState} from 'react';
 import {useSearchParams} from 'next/navigation';
 import {Workspace, statusName, statusClass} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
+import {confirmAction, promptText} from '@/components/confirm-dialog';
 import {taskActionInput} from '@/lib/live-validation';
 import {workspaceDate} from '@/lib/dates';
 import DueDate from '@/components/due-date';
@@ -158,13 +159,24 @@ export default function LiveTasks({
     }
     let reason = '';
     if (target === 'blocked' || ['completed', 'cancelled'].includes(task.progress)) {
-      const answer = window.prompt(
-        target === 'blocked' ? 'Why is this task blocked?' : 'Why are you reopening this task?',
+      const answer = await promptText(
+        target === 'blocked'
+          ? {title: 'Why is this task blocked?', label: 'Blocker', confirmLabel: 'Mark blocked'}
+          : {title: 'Why are you reopening this task?', label: 'Reason', confirmLabel: 'Reopen'},
       );
-      if (!answer?.trim()) return;
-      reason = answer.trim();
+      if (!answer) return;
+      reason = answer;
     }
-    if (target === 'cancelled' && !window.confirm('Cancel this task and retain its history?')) return;
+    if (
+      target === 'cancelled' &&
+      !(await confirmAction({
+        title: 'Cancel this task?',
+        message: 'Its history will be kept.',
+        confirmLabel: 'Cancel task',
+        danger: true,
+      }))
+    )
+      return;
     lock.current = true;
     setBusy(true);
     setActionError('');
@@ -194,8 +206,10 @@ export default function LiveTasks({
   }
   async function respond(task: ListTask, accept: boolean) {
     if (lock.current || !task.pending_assignment_id) return;
-    const reason = accept ? '' : window.prompt('Why are you declining this assignment?');
-    if (!accept && !reason?.trim()) return;
+    const reason = accept
+      ? ''
+      : await promptText({title: 'Why are you declining this assignment?', label: 'Reason', confirmLabel: 'Decline'});
+    if (!accept && !reason) return;
     lock.current = true;
     setBusy(true);
     setActionError('');

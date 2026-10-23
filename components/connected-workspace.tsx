@@ -332,6 +332,9 @@ export default function ConnectedWorkspace() {
   }
   return (
     <div className="app-shell connected-app">
+      <a className="skip-link" href="#workspace-main">
+        Skip to content
+      </a>
       <aside className={`sidebar ${mobile ? 'mobile-open' : ''}`}>
         <Link
           className="brand"
@@ -450,7 +453,7 @@ export default function ConnectedWorkspace() {
             </button>
           </div>
         </header>
-        <main data-page={page}>
+        <main id="workspace-main" tabIndex={-1} data-page={page}>
           <div className="page-heading">
             <div>
               <div className="eyebrow">{data.workspace.name}</div>

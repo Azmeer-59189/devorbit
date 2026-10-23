@@ -41,6 +41,8 @@ Responsive rules keep their cascade order. See docs/STYLING.md. */
   --primary-hover: #193b79;
   --primary-surface: #edf3fc;
   --primary-border: #cad9f3;
+  /* One quiet tint for hovered rows, cards and list items. */
+  --surface-hover: #f5f7fb;
   --focus-ring: #214b98;
   --nav-active-text: var(--primary);
   --font-size-body: 14px;
@@ -375,8 +377,13 @@ small {
   padding: 4px;
   border-radius: var(--radius-sm);
 }
+.icon-button {
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
 .icon-button:hover {
-  background: #edf3fc;
+  background: var(--primary-surface);
   color: var(--primary);
 }
 .mobile-toggle {
@@ -2129,7 +2136,7 @@ button:disabled {
 .button:focus-visible,
 a:focus-visible,
 button:focus-visible {
-  outline: 3px solid #a590e6;
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 .kpi-grid .kpi:nth-child(4n + 1) {
@@ -3527,7 +3534,7 @@ h4 {
 }
 .topbar .icon-button:hover {
   color: var(--primary);
-  background: #eff5fe;
+  background: var(--primary-surface);
 }
 .connected-app main {
   max-width: 1600px;
@@ -3563,6 +3570,11 @@ h4 {
   border-radius: var(--radius-control);
   font-weight: 500;
   font-size: var(--font-size-label);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease;
 }
 .connected-app .button.primary {
   box-shadow: none;
@@ -3571,24 +3583,28 @@ h4 {
 }
 .connected-app .button.primary:hover {
   background: var(--primary-hover);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--primary) 25%, transparent);
 }
 .connected-app .button.secondary {
   background: var(--surface);
   border-color: var(--border-control);
   color: #59616e;
 }
-.connected-app .button.secondary:hover {
-  background: #f6f8fb;
-  border-color: #cbd4e1;
+.connected-app .button.secondary:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: #c3c9d4;
+  color: var(--text);
 }
 .connected-app .text-button {
-  color: #347bcf;
+  color: var(--primary);
   font-weight: 500;
   font-size: var(--font-size-label);
+  text-underline-offset: 3px;
 }
-.connected-app .text-button:hover {
-  text-decoration: none;
-  color: #1b5ba9;
+/* Underline on hover so links read as links without relying on colour alone. */
+.connected-app .text-button:hover:not(:disabled) {
+  text-decoration: underline;
+  color: var(--primary-hover);
 }
 .card {
   background: var(--surface);
@@ -3883,8 +3899,11 @@ button.attention-item:hover {
   font-weight: 500;
   font-size: var(--font-size-body);
 }
-.connected-app .task-table tbody tr:hover {
-  background: #fafcff;
+.connected-app tbody tr {
+  transition: background-color 120ms ease;
+}
+.connected-app tbody tr:hover {
+  background: var(--surface-hover);
 }
 .connected-app .badge {
   font-weight: 400;
@@ -3955,6 +3974,14 @@ button.attention-item:hover {
 .field input:focus {
   border-color: var(--focus-ring);
   outline-color: var(--focus-ring);
+}
+.connected-app .field input:hover:not(:focus, :disabled),
+.connected-app .field select:hover:not(:focus, :disabled),
+.connected-app .field textarea:hover:not(:focus, :disabled) {
+  border-color: #c3c9d4;
+}
+.connected-app select:not(:disabled) {
+  cursor: pointer;
 }
 .connected-app .form-hint {
   color: var(--muted);
@@ -4066,6 +4093,13 @@ button.attention-item:hover {
 .website-card:nth-child(n) {
   background: var(--surface);
   border: 1px solid var(--border);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+.website-card:nth-child(n):hover {
+  border-color: var(--primary-border);
+  box-shadow: 0 4px 14px #26324710;
 }
 .website-card footer {
   border-color: var(--border);
@@ -4097,8 +4131,12 @@ button.attention-item:hover {
   font-size: 13px;
 }
 .notification-row {
-  background: #f1f6ff;
-  border-color: #e4edfb;
+  background: var(--primary-surface);
+  border-color: var(--primary-border);
+  transition: box-shadow 120ms ease;
+}
+.notification-row:hover {
+  box-shadow: inset 0 0 0 1px var(--primary-border);
 }
 .notification-row.read {
   opacity: 1;
@@ -4246,6 +4284,32 @@ a:focus-visible,
 summary:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 3px;
+}
+summary {
+  cursor: pointer;
+}
+.connected-app summary:hover {
+  color: var(--primary);
+}
+/* Keyboard users can jump past the sidebar; hidden until focused. */
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 100;
+  padding: 10px 14px;
+  border-radius: var(--radius-control);
+  background: var(--primary);
+  color: var(--surface);
+  font-weight: 600;
+  transform: translateY(-160%);
+}
+.skip-link:focus-visible {
+  transform: none;
+}
+/* The skip target takes focus only so the next Tab starts in the page content. */
+.connected-app main:focus {
+  outline: none;
 }
 @media (max-width: 700px) {
   .website-overview,

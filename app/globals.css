@@ -3231,6 +3231,117 @@ button.website-related-row:hover {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 22px;
 }
+/* One website's header: identity, then score and completeness. */
+.site-header h2 {
+  font-size: 20px;
+  font-weight: 650;
+}
+.site-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: var(--font-size-label);
+}
+.site-meta-dotted > :not(:first-child)::before {
+  content: '·';
+  margin-right: 10px;
+  color: #b4bcc8;
+}
+.site-meta a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+/* Long forms get a sticky list of sections with live recorded counts. */
+.seo-form-layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.seo-form-nav {
+  position: sticky;
+  top: 20px;
+  display: grid;
+  gap: 2px;
+}
+.seo-form-nav a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: var(--font-size-label);
+  transition: background-color 120ms ease;
+}
+.seo-form-nav a:hover {
+  background: var(--surface-hover);
+  color: var(--primary);
+}
+.seo-form-nav small,
+.seo-field-group legend small {
+  color: var(--muted);
+  font-size: var(--font-size-caption);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.seo-field-group legend small {
+  margin-left: 8px;
+}
+.seo-field-group {
+  scroll-margin-top: 20px;
+}
+/* Cards clip their overflow, which would stop the sticky jump list and save bar. */
+.seo-fixed-form.card {
+  overflow: visible;
+}
+/* Save bar pinned to the bottom of the screen while the form is in view. */
+.form-savebar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px -24px -24px;
+  padding: 14px 24px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
+  color: var(--muted);
+  font-size: var(--font-size-label);
+}
+.form-savebar[data-dirty] {
+  color: var(--text);
+  font-weight: 550;
+  box-shadow: 0 -6px 16px #2632470f;
+}
+@media (max-width: 1000px) {
+  /* minmax(0, …) lets the column shrink below the fieldsets' min-content width on phones. */
+  .seo-form-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Positioned so the screen-reader-only counts inside are clipped by the scroll row
+     instead of widening the page. */
+  .seo-form-nav {
+    position: relative;
+    display: flex;
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 4px;
+  }
+  .seo-form-nav a {
+    flex-shrink: 0;
+    border: 1px solid var(--border-control);
+    background: var(--surface);
+  }
+}
 .seo-field-note {
   margin-top: 9px;
 }
@@ -4389,6 +4500,8 @@ summary {
 
 /* Spreadsheet comparison keeps website names visible while scanning features. */
 .comparison-wrap {
+  /* Positioned so screen-reader-only cell text stays inside the scroll area on phones. */
+  position: relative;
   overflow: auto;
   max-height: 70vh;
   scrollbar-gutter: stable;
@@ -4586,6 +4699,7 @@ th[aria-sort] .sort-button svg,
   }
   /* One swipeable row of field groups instead of several wrapped rows. */
   .matrix-tabs {
+    position: relative;
     flex-wrap: nowrap;
     overflow-x: auto;
     padding-bottom: 4px;

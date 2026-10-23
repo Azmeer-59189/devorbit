@@ -231,6 +231,14 @@ export default function ConnectedWorkspace() {
       </div>
     );
   const canAddWebsites = ['administrator', 'manager'].includes(data.profile.role);
+  // The open website, from /websites/<id> or the SEO pages' ?website=<id>.
+  const crumbSiteId =
+    page === 'Websites'
+      ? selectedWebsite
+      : ['SEO reports', 'Website features'].includes(page)
+        ? searchParams.get('website')
+        : null;
+  const crumbSite = crumbSiteId ? data.websites.find(w => w.id === crumbSiteId)?.name : undefined;
   const memberName = (id: string | null) =>
     data.members.find(m => m.id === id)?.display_name || (id ? 'Former team member' : 'Unassigned');
   const siteName = (id: string) => data.websites.find(s => s.id === id)?.name || 'Website';
@@ -425,7 +433,15 @@ export default function ConnectedWorkspace() {
             </button>
             <span>Workspace</span>
             <ChevronRight size={13} />
-            <strong>{pageLabel(page)}</strong>
+            {crumbSite ? (
+              <>
+                <span>{pageLabel(page)}</span>
+                <ChevronRight size={13} />
+                <strong>{crumbSite}</strong>
+              </>
+            ) : (
+              <strong>{pageLabel(page)}</strong>
+            )}
           </div>
           <div className="topbar-actions">
             <span className="workspace-date">

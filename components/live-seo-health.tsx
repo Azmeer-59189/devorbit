@@ -4,7 +4,7 @@ import {useSearchParams} from 'next/navigation';
 import {Workspace, statusName} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
 import {seoStatuses, SeoValues, seoInput} from '@/lib/seo-health';
-import {ArrowDown, ArrowUp, ArrowUpDown, Pencil} from 'lucide-react';
+import {ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Pencil} from 'lucide-react';
 import {compareCells, compareSeo, fieldsForPage, recordableFields, reviewSeo} from '@/lib/seo-review';
 import {seoTaskDraft, SeoTaskDraft} from '@/lib/seo-task';
 import {displayDate, workspaceDate} from '@/lib/dates';
@@ -61,6 +61,13 @@ type ImportPreview = {
     review: string;
   }[];
 };
+/** Profile URL and CMS sit alongside the saved answers, as the form shows them. */
+const formValues = (w: {fields: SeoValues; canonical_url: string; cms: string}): SeoValues => ({
+  ...w.fields,
+  website_url: w.canonical_url,
+  cms: w.cms || '',
+});
+const sectionId = (group: string) => 'section-' + group.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 type Tile = {
   label: string;
   hint: string;
@@ -147,7 +154,7 @@ export default function LiveSeoHealth({
     setCatalog(d);
     const selected = id ? d.websites[0] || null : null;
     setSite(selected);
-    setFields(selected ? {...selected.fields, website_url: selected.canonical_url, cms: selected.cms || ''} : {});
+    setFields(selected ? formValues(selected) : {});
     setNotes(selected?.notes || {});
     setSource(selected?.source || '');
     setReason('');
@@ -213,7 +220,8 @@ export default function LiveSeoHealth({
       const d: Catalog = await workspaceFetch(`/api/seo-health?website=${site.id}`);
       setCatalog(d);
       setSite(d.websites[0]);
-      setFields(d.websites[0].fields);
+      // Keep profile URL and CMS in the form after a save, as on open.
+      setFields(formValues(d.websites[0]));
       setNotes(d.websites[0].notes);
       setDirty(false);
       setReason('');
@@ -226,6 +234,15 @@ export default function LiveSeoHealth({
       lock.current = false;
       setBusy(false);
     }
+  }
+  function discard() {
+    if (!site) return;
+    setFields(formValues(site));
+    setNotes(site.notes);
+    setSource(site.source || '');
+    setReason('');
+    setDirty(false);
+    pending.current = null;
   }
   const member = (id: string) => data.members.find(m => m.id === id)?.display_name || 'Team member';
   const today = workspaceDate(data.workspace.timezone);
@@ -267,6 +284,24 @@ export default function LiveSeoHealth({
   const toggleSort = (key: string) =>
     setSort(current => ({key, direction: current.key === key && current.direction === 1 ? -1 : 1}));
   const groups = [...new Set(pageFields.map(f => f.group))];
+  // A blank score or audit date in the form falls back to the latest audit, as the header shows.
+  const liveReview = reviewPage({
+    ...fields,
+    seo_score: fields.seo_score ?? site?.latest_audit?.score ?? null,
+    audit_date: fields.audit_date || site?.latest_audit?.measurement_date || null,
+  });
+  /** Recorded answers in a form section as the user edits; generated fields are not counted. */
+  const groupProgress = (group: string) => {
+    const total = recordableFields(pageFields).filter(f => f.group === group).length;
+    return {done: total - liveReview.missing.filter(f => f.group === group).length, total};
+  };
+  const blankish = (v: unknown) => (v == null || v === '' || v === 'unknown' ? '' : String(v));
+  const saved = site ? formValues(site) : {};
+  const changes = site
+    ? pageFields.filter(
+        f => blankish(fields[f.key]) !== blankish(saved[f.key]) || (notes[f.key] || '') !== (site.notes[f.key] || ''),
+      ).length + (source !== (site.source || '') ? 1 : 0)
+    : 0;
   /** Unrecorded answers in a field group across the websites currently listed. */
   const groupGaps = (group: string) =>
     visibleSites.reduce(
@@ -419,12 +454,39 @@ export default function LiveSeoHealth({
       <div className="section-toolbar">
         {/* The page heading already names the list, so the title only appears for one website. */}
         {site ? (
-          <div>
+          <div className="site-header">
             <h2>{site.name}</h2>
-            <p className="form-hint">
-              {mode === 'seo'
-                ? 'SEO performance and analytics for this website.'
-                : 'Website capabilities for this website.'}
+            <p className="site-meta site-meta-dotted">
+              <span>{site.country}</span>
+              {/^https?:\/\//i.test(site.canonical_url) ? (
+                <a href={site.canonical_url} target="_blank" rel="noreferrer">
+                  {site.canonical_url.replace(/^https?:\/\//i, '')}
+                  <ExternalLink size={12} aria-hidden="true" />
+                </a>
+              ) : (
+                <span>{site.canonical_url}</span>
+              )}
+              <span>{site.cms || 'CMS not set'}</span>
+              {(site.archived_at || site.status === 'archived') && <span>Archived</span>}
+            </p>
+            <p className="site-meta">
+              {mode === 'seo' &&
+                (site.latest_audit ? (
+                  <>
+                    <span className="matrix-score" data-band={scoreBand(site.latest_audit.score)}>
+                      {site.latest_audit.score}/100
+                    </span>
+                    <span>
+                      Latest audit {displayDate(site.latest_audit.measurement_date, today)} · {site.latest_audit.source}
+                    </span>
+                  </>
+                ) : (
+                  <span>Not yet audited</span>
+                ))}
+              <span>
+                {recordableFields(pageFields).length - reviewSite(site).missing.length} of{' '}
+                {recordableFields(pageFields).length} fields recorded
+              </span>
             </p>
           </div>
         ) : (
@@ -676,131 +738,181 @@ export default function LiveSeoHealth({
               className="live-form-fieldset"
               disabled={busy || !!site.archived_at || site.status === 'archived'}
             >
-              {[...new Set(pageFields.map(f => f.group))].map(group => (
-                <fieldset className="seo-field-group" key={group}>
-                  <legend>{group}</legend>
-                  <div className="seo-form-grid">
-                    {pageFields
-                      .filter(f => f.group === group)
-                      .map(f => (
-                        <div key={f.key}>
-                          <label className="field">
-                            {f.label}
-                            {f.type === 'duration' ? ' (seconds)' : ''}
-                            {f.type === 'status' ? (
-                              <select
-                                value={String(fields[f.key] || 'unknown')}
-                                onChange={e => change(f.key, e.target.value)}
-                              >
-                                {seoStatuses.map(s => (
-                                  <option value={s} key={s}>
-                                    {statusName(s)}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : f.type === 'long_text' ? (
-                              <textarea
-                                rows={12}
-                                readOnly={f.key === 'remarks'}
-                                maxLength={5000}
-                                value={String(fields[f.key] ?? '')}
-                                onChange={e => change(f.key, e.target.value)}
-                              />
-                            ) : (
-                              <input
-                                type={
-                                  ['number', 'duration'].includes(f.type)
-                                    ? 'number'
-                                    : f.type === 'date'
-                                      ? 'date'
-                                      : f.type === 'url'
-                                        ? 'url'
-                                        : 'text'
-                                }
-                                step="any"
-                                min={0}
-                                max={f.type === 'number' ? 100 : f.type === 'duration' ? 3600 : undefined}
-                                readOnly={['website_url', 'cms', 'qa', 'plugin_updated', 'backup_date'].includes(f.key)}
-                                value={fields[f.key] ?? ''}
-                                maxLength={5000}
-                                onChange={e =>
-                                  change(
-                                    f.key,
-                                    e.target.value === ''
-                                      ? null
-                                      : ['number', 'duration'].includes(f.type)
-                                        ? Number(e.target.value)
-                                        : e.target.value,
-                                  )
-                                }
-                              />
-                            )}
-                          </label>
-                          {['qa', 'plugin_updated', 'backup_date', 'remarks'].includes(f.key) ? (
-                            <small className="form-hint">
-                              {f.key === 'remarks'
-                                ? 'Generated from the latest saved form. Save changes to refresh.'
-                                : f.key === 'backup_date'
-                                  ? 'Automatic reference: seven days before today; not a confirmed backup.'
-                                  : 'Automatic reference: first day of the current month; changes monthly, not daily. Not a completion record.'}
+              <div className={groups.length > 1 ? 'seo-form-layout' : undefined}>
+                {groups.length > 1 && (
+                  <nav className="seo-form-nav" aria-label="Form sections">
+                    {groups.map(g => {
+                      const p = groupProgress(g);
+                      return (
+                        <a key={g} href={`#${sectionId(g)}`}>
+                          <span>{g}</span>
+                          {p.total > 0 && (
+                            <small>
+                              {p.done}/{p.total}
+                              <span className="sr-only"> recorded</span>
                             </small>
-                          ) : ['website_url', 'cms'].includes(f.key) ? (
-                            <small className="form-hint">Managed in the website profile.</small>
-                          ) : (
-                            <details className="seo-field-note" open={!!notes[f.key] || undefined}>
-                              <summary>Field note / original detail</summary>
-                              <textarea
-                                aria-label={`${f.label} note`}
-                                maxLength={2000}
-                                rows={2}
-                                value={notes[f.key] || ''}
-                                onChange={e => {
-                                  setNotes({...notes, [f.key]: e.target.value});
-                                  setDirty(true);
-                                }}
-                              />
-                            </details>
                           )}
-                        </div>
-                      ))}
-                  </div>
-                </fieldset>
-              ))}
-              <div className="seo-form-grid">
-                {mode === 'seo' && (
+                        </a>
+                      );
+                    })}
+                  </nav>
+                )}
+                <div>
+                  {groups.map(group => (
+                    <fieldset className="seo-field-group" key={group} id={sectionId(group)}>
+                      <legend>
+                        {group}
+                        {groupProgress(group).total > 0 && (
+                          <small>
+                            {groupProgress(group).done} of {groupProgress(group).total} recorded
+                          </small>
+                        )}
+                      </legend>
+                      <div className="seo-form-grid">
+                        {pageFields
+                          .filter(f => f.group === group)
+                          .map(f => (
+                            <div key={f.key}>
+                              <label className="field">
+                                {f.label}
+                                {f.type === 'duration' ? ' (seconds)' : ''}
+                                {f.type === 'status' ? (
+                                  <select
+                                    value={String(fields[f.key] || 'unknown')}
+                                    onChange={e => change(f.key, e.target.value)}
+                                  >
+                                    {seoStatuses.map(s => (
+                                      <option value={s} key={s}>
+                                        {statusName(s)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : f.type === 'long_text' ? (
+                                  <textarea
+                                    rows={12}
+                                    readOnly={f.key === 'remarks'}
+                                    maxLength={5000}
+                                    value={String(fields[f.key] ?? '')}
+                                    onChange={e => change(f.key, e.target.value)}
+                                  />
+                                ) : (
+                                  <input
+                                    type={
+                                      ['number', 'duration'].includes(f.type)
+                                        ? 'number'
+                                        : f.type === 'date'
+                                          ? 'date'
+                                          : f.type === 'url'
+                                            ? 'url'
+                                            : 'text'
+                                    }
+                                    step="any"
+                                    min={0}
+                                    max={f.type === 'number' ? 100 : f.type === 'duration' ? 3600 : undefined}
+                                    readOnly={['website_url', 'cms', 'qa', 'plugin_updated', 'backup_date'].includes(
+                                      f.key,
+                                    )}
+                                    value={fields[f.key] ?? ''}
+                                    maxLength={5000}
+                                    onChange={e =>
+                                      change(
+                                        f.key,
+                                        e.target.value === ''
+                                          ? null
+                                          : ['number', 'duration'].includes(f.type)
+                                            ? Number(e.target.value)
+                                            : e.target.value,
+                                      )
+                                    }
+                                  />
+                                )}
+                              </label>
+                              {['qa', 'plugin_updated', 'backup_date', 'remarks'].includes(f.key) ? (
+                                <small className="form-hint">
+                                  {f.key === 'remarks'
+                                    ? 'Generated from the latest saved form. Save changes to refresh.'
+                                    : f.key === 'backup_date'
+                                      ? 'Automatic reference: seven days before today; not a confirmed backup.'
+                                      : 'Automatic reference: first day of the current month; changes monthly, not daily. Not a completion record.'}
+                                </small>
+                              ) : ['website_url', 'cms'].includes(f.key) ? (
+                                <small className="form-hint">Managed in the website profile.</small>
+                              ) : (
+                                <details className="seo-field-note" open={!!notes[f.key] || undefined}>
+                                  <summary>{notes[f.key] ? 'Note' : 'Add note'}</summary>
+                                  <textarea
+                                    aria-label={`${f.label} note`}
+                                    maxLength={2000}
+                                    rows={2}
+                                    value={notes[f.key] || ''}
+                                    onChange={e => {
+                                      setNotes({...notes, [f.key]: e.target.value});
+                                      setDirty(true);
+                                    }}
+                                  />
+                                </details>
+                              )}
+                            </div>
+                          ))}
+                      </div>
+                    </fieldset>
+                  ))}
+                </div>
+              </div>
+              {mode === 'seo' && (
+                <div className="seo-form-grid">
+                  {mode === 'seo' && (
+                    <label className="field">
+                      SEO audit source / tool
+                      <input
+                        maxLength={500}
+                        value={source}
+                        placeholder="e.g. Rank Math SEO Analyzer"
+                        onChange={e => {
+                          setSource(e.target.value);
+                          setDirty(true);
+                        }}
+                      />
+                    </label>
+                  )}
                   <label className="field">
-                    SEO audit source / tool
-                    <input
-                      maxLength={500}
-                      value={source}
-                      placeholder="e.g. Rank Math SEO Analyzer"
+                    Correction reason
+                    <textarea
+                      maxLength={2000}
+                      value={reason}
                       onChange={e => {
-                        setSource(e.target.value);
+                        setReason(e.target.value);
                         setDirty(true);
                       }}
+                      placeholder="Required when correcting an existing score for the same date and source"
                     />
                   </label>
-                )}
-                <label className="field">
-                  Correction reason
-                  <textarea
-                    maxLength={2000}
-                    value={reason}
-                    onChange={e => {
-                      setReason(e.target.value);
-                      setDirty(true);
-                    }}
-                    placeholder="Required when correcting an existing score for the same date and source"
-                  />
-                </label>
-              </div>
+                </div>
+              )}
               <p className="form-hint">
                 Leave unmeasured fields blank. Unknown is different from No. Do not enter passwords, API keys or payment
-                credentials. Scores require an audit date and source.
+                credentials.{mode === 'seo' && ' Scores require an audit date and source.'}
               </p>
-              <button className="button primary" disabled={!dirty} type="submit">
-                {busy ? 'Saving...' : mode === 'seo' ? 'Save SEO' : 'Save features'}
-              </button>
+              {/* Stays in view while editing a long form; Discard restores the last saved values. */}
+              <div className="form-savebar" data-dirty={dirty || undefined}>
+                <span role="status">
+                  {changes > 0
+                    ? `${changes} unsaved change${changes === 1 ? '' : 's'}`
+                    : dirty
+                      ? 'Unsaved changes'
+                      : 'No unsaved changes'}
+                </span>
+                <div className="row">
+                  {dirty && (
+                    <button type="button" className="text-button" onClick={discard}>
+                      Discard
+                    </button>
+                  )}
+                  <button className="button primary" disabled={!dirty} type="submit">
+                    {busy ? 'Saving...' : mode === 'seo' ? 'Save SEO' : 'Save features'}
+                  </button>
+                </div>
+              </div>
             </fieldset>
             {(site.archived_at || site.status === 'archived') && (
               <p className="form-hint">Restore this website from Websites before editing.</p>

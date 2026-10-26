@@ -16,6 +16,7 @@ import SummaryTiles, {type Tile} from '@/components/seo/summary-tiles';
 import SeoHistory from '@/components/seo/seo-history';
 import SeoImport from '@/components/seo/seo-import';
 import {bandStatus, formValues, scoreBand, type Catalog, type Site} from '@/components/seo/types';
+import AutomaticAuditHistory from '@/components/seo/automatic-audit-history';
 import RecordAuditDialog, {type NewAudit} from '@/components/seo/record-audit-dialog';
 const sectionId = (group: string) => 'section-' + group.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 export default function LiveSeoHealth({
@@ -41,6 +42,8 @@ export default function LiveSeoHealth({
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [auditing, setAuditing] = useState<string | null>(null);
+  const [auditRefresh, setAuditRefresh] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [search, setSearch] = useState('');
   // Narrows the table to one summary tile's websites; cleared by selecting the tile again.
@@ -172,6 +175,35 @@ export default function LiveSeoHealth({
     setNotes(site.notes);
     setDirty(false);
     pending.current = null;
+  }
+  async function automaticAudit(website: string) {
+    if (lock.current || dirty) return;
+    lock.current = true;
+    setBusy(true);
+    setAuditing(website);
+    setError('');
+    try {
+      const result = await workspaceFetch('/api/seo-health/automate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({website_id: website, request_id: crypto.randomUUID()}),
+      });
+      const updated: Catalog = await workspaceFetch('/api/seo-health' + (site ? `?website=${site.id}` : ''));
+      show(updated, site?.id || null);
+      setMessage(
+        result.state === 'completed'
+          ? 'Automatic SEO and page-speed audit saved. Previous audits are preserved.'
+          : 'Audit is still running or was interrupted. Reload before retrying.',
+      );
+      await onChanged();
+    } catch (error) {
+      setError((error as Error).message);
+    } finally {
+      lock.current = false;
+      setBusy(false);
+      setAuditing(null);
+      setAuditRefresh(n => n + 1);
+    }
   }
   const member = (id: string) => data.members.find(m => m.id === id)?.display_name || 'Team member';
   const today = workspaceDate(data.workspace.timezone);
@@ -339,6 +371,12 @@ export default function LiveSeoHealth({
     setError('');
     const rows = visibleSites.map(w => {
       const row: Record<string, string | number> = {Website: w.name, Country: w.country};
+      if (mode === 'seo') {
+        row['Mobile performance /100'] = w.lighthouse?.performance_score ?? '';
+        row['Mobile LCP (seconds)'] = w.lighthouse?.lcp_seconds ?? '';
+        row['Automatic measured at'] = w.lighthouse?.measured_at ?? '';
+        row['Lighthouse version'] = w.lighthouse?.lighthouse_version ?? '';
+      }
       for (const f of matrixFields) {
         const value = cellValue(w, f.key);
         row[
@@ -374,6 +412,16 @@ export default function LiveSeoHealth({
         <p role="status" className="timesheet-message">
           {message}
         </p>
+      )}
+      {mode === 'seo' && (
+        <p className="form-hint">
+          Automatic audits use Google PageSpeed Insights mobile Lighthouse. Performance /100 and LCP seconds are
+          separate from the manually recorded speed field. Limit: 20 audits/workspace/hour, five minutes between website
+          attempts.
+        </p>
+      )}
+      {auditing && (
+        <p role="status">Running Google mobile audit... This can take up to two minutes. Keep this page open.</p>
       )}
       <div className="section-toolbar">
         {/* The page heading already names the list, so the title only appears for one website. */}
@@ -545,6 +593,13 @@ export default function LiveSeoHealth({
                       </th>
                     );
                   })}
+                  {mode === 'seo' && (
+                    <>
+                      <th scope="col">Mobile performance /100</th>
+                      <th scope="col">LCP (seconds)</th>
+                      <th scope="col">Automatic audit</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -612,6 +667,28 @@ export default function LiveSeoHealth({
                         </td>
                       );
                     })}
+                    {mode === 'seo' && (
+                      <>
+                        <td>{w.lighthouse?.performance_score ?? 'Not recorded'}</td>
+                        <td>{w.lighthouse?.lcp_seconds ?? 'Not recorded'}</td>
+                        <td>
+                          {w.lighthouse && (
+                            <small className="block">
+                              {new Date(w.lighthouse.measured_at).toLocaleString('en-GB', {
+                                timeZone: data.workspace.timezone,
+                              })}
+                            </small>
+                          )}
+                          <button
+                            className="button secondary"
+                            disabled={busy || !!w.archived_at || w.status === 'archived'}
+                            onClick={() => automaticAudit(w.id)}
+                          >
+                            {auditing === w.id ? 'Auditing...' : 'Run audit'}
+                          </button>
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -627,6 +704,40 @@ export default function LiveSeoHealth({
             Page-load values are durations, not SEO scores; their method/date may be unspecified.
           </p>
         </>
+      )}
+      {site && mode === 'seo' && (
+        <section className="card padded">
+          <div className="section-toolbar">
+            <h3>Automatic SEO & page speed</h3>
+            <button
+              className="button primary"
+              disabled={busy || dirty || !!site.archived_at || site.status === 'archived'}
+              onClick={() => automaticAudit(site.id)}
+            >
+              {auditing ? 'Auditing...' : 'Run automatic audit'}
+            </button>
+          </div>
+          {dirty && <p className="form-hint">Save or discard form changes before running an automatic audit.</p>}
+          <p>
+            Mobile performance:{' '}
+            <strong>{site.lighthouse ? `${site.lighthouse.performance_score}/100` : 'Not recorded'}</strong> / Largest
+            contentful paint:{' '}
+            {site.lighthouse?.lcp_seconds == null ? 'Not recorded' : `${site.lighthouse.lcp_seconds} seconds`}
+          </p>
+          {site.lighthouse && (
+            <p className="form-hint">
+              Measured{' '}
+              {new Date(site.lighthouse.measured_at).toLocaleString('en-GB', {timeZone: data.workspace.timezone})} /
+              Lighthouse {site.lighthouse.lighthouse_version}
+            </p>
+          )}
+          <AutomaticAuditHistory
+            key={site.id}
+            website={site.id}
+            refresh={`${site.lighthouse?.id || ''}:${auditRefresh}`}
+            timezone={data.workspace.timezone}
+          />
+        </section>
       )}
       {recording && site && catalog && (
         <RecordAuditDialog

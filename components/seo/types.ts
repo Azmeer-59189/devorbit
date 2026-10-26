@@ -24,6 +24,14 @@ export type Site = {
   source: string;
   revision: number;
   latest_audit: Audit | null;
+  lighthouse?: {
+    id: string;
+    seo_score: number;
+    performance_score: number;
+    lcp_seconds: number | null;
+    measured_at: string;
+    lighthouse_version: string;
+  } | null;
   /** Current website with no dated audit within the workspace schedule (migration 016). */
   audit_due?: boolean;
 };
@@ -37,7 +45,13 @@ export type Revision = {
   reason: string;
   created_at: string;
 };
-export type Catalog = {websites: Site[]; audits: Audit[]; revisions: Revision[]; audit_interval_days?: number};
+export type Catalog = {
+  websites: Site[];
+  audits: Audit[];
+  revisions: Revision[];
+  audit_interval_days?: number;
+  automatic_audits_enabled?: boolean;
+};
 /** Lighthouse-style score bands: 90+ good, 50–89 needs work, under 50 poor. */
 export const scoreBand = (score: number) => (score >= 90 ? 'good' : score >= 50 ? 'fair' : 'poor');
 type FormSource = {

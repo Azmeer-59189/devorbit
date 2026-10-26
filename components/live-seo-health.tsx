@@ -188,8 +188,8 @@ export default function LiveSeoHealth({
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({website_id: website, request_id: crypto.randomUUID()}),
-        // Google may need 95 seconds; keep waiting through the server's 120-second window.
-        signal: AbortSignal.timeout(125000),
+        // Keep the browser waiting through the server's 240-second window.
+        signal: AbortSignal.timeout(245000),
       });
       const updated: Catalog = await workspaceFetch('/api/seo-health' + (site ? `?website=${site.id}` : ''));
       show(updated, site?.id || null);
@@ -386,7 +386,7 @@ export default function LiveSeoHealth({
       if (mode === 'seo') {
         row['Mobile performance /100'] = w.lighthouse?.performance_score ?? '';
         row['Load time source'] = currentLoadTime(w).automatic
-          ? 'Google mobile / observed load event'
+          ? 'Google observed load event (unthrottled)'
           : 'Manual historical input';
         row['Load time measured at'] = currentLoadTime(w).measuredAt || '';
         row['Previous manual load time (seconds)'] = w.fields.page_seconds ?? '';
@@ -433,12 +433,12 @@ export default function LiveSeoHealth({
       {mode === 'seo' && (
         <p className="form-hint">
           Automatic audits use Google PageSpeed Insights mobile Lighthouse. Performance /100 and LCP seconds are
-          separate measurements. Load time uses the Google observed page-load event when available, otherwise the
-          previous manual value. Limit: 20 audits/workspace/hour, five minutes between website attempts.
+          simulated for a throttled phone. Load time is Google&apos;s unthrottled page-load event when available,
+          otherwise the previous manual value. Limit: 20 audits/workspace/hour, five minutes between website attempts.
         </p>
       )}
       {auditing && (
-        <p role="status">Running Google mobile audit... This can take up to two minutes. Keep this page open.</p>
+        <p role="status">Running Google mobile audit... This can take up to four minutes. Keep this page open.</p>
       )}
       <div className="section-toolbar">
         {/* The page heading already names the list, so the title only appears for one website. */}
@@ -678,7 +678,7 @@ export default function LiveSeoHealth({
                           {f.key === 'page_seconds' && (
                             <small className="block form-hint">
                               {currentLoadTime(w).automatic
-                                ? 'Google mobile / load event'
+                                ? 'Google / unthrottled load event'
                                 : 'Manual / historical input'}
                             </small>
                           )}
@@ -930,7 +930,7 @@ export default function LiveSeoHealth({
                               {f.key === 'page_seconds' && (
                                 <p className="form-hint">
                                   {currentLoadTime(site).automatic
-                                    ? 'Updated by Run audit from Google mobile load-event timing. This is not LCP or Pingdom.'
+                                    ? "Updated by Run audit from Google's unthrottled load-event timing. This is not LCP or Pingdom."
                                     : 'Manual historical value. Run audit to collect an automatic load-event measurement.'}
                                 </p>
                               )}

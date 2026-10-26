@@ -18,7 +18,7 @@ test('long audits retain their caller timeout instead of being cut off by the wo
     requested.push(ms);
     return new AbortController().signal;
   });
-  const longSignal = AbortSignal.timeout(125000);
+  const longSignal = AbortSignal.timeout(245000);
   let signal: AbortSignal | null | undefined;
   const fetchMock = mock.method(globalThis, 'fetch', async (_input: unknown, init?: RequestInit) => {
     signal = init?.signal;
@@ -27,9 +27,9 @@ test('long audits retain their caller timeout instead of being cut off by the wo
   try {
     await workspaceFetch('/api/seo-health/automate', {method: 'POST', signal: longSignal});
     assert.equal(signal, longSignal);
-    assert.deepEqual(requested, [125000]);
+    assert.deepEqual(requested, [245000]);
     await workspaceFetch('/api/seo-health');
-    assert.deepEqual(requested, [125000, 20000]);
+    assert.deepEqual(requested, [245000, 20000]);
   } finally {
     session.mock.restore();
     timeouts.mock.restore();

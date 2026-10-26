@@ -12,7 +12,13 @@ type Run = {
   lcp_seconds: number | null;
   load_seconds: number | null;
   lighthouse_version: string | null;
+  error_code: string | null;
 };
+// The server stops an audit after 240 seconds, so a run still marked running after five minutes was cut off.
+const status = (r: Run) =>
+  r.error_code === 'timed_out' || (r.state === 'running' && Date.now() - Date.parse(r.created_at) > 300000)
+    ? 'timed out'
+    : r.state;
 export default function AutomaticAuditHistory({
   website,
   refresh,
@@ -45,8 +51,9 @@ export default function AutomaticAuditHistory({
     <details className="card padded">
       <summary>Automatic audit history</summary>
       <p className="form-hint">
-        Latest 20 attempts. Mobile Lighthouse lab measurements, not real-user field data. A running attempt older than
-        two minutes may have timed out; retry after the five-minute cooldown.
+        Latest 20 attempts. Mobile Lighthouse lab measurements, not real-user field data. Performance and LCP are
+        simulated for a throttled phone; load time is Google&apos;s unthrottled browser timing, so it can be lower than
+        LCP.
       </p>
       {error ? (
         <p role="alert">
@@ -77,7 +84,7 @@ export default function AutomaticAuditHistory({
               {runs.map(r => (
                 <tr key={r.id}>
                   <td>{new Date(r.finished_at || r.created_at).toLocaleString('en-GB', {timeZone: timezone})}</td>
-                  <td>{r.state}</td>
+                  <td>{status(r)}</td>
                   <td>{r.seo_score ?? '—'}</td>
                   <td>{r.performance_score ?? '—'}</td>
                   <td>{r.load_seconds ?? 'Not recorded'}</td>

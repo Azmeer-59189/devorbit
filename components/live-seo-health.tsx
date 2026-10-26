@@ -1,5 +1,6 @@
 'use client';
 import {useEffect, useRef, useState} from 'react';
+import dynamic from 'next/dynamic';
 import {useSearchParams} from 'next/navigation';
 import {Workspace, statusName} from '@/lib/live-types';
 import {currentLoadTime} from '@/lib/load-time';
@@ -12,13 +13,14 @@ import {seoTaskDraft, SeoTaskDraft} from '@/lib/seo-task';
 import {displayDate, workspaceDate} from '@/lib/dates';
 import {downloadRows, type ExportFormat} from '@/lib/export';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-import SeoTrend from '@/components/seo-trend';
 import SummaryTiles, {type Tile} from '@/components/seo/summary-tiles';
 import SeoHistory from '@/components/seo/seo-history';
 import SeoImport from '@/components/seo/seo-import';
 import {bandStatus, formValues, scoreBand, type Catalog, type Site} from '@/components/seo/types';
 import AutomaticAuditHistory from '@/components/seo/automatic-audit-history';
 import RecordAuditDialog, {type NewAudit} from '@/components/seo/record-audit-dialog';
+// Loaded on demand so the SEO pages do not download the chart library until a trend is shown.
+const SeoTrend = dynamic(() => import('@/components/seo-trend'));
 const sectionId = (group: string) => 'section-' + group.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 export default function LiveSeoHealth({
   data,
@@ -494,7 +496,7 @@ export default function LiveSeoHealth({
               title={dirty ? 'Save or discard your changes first' : undefined}
               onClick={() => setRecording(true)}
             >
-              Record audit
+              Update score manually
             </button>
           )}
           {!site && catalog && (
@@ -775,7 +777,7 @@ export default function LiveSeoHealth({
           websiteName={site.name}
           audits={catalog.audits}
           today={today}
-          defaultSource={site.latest_audit?.source ?? site.source ?? ''}
+          defaultSource="Manual SEO review"
           onSubmit={recordAudit}
           onClose={() => setRecording(false)}
         />
@@ -948,7 +950,7 @@ export default function LiveSeoHealth({
                                 <>
                                   {['seo_score', 'audit_date'].includes(f.key) && (
                                     <small className="form-hint">
-                                      From the latest audit. Use Record audit to add one.
+                                      From the latest audit. Use Update score manually to record a score.
                                     </small>
                                   )}
                                   <details className="seo-field-note" open={!!notes[f.key] || undefined}>

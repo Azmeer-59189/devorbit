@@ -40,3 +40,40 @@ test('long audits retain their caller timeout instead of being cut off by the wo
     else process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = previousKey;
   }
 });
+
+test('hosting error pages and timeouts give readable messages instead of JSON parse errors', async () => {
+  const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const previousKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'test-key';
+  const client = createBrowserSupabase();
+  const session = mock.method(client.auth, 'getSession', async () => ({
+    data: {session: {access_token: 'test-token'}},
+    error: null,
+  }));
+  let reply: () => Promise<Response> = async () =>
+    new Response('<html>Gateway Timeout</html>', {status: 504, headers: {'Content-Type': 'text/html'}});
+  const fetchMock = mock.method(globalThis, 'fetch', async () => reply());
+  try {
+    await assert.rejects(workspaceFetch('/api/workspace'), /took too long to respond/);
+    reply = async () => new Response('<html>Bad Gateway</html>', {status: 502});
+    await assert.rejects(workspaceFetch('/api/workspace'), /Unable to complete this request/);
+    reply = async () => {
+      throw new DOMException('signal timed out', 'TimeoutError');
+    };
+    await assert.rejects(workspaceFetch('/api/workspace'), /took too long to respond/);
+    reply = async () => {
+      throw new TypeError('Failed to fetch');
+    };
+    await assert.rejects(workspaceFetch('/api/workspace'), /Could not reach the server/);
+    reply = async () => Response.json({error: 'Task not found.'}, {status: 404});
+    await assert.rejects(workspaceFetch('/api/workspace'), /Task not found/);
+  } finally {
+    session.mock.restore();
+    fetchMock.mock.restore();
+    if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    else process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl;
+    if (previousKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    else process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = previousKey;
+  }
+});

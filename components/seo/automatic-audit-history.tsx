@@ -31,6 +31,9 @@ export default function AutomaticAuditHistory({
   const [runs, setRuns] = useState<Run[] | null>(null);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
+  const latest = runs?.[0];
+  const successful = runs?.find(run => run.state === 'completed');
+  const formatTime = (value: string) => new Date(value).toLocaleString('en-GB', {timeZone: timezone});
   useEffect(() => {
     let cancelled = false;
     workspaceFetch(`/api/seo-health/automate?website=${website}`)
@@ -48,54 +51,81 @@ export default function AutomaticAuditHistory({
     };
   }, [website, refresh, retry]);
   return (
-    <details className="card padded">
-      <summary>Automatic audit history</summary>
-      <p className="form-hint">
-        Latest 20 attempts. Mobile Lighthouse lab measurements, not real-user field data. Performance and LCP are
-        simulated for a throttled phone; load time is Google&apos;s unthrottled browser timing, so it can be lower than
-        LCP.
-      </p>
-      {error ? (
-        <p role="alert">
-          {error}{' '}
-          <button className="text-button" onClick={() => setRetry(n => n + 1)}>
-            Retry
-          </button>
-        </p>
-      ) : !runs ? (
-        <p role="status">Loading audits…</p>
-      ) : !runs.length ? (
-        <p>No automatic audits yet.</p>
-      ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Saved / attempted</th>
-                <th>Status</th>
-                <th>SEO /100</th>
-                <th>Performance /100</th>
-                <th>Load time (seconds)</th>
-                <th>LCP (seconds)</th>
-                <th>Lighthouse version</th>
-              </tr>
-            </thead>
-            <tbody>
-              {runs.map(r => (
-                <tr key={r.id}>
-                  <td>{new Date(r.finished_at || r.created_at).toLocaleString('en-GB', {timeZone: timezone})}</td>
-                  <td>{status(r)}</td>
-                  <td>{r.seo_score ?? '—'}</td>
-                  <td>{r.performance_score ?? '—'}</td>
-                  <td>{r.load_seconds ?? 'Not recorded'}</td>
-                  <td>{r.lcp_seconds ?? '—'}</td>
-                  <td>{r.lighthouse_version || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <section className="card padded" aria-label="Automatic audit status">
+      <h3>Automatic audit status</h3>
+      {latest && (
+        <div role="status">
+          <p>
+            Latest attempt: <strong>{status(latest)}</strong> · {formatTime(latest.finished_at || latest.created_at)}
+          </p>
+          {successful ? (
+            <p className="form-hint">
+              Last successful automatic audit: {formatTime(successful.finished_at || successful.created_at)}.
+            </p>
+          ) : (
+            <p className="form-hint">No successful automatic audit in the latest 20 attempts.</p>
+          )}
+          {status(latest) === 'timed out' ? (
+            <p className="info-callout">The latest attempt timed out. Previous results were kept. Try again later.</p>
+          ) : latest.state === 'failed' ? (
+            <p className="info-callout">
+              The latest attempt failed. Previous results were kept.
+              {latest.error_code === 'website_or_membership_changed'
+                ? ' The website or team membership changed during the audit.'
+                : ' Google could not complete the audit; the saved history does not identify the exact cause.'}
+            </p>
+          ) : null}
         </div>
       )}
-    </details>
+      <details>
+        <summary>Automatic audit history</summary>
+        <p className="form-hint">
+          Latest 20 attempts. Mobile Lighthouse lab measurements, not real-user field data. Performance and LCP are
+          simulated for a throttled phone; load time is Google&apos;s unthrottled browser timing, so it can be lower
+          than LCP.
+        </p>
+        {error ? (
+          <p role="alert">
+            {error}{' '}
+            <button className="text-button" onClick={() => setRetry(n => n + 1)}>
+              Retry
+            </button>
+          </p>
+        ) : !runs ? (
+          <p role="status">Loading audits…</p>
+        ) : !runs.length ? (
+          <p>No automatic audits yet.</p>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Saved / attempted</th>
+                  <th>Status</th>
+                  <th>SEO /100</th>
+                  <th>Performance /100</th>
+                  <th>Load time (seconds)</th>
+                  <th>LCP (seconds)</th>
+                  <th>Lighthouse version</th>
+                </tr>
+              </thead>
+              <tbody>
+                {runs.map(r => (
+                  <tr key={r.id}>
+                    <td>{new Date(r.finished_at || r.created_at).toLocaleString('en-GB', {timeZone: timezone})}</td>
+                    <td>{status(r)}</td>
+                    <td>{r.seo_score ?? '—'}</td>
+                    <td>{r.performance_score ?? '—'}</td>
+                    <td>{r.load_seconds ?? 'Not recorded'}</td>
+                    <td>{r.lcp_seconds ?? '—'}</td>
+                    <td>{r.lighthouse_version || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </details>
+    </section>
   );
 }

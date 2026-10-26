@@ -1,6 +1,7 @@
 'use client';
 
 import {FormEvent, useCallback, useEffect, useRef, useState} from 'react';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
 import {usePathname, useRouter, useSearchParams} from 'next/navigation';
@@ -40,10 +41,13 @@ import LiveTeam from '@/components/live-team';
 import LiveNotifications from '@/components/live-notifications';
 import LiveSeoHealth from '@/components/live-seo-health';
 import LiveWebsite from '@/components/live-website';
-import LiveDashboard from '@/components/live-dashboard';
 import DueDate from '@/components/due-date';
 import {workspaceDate} from '@/lib/dates';
 import {adminPages, parseWorkspacePath, workspacePath, type Page} from '@/lib/workspace-routes';
+// The chart library is most of the workspace bundle, so only the dashboard downloads it.
+const LiveDashboard = dynamic(() => import('@/components/live-dashboard'), {
+  loading: () => <p role="status">Loading dashboard…</p>,
+});
 
 const pageLabels: Record<string, string> = {
   Overview: 'Home',
@@ -77,13 +81,16 @@ export default function ConnectedWorkspace() {
   useEffect(() => {
     let cancelled = false;
     const refresh = () =>
-      workspaceFetch('/api/notifications')
+      workspaceFetch('/api/notifications?count=unread')
         .then(r => {
           if (!cancelled) setUnread(r.unread || 0);
         })
         .catch(() => {});
     refresh();
-    const timer = setInterval(refresh, 60000);
+    // Background tabs skip the poll; the focus listener catches up when the tab returns.
+    const timer = setInterval(() => {
+      if (!document.hidden) refresh();
+    }, 60000);
     window.addEventListener('notifications-changed', refresh);
     window.addEventListener('focus', refresh);
     return () => {

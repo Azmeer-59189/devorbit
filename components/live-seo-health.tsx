@@ -31,7 +31,9 @@ export default function LiveSeoHealth({
   onCreateTask?: (draft: SeoTaskDraft) => void;
 }) {
   const [fieldGroup, setFieldGroup] = useState('all');
-  const pageFields = fieldsForPage(mode);
+  const pageFields = fieldsForPage(mode).map(f =>
+    f.key === 'page_seconds' ? {...f, label: 'Recorded load time (manual)'} : f,
+  );
   const reviewPage = (values: SeoValues) => reviewSeo(values, pageFields);
   const matrixFields = pageFields.filter(f => fieldGroup === 'all' || f.group === fieldGroup);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
@@ -187,12 +189,16 @@ export default function LiveSeoHealth({
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({website_id: website, request_id: crypto.randomUUID()}),
+        // Google may need 95 seconds; keep waiting through the server's 120-second window.
+        signal: AbortSignal.timeout(125000),
       });
       const updated: Catalog = await workspaceFetch('/api/seo-health' + (site ? `?website=${site.id}` : ''));
       show(updated, site?.id || null);
+      const refreshed = updated.websites.find(w => w.id === website);
+      const run = refreshed?.lighthouse;
       setMessage(
-        result.state === 'completed'
-          ? 'Automatic SEO and page-speed audit saved. Previous audits are preserved.'
+        result.state === 'completed' && run
+          ? `Audit saved ${new Date(run.finished_at || run.measured_at).toLocaleString('en-GB', {timeZone: data.workspace.timezone})}. SEO ${run.seo_score}/100; mobile performance ${run.performance_score}/100. A fresh audit can return the same scores.`
           : 'Audit is still running or was interrupted. Reload before retrying.',
       );
       await onChanged();
@@ -674,7 +680,7 @@ export default function LiveSeoHealth({
                         <td>
                           {w.lighthouse && (
                             <small className="block">
-                              {new Date(w.lighthouse.measured_at).toLocaleString('en-GB', {
+                              {new Date(w.lighthouse.finished_at || w.lighthouse.measured_at).toLocaleString('en-GB', {
                                 timeZone: data.workspace.timezone,
                               })}
                             </small>

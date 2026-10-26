@@ -60,7 +60,7 @@ test('automatic SEO audits enforce caller scope, server-only results, cooldown a
       performance_score: 70,
       lcp_seconds: 2.4,
       speed_index_seconds: 3.1,
-      measured_at: new Date().toISOString(),
+      measured_at: new Date(Date.now() - 5 * 60000).toISOString(),
       final_url: 'https://foih.ch/',
       lighthouse_version: '13',
     };
@@ -76,6 +76,13 @@ test('automatic SEO audits enforce caller scope, server-only results, cooldown a
     ).rows[0].r;
     assert.equal(catalog.websites[0].lighthouse.performance_score, 70);
     assert.equal(catalog.websites[0].latest_audit.score, 92);
+    const dates = (
+      await db.query<{current_day: string; audit_day: string}>(
+        `select (now() at time zone 'Asia/Karachi')::date::text as current_day,a.measurement_date::text audit_day from public.website_seo_audits a where a.website_id=$1`,
+        [site],
+      )
+    ).rows[0];
+    assert.equal(dates.audit_day, dates.current_day);
     await user(outsider);
     assert.equal((await db.query('select * from public.website_lighthouse_runs')).rows.length, 0);
     await db.exec(`reset role;update public.website_lighthouse_runs set created_at=now()-interval '6 minutes';`);

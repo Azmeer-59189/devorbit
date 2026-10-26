@@ -5,6 +5,7 @@ type Run = {
   id: string;
   state: string;
   measured_at: string | null;
+  finished_at: string | null;
   created_at: string;
   seo_score: number | null;
   performance_score: number | null;
@@ -62,7 +63,7 @@ export default function AutomaticAuditHistory({
           <table>
             <thead>
               <tr>
-                <th>Measured / attempted</th>
+                <th>Saved / attempted</th>
                 <th>Status</th>
                 <th>SEO /100</th>
                 <th>Performance /100</th>
@@ -73,7 +74,7 @@ export default function AutomaticAuditHistory({
             <tbody>
               {runs.map(r => (
                 <tr key={r.id}>
-                  <td>{new Date(r.measured_at || r.created_at).toLocaleString('en-GB', {timeZone: timezone})}</td>
+                  <td>{new Date(r.finished_at || r.created_at).toLocaleString('en-GB', {timeZone: timezone})}</td>
                   <td>{r.state}</td>
                   <td>{r.seo_score ?? '—'}</td>
                   <td>{r.performance_score ?? '—'}</td>

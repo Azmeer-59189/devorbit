@@ -30,6 +30,7 @@ export type Site = {
     performance_score: number;
     lcp_seconds: number | null;
     measured_at: string;
+    finished_at?: string;
     lighthouse_version: string;
   } | null;
   /** Current website with no dated audit within the workspace schedule (migration 016). */

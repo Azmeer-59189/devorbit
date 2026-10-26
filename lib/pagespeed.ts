@@ -28,6 +28,7 @@ export type PageSpeedResult = {
   seo_score: number;
   performance_score: number;
   lcp_seconds: number | null;
+  load_seconds: number | null;
   speed_index_seconds: number | null;
   measured_at: string;
   final_url: string;
@@ -41,7 +42,7 @@ export function parsePageSpeed(raw: unknown): PageSpeedResult {
     fetchTime?: string;
     finalUrl?: string;
     lighthouseVersion?: string;
-    audits?: Record<string, {numericValue?: unknown}>;
+    audits?: Record<string, {numericValue?: unknown; details?: {items?: Record<string, unknown>[]}}>;
   };
   const result = (raw as {lighthouseResult?: Lighthouse})?.lighthouseResult;
   const validScore = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1;
@@ -63,10 +64,19 @@ export function parsePageSpeed(raw: unknown): PageSpeedResult {
       ? Math.round(value) / 1000
       : null;
   };
+  const metrics = result.audits?.metrics?.details?.items?.[0];
+  const load = metrics?.observedLoad;
+  const navigation = metrics?.observedNavigationStart;
+  // Both values are relative trace timings in milliseconds, not epoch timestamps.
+  const loadMilliseconds = typeof load === 'number' && typeof navigation === 'number' ? load - navigation : NaN;
   return {
     seo_score: Math.round(result.categories.seo.score * 100),
     performance_score: Math.round(result.categories.performance.score * 100),
     lcp_seconds: seconds('largest-contentful-paint'),
+    load_seconds:
+      Number.isFinite(loadMilliseconds) && loadMilliseconds > 0 && loadMilliseconds <= 3600000
+        ? Math.round(loadMilliseconds) / 1000
+        : null,
     speed_index_seconds: seconds('speed-index'),
     measured_at: new Date(result.fetchTime).toISOString(),
     final_url: publicAuditUrl(result.finalUrl),

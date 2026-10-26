@@ -59,6 +59,7 @@ test('automatic SEO audits enforce caller scope, server-only results, cooldown a
       seo_score: 92,
       performance_score: 70,
       lcp_seconds: 2.4,
+      load_seconds: 5.8,
       speed_index_seconds: 3.1,
       measured_at: new Date(Date.now() - 5 * 60000).toISOString(),
       final_url: 'https://foih.ch/',
@@ -76,6 +77,11 @@ test('automatic SEO audits enforce caller scope, server-only results, cooldown a
     ).rows[0].r;
     assert.equal(catalog.websites[0].lighthouse.performance_score, 70);
     assert.equal(catalog.websites[0].latest_audit.score, 92);
+    assert.equal(
+      (catalog.websites[0] as unknown as {automatic_load_time: {load_seconds: number}}).automatic_load_time
+        .load_seconds,
+      5.8,
+    );
     const dates = (
       await db.query<{current_day: string; audit_day: string}>(
         `select (now() at time zone 'Asia/Karachi')::date::text as current_day,a.measurement_date::text audit_day from public.website_seo_audits a where a.website_id=$1`,
@@ -97,8 +103,21 @@ test('automatic SEO audits enforce caller scope, server-only results, cooldown a
       ])
     ).rows[0].r;
     assert.equal(retained.websites[0].lighthouse.seo_score, 92);
+    await db.exec(`reset role;update public.website_lighthouse_runs set created_at=now()-interval '6 minutes';`);
+    await user(actor);
+    const noTiming = await start();
+    await db.exec('reset role;set role service_role');
+    await finish(noTiming.id, {...result, load_seconds: null});
+    await user(actor);
+    const fallback = (
+      await db.query<{r: {websites: {automatic_load_time: {load_seconds: number}}[]}}>(
+        'select public.fixed_seo_catalog($1) r',
+        [site],
+      )
+    ).rows[0].r;
+    assert.equal(fallback.websites[0].automatic_load_time.load_seconds, 5.8);
     await db.exec('reset role');
-    assert.equal((await db.query('select * from public.website_seo_audits')).rows.length, 1);
+    assert.equal((await db.query('select * from public.website_seo_audits')).rows.length, 2);
   } finally {
     await db.close();
   }

@@ -8,7 +8,11 @@ const fixture = () => ({
     fetchTime: '2026-10-26T10:00:00.000Z',
     finalUrl: 'https://foih.ch/',
     lighthouseVersion: '13.0.0',
-    audits: {'largest-contentful-paint': {numericValue: 2300}, 'speed-index': {numericValue: 4700}},
+    audits: {
+      'largest-contentful-paint': {numericValue: 2300},
+      'speed-index': {numericValue: 4700},
+      metrics: {details: {items: [{observedLoad: 7114, observedNavigationStart: 0}]}},
+    },
   },
 });
 test('PageSpeed results preserve zero scores and separate scores from milliseconds converted to seconds', () => {
@@ -17,12 +21,21 @@ test('PageSpeed results preserve zero scores and separate scores from millisecon
   assert.equal(result.performance_score, 87);
   assert.equal(result.lcp_seconds, 2.3);
   assert.equal(result.speed_index_seconds, 4.7);
+  assert.equal(result.load_seconds, 7.114);
   assert.throws(() => parsePageSpeed({lighthouseResult: {categories: {seo: {score: null}}}}), /complete mobile audit/);
   assert.throws(
     () =>
       parsePageSpeed({...fixture(), lighthouseResult: {...fixture().lighthouseResult, runtimeError: {code: 'NO_FCP'}}}),
     /complete mobile audit/,
   );
+});
+test('load time uses the observed load event, with no fallback to LCP or speed index', () => {
+  const data = fixture();
+  data.lighthouseResult.audits.metrics.details.items[0] = {observedLoad: 50, observedNavigationStart: 100};
+  assert.equal(parsePageSpeed(data).load_seconds, null);
+  data.lighthouseResult.audits.metrics.details.items = [];
+  assert.equal(parsePageSpeed(data).load_seconds, null);
+  assert.equal(parsePageSpeed(data).lcp_seconds, 2.3);
 });
 test('Automatic audit URLs reject private addresses, credentials and unsupported protocols', () => {
   for (const url of [

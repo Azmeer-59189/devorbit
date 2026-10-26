@@ -2,6 +2,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {useSearchParams} from 'next/navigation';
 import {Workspace, statusName} from '@/lib/live-types';
+import {currentLoadTime} from '@/lib/load-time';
 import {workspaceFetch} from '@/lib/workspace-client';
 import {confirmAction} from '@/components/confirm-dialog';
 import {seoStatuses, SeoValues, seoInput} from '@/lib/seo-health';
@@ -31,9 +32,7 @@ export default function LiveSeoHealth({
   onCreateTask?: (draft: SeoTaskDraft) => void;
 }) {
   const [fieldGroup, setFieldGroup] = useState('all');
-  const pageFields = fieldsForPage(mode).map(f =>
-    f.key === 'page_seconds' ? {...f, label: 'Recorded load time (manual)'} : f,
-  );
+  const pageFields = fieldsForPage(mode).map(f => (f.key === 'page_seconds' ? {...f, label: 'Load time'} : f));
   const reviewPage = (values: SeoValues) => reviewSeo(values, pageFields);
   const matrixFields = pageFields.filter(f => fieldGroup === 'all' || f.group === fieldGroup);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
@@ -198,7 +197,7 @@ export default function LiveSeoHealth({
       const run = refreshed?.lighthouse;
       setMessage(
         result.state === 'completed' && run
-          ? `Audit saved ${new Date(run.finished_at || run.measured_at).toLocaleString('en-GB', {timeZone: data.workspace.timezone})}. SEO ${run.seo_score}/100; mobile performance ${run.performance_score}/100. A fresh audit can return the same scores.`
+          ? `Audit saved ${new Date(run.finished_at || run.measured_at).toLocaleString('en-GB', {timeZone: data.workspace.timezone})}. SEO ${run.seo_score}/100; mobile performance ${run.performance_score}/100. ${refreshed?.automatic_load_time?.id === run.id ? `Load time ${refreshed.automatic_load_time.load_seconds} s.` : 'No load-event timing returned; previous load time kept.'} A fresh audit can return the same scores.`
           : 'Audit is still running or was interrupted. Reload before retrying.',
       );
       await onChanged();
@@ -215,20 +214,24 @@ export default function LiveSeoHealth({
   const today = workspaceDate(data.workspace.timezone);
   // Audit-backed fields come from the latest dated audit; the website profile owns URL and CMS.
   const cellValue = (w: Site, key: string) =>
-    key === 'seo_score'
-      ? w.latest_audit?.score
-      : key === 'audit_date'
-        ? w.latest_audit?.measurement_date
-        : key === 'website_url'
-          ? w.canonical_url
-          : key === 'cms'
-            ? w.cms
-            : w.fields[key];
+    key === 'page_seconds'
+      ? currentLoadTime(w).seconds
+      : key === 'seo_score'
+        ? w.latest_audit?.score
+        : key === 'audit_date'
+          ? w.latest_audit?.measurement_date
+          : key === 'website_url'
+            ? w.canonical_url
+            : key === 'cms'
+              ? w.cms
+              : w.fields[key];
   // Reviews count what the table shows, so profile and audit values are not reported as gaps.
   const reviewSite = (w: Site) =>
     reviewPage({
       ...w.fields,
-      ...Object.fromEntries(['seo_score', 'audit_date', 'website_url', 'cms'].map(k => [k, cellValue(w, k) ?? null])),
+      ...Object.fromEntries(
+        ['page_seconds', 'seo_score', 'audit_date', 'website_url', 'cms'].map(k => [k, cellValue(w, k) ?? null]),
+      ),
     });
   const sortField = pageFields.find(f => f.key === sort.key);
   const visibleSites = (catalog?.websites || [])
@@ -251,7 +254,10 @@ export default function LiveSeoHealth({
   const toggleSort = (key: string) =>
     setSort(current => ({key, direction: current.key === key && current.direction === 1 ? -1 : 1}));
   const groups = [...new Set(pageFields.map(f => f.group))];
-  const liveReview = reviewPage(fields);
+  const liveReview = reviewPage({
+    ...fields,
+    ...(site && currentLoadTime(site).automatic ? {page_seconds: currentLoadTime(site).seconds} : {}),
+  });
   const currentAudits = (catalog?.audits || []).filter(a => !catalog?.audits.some(n => n.supersedes_id === a.id));
   const trendReady = currentAudits.some((a, i) => currentAudits.findIndex(b => b.source === a.source) !== i);
   /** Recorded answers in a form section as the user edits; generated fields are not counted. */
@@ -379,6 +385,11 @@ export default function LiveSeoHealth({
       const row: Record<string, string | number> = {Website: w.name, Country: w.country};
       if (mode === 'seo') {
         row['Mobile performance /100'] = w.lighthouse?.performance_score ?? '';
+        row['Load time source'] = currentLoadTime(w).automatic
+          ? 'Google mobile / observed load event'
+          : 'Manual historical input';
+        row['Load time measured at'] = currentLoadTime(w).measuredAt || '';
+        row['Previous manual load time (seconds)'] = w.fields.page_seconds ?? '';
         row['Mobile LCP (seconds)'] = w.lighthouse?.lcp_seconds ?? '';
         row['Automatic measured at'] = w.lighthouse?.measured_at ?? '';
         row['Lighthouse version'] = w.lighthouse?.lighthouse_version ?? '';
@@ -422,8 +433,8 @@ export default function LiveSeoHealth({
       {mode === 'seo' && (
         <p className="form-hint">
           Automatic audits use Google PageSpeed Insights mobile Lighthouse. Performance /100 and LCP seconds are
-          separate from the manually recorded speed field. Limit: 20 audits/workspace/hour, five minutes between website
-          attempts.
+          separate measurements. Load time uses the Google observed page-load event when available, otherwise the
+          previous manual value. Limit: 20 audits/workspace/hour, five minutes between website attempts.
         </p>
       )}
       {auditing && (
@@ -664,6 +675,13 @@ export default function LiveSeoHealth({
                               {f.type === 'duration' ? ' s' : ''}
                             </span>
                           )}
+                          {f.key === 'page_seconds' && (
+                            <small className="block form-hint">
+                              {currentLoadTime(w).automatic
+                                ? 'Google mobile / load event'
+                                : 'Manual / historical input'}
+                            </small>
+                          )}
                           {w.notes[f.key] && (
                             <details className="matrix-note">
                               <summary>Note</summary>
@@ -737,6 +755,13 @@ export default function LiveSeoHealth({
               Lighthouse {site.lighthouse.lighthouse_version}
             </p>
           )}
+          <details>
+            <summary>Previous manually recorded load time</summary>
+            <p>{site.fields.page_seconds == null ? 'Not recorded' : `${site.fields.page_seconds} seconds`}</p>
+            <p className="form-hint">
+              Original input, including earlier Pingdom measurements. It is preserved separately from Google timings.
+            </p>
+          </details>
           <AutomaticAuditHistory
             key={site.id}
             website={site.id}
@@ -871,16 +896,23 @@ export default function LiveSeoHealth({
                                     step="any"
                                     min={0}
                                     max={f.type === 'number' ? 100 : f.type === 'duration' ? 3600 : undefined}
-                                    readOnly={[
-                                      'website_url',
-                                      'cms',
-                                      'seo_score',
-                                      'audit_date',
-                                      'qa',
-                                      'plugin_updated',
-                                      'backup_date',
-                                    ].includes(f.key)}
-                                    value={fields[f.key] ?? ''}
+                                    readOnly={
+                                      (f.key === 'page_seconds' && currentLoadTime(site).automatic) ||
+                                      [
+                                        'website_url',
+                                        'cms',
+                                        'seo_score',
+                                        'audit_date',
+                                        'qa',
+                                        'plugin_updated',
+                                        'backup_date',
+                                      ].includes(f.key)
+                                    }
+                                    value={
+                                      f.key === 'page_seconds' && currentLoadTime(site).automatic
+                                        ? (currentLoadTime(site).seconds ?? '')
+                                        : (fields[f.key] ?? '')
+                                    }
                                     maxLength={5000}
                                     onChange={e =>
                                       change(
@@ -895,6 +927,13 @@ export default function LiveSeoHealth({
                                   />
                                 )}
                               </label>
+                              {f.key === 'page_seconds' && (
+                                <p className="form-hint">
+                                  {currentLoadTime(site).automatic
+                                    ? 'Updated by Run audit from Google mobile load-event timing. This is not LCP or Pingdom.'
+                                    : 'Manual historical value. Run audit to collect an automatic load-event measurement.'}
+                                </p>
+                              )}
                               {['qa', 'plugin_updated', 'backup_date', 'remarks'].includes(f.key) ? (
                                 <small className="form-hint">
                                   {f.key === 'remarks'

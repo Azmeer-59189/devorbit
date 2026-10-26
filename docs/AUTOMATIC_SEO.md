@@ -4,6 +4,7 @@
 
 1. Apply `supabase/migrations/202610260017_automatic_seo.sql` in the Supabase SQL editor after migrations 001–016. Keep RLS enabled.
    Then apply `supabase/migrations/202610260018_automatic_audit_dates.sql` so audit dates use the current workspace date when a successful result is saved. Google's original measurement timestamp is retained separately.
+   Apply `supabase/migrations/202610260019_automatic_load_time.sql` to enable automatic load-event timing in the existing load-time column.
 2. In your Google Cloud project, enable **PageSpeed Insights API**, then create an API key restricted to that API. See [Google's setup guide](https://developers.google.com/speed/docs/insights/v5/get-started).
 3. Add `PAGESPEED_API_KEY` privately to your local `.env` and to **Vercel → DevOrbit → Settings → Environment Variables → Production**. Keep the existing server-only `SUPABASE_SECRET_KEY`. Do not prefix either key with `NEXT_PUBLIC_`, commit it, or paste it into chat.
 4. Restart the local app / redeploy Vercel. Open **SEO → Run audit** beside a website, or open a website and choose **Run automatic audit**. Allow up to two minutes.
@@ -20,4 +21,10 @@ This phase automates collection with one click. It does not install a scheduled/
 
 ## Audit refresh and dates
 
-The audit request waits up to 125 seconds in the browser instead of the normal workspace request timeout of 20 seconds. The server allows 120 seconds, with a 95-second provider timeout. On success the table reloads and the confirmation shows saved time and both scores. Repeated audits can return identical scores; a new successful run still saves a new timestamp. The audit date is the successful save's calendar date in the workspace timezone. Failed runs do not advance the last successful audit date. "Recorded load time (manual)" is historical input; live speed results appear in the separate mobile performance and LCP columns.
+The audit request waits up to 125 seconds in the browser instead of the normal workspace request timeout of 20 seconds. The server allows 120 seconds, with a 95-second provider timeout. On success the table reloads and the confirmation shows saved time and both scores. Repeated audits can return identical scores; a new successful run still saves a new timestamp. The audit date is the successful save's calendar date in the workspace timezone. Failed runs do not advance the last successful audit date.
+
+## Automatic load time in the existing column
+
+After migration 019 and a new successful audit, **Load time** shows Google's observed page-load-event timing in seconds. Its column position is unchanged. This is `observedLoad - observedNavigationStart` from the Lighthouse metrics trace, converted from milliseconds; it is not LCP, Speed Index, or a Pingdom result. See [Lighthouse's timing implementation](https://github.com/GoogleChrome/lighthouse/blob/main/core/computed/metrics/timing-summary.js).
+
+The original manually entered value is never overwritten. It remains available under **Previous manually recorded load time** and in saved form history. The comparison table, editor, sorting and exports show the latest successful automatic load timing for the current website URL, with a source label. If no such timing exists, they show the manual value. If an otherwise successful audit lacks load timing, the last valid automatic load timing is retained. Google and Pingdom use different test environments, so their numbers should not be treated as an identical measurement series. Existing runs cannot be backfilled because their full provider trace was not stored; run a new audit after applying 019.

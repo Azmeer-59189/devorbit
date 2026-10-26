@@ -10,6 +10,7 @@ type Run = {
   seo_score: number | null;
   performance_score: number | null;
   lcp_seconds: number | null;
+  load_seconds: number | null;
   lighthouse_version: string | null;
 };
 export default function AutomaticAuditHistory({
@@ -67,6 +68,7 @@ export default function AutomaticAuditHistory({
                 <th>Status</th>
                 <th>SEO /100</th>
                 <th>Performance /100</th>
+                <th>Load time (seconds)</th>
                 <th>LCP (seconds)</th>
                 <th>Lighthouse version</th>
               </tr>
@@ -78,6 +80,7 @@ export default function AutomaticAuditHistory({
                   <td>{r.state}</td>
                   <td>{r.seo_score ?? '—'}</td>
                   <td>{r.performance_score ?? '—'}</td>
+                  <td>{r.load_seconds ?? 'Not recorded'}</td>
                   <td>{r.lcp_seconds ?? '—'}</td>
                   <td>{r.lighthouse_version || '—'}</td>
                 </tr>

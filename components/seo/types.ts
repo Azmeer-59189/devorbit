@@ -1,4 +1,5 @@
 import type {SeoValues} from '@/lib/seo-health';
+import type {AutomaticLoadTime} from '@/lib/load-time';
 
 // Shapes returned by /api/seo-health and helpers shared by the SEO and Website features pages.
 export type Audit = {
@@ -24,6 +25,7 @@ export type Site = {
   source: string;
   revision: number;
   latest_audit: Audit | null;
+  automatic_load_time?: AutomaticLoadTime | null;
   lighthouse?: {
     id: string;
     seo_score: number;

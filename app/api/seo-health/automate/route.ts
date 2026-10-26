@@ -55,7 +55,7 @@ export async function GET(request: Request) {
     const {data, error} = await supabase
       .from('website_lighthouse_runs')
       .select(
-        'id,state,created_at,finished_at,measured_at,seo_score,performance_score,lcp_seconds,speed_index_seconds,lighthouse_version,final_url,error_code',
+        'id,state,created_at,finished_at,measured_at,seo_score,performance_score,load_seconds,lcp_seconds,speed_index_seconds,lighthouse_version,final_url,error_code',
       )
       .eq('workspace_id', profile.workspace_id)
       .eq('website_id', website)

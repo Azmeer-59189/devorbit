@@ -9,6 +9,22 @@ test('dashboard summary tiles open the matching task list', async ({page}) => {
   await expect(page.locator('main h1')).toHaveText('Tasks');
 });
 
+test('task completion shows only three statuses and uses their total', async ({page}) => {
+  await openWorkspace(page, '/workspace');
+  const chart = page.locator('.task-completion');
+  await expect(chart.locator('.completion-row')).toHaveCount(3);
+  const statuses = ['to_do', 'in_progress', 'completed'];
+  const total = tasks.filter(t => statuses.includes(t.progress)).length;
+  for (const status of statuses) {
+    const count = tasks.filter(t => t.progress === status).length;
+    await expect(chart.locator(`[data-status="${status}"]`)).toHaveAttribute(
+      'aria-label',
+      new RegExp(`${count} of ${total} tasks`),
+    );
+  }
+  await expect(chart.getByRole('button', {name: /Blocked|In review|Cancelled/})).toHaveCount(0);
+});
+
 test('task list shows due-date hints and switches to the board', async ({page}) => {
   await openWorkspace(page, '/workspace/tasks');
   const row = page.getByRole('row', {name: /Fix broken hreflang tags/});

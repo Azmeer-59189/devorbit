@@ -25,22 +25,22 @@ test('task list shows due-date hints and switches to the board', async ({page}) 
 
 test('SEO list filters from a summary tile and sorts by score', async ({page}) => {
   await openWorkspace(page, '/workspace/reports');
-  const rows = page.locator('.website-comparison tbody tr');
-  await expect(rows).toHaveCount(6);
+  const headers = page.locator('.website-comparison thead th').filter({has: page.locator('.matrix-site')});
+  await expect(headers).toHaveCount(6);
 
   const unaudited = page.getByRole('button', {name: /Not yet audited/});
   await unaudited.click();
   await expect(unaudited).toHaveAttribute('aria-pressed', 'true');
-  await expect(rows).toHaveCount(3);
+  await expect(headers).toHaveCount(3);
   await unaudited.click();
-  await expect(rows).toHaveCount(6);
+  await expect(headers).toHaveCount(6);
 
   const score = page.getByRole('button', {name: /^SEO Rating/});
   await score.click();
   await score.click();
-  await expect(page.getByRole('columnheader', {name: /SEO Rating/})).toHaveAttribute('aria-sort', 'descending');
-  await expect(rows.first()).toContainText('CRD United Kingdom');
-  await expect(rows.first()).toContainText('92/100');
+  await expect(headers.first()).toContainText('CRD United Kingdom');
+  const rating = page.getByRole('row', {name: /^SEO Rating/});
+  await expect(rating.locator('td').first()).toHaveText('92/100');
 });
 
 test('Website features groups narrow the table to one section', async ({page}) => {
@@ -48,7 +48,12 @@ test('Website features groups narrow the table to one section', async ({page}) =
   const social = page.getByRole('button', {name: /^Social media/});
   await social.click();
   await expect(social).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('.website-comparison thead th')).toHaveCount(6);
+  await expect(page.locator('.website-comparison thead th')).toHaveCount(websites.length + 1);
+  await expect(page.locator('.matrix-section')).toHaveCount(1);
+  await expect(page.locator('.matrix-section')).toHaveText('Social media');
+  await expect(page.locator('.website-comparison tbody tr:not(.matrix-section)')).toHaveCount(5);
+  await page.getByRole('button', {name: /^All sections/}).click();
+  await expect(page.locator('.matrix-section')).not.toHaveCount(1);
 });
 
 test('edit view counts unsaved changes and discards them', async ({page}) => {
@@ -104,9 +109,11 @@ test('recording a different score for an existing audit asks for a reason', asyn
   await expect(page.getByRole('spinbutton', {name: /SEO Rating/})).toHaveValue('92');
   await expect(page.getByRole('spinbutton', {name: /SEO Rating/})).toHaveAttribute('readonly', '');
 
-  await page.getByRole('button', {name: 'Record audit'}).click();
-  const dialog = page.getByRole('dialog', {name: 'Record an SEO audit'});
+  await page.getByRole('button', {name: 'Update score manually'}).click();
+  const dialog = page.getByRole('dialog', {name: 'Update SEO score manually'});
   await dialog.getByRole('spinbutton', {name: 'Score (0–100)'}).fill('88');
+  await expect(dialog.getByRole('combobox', {name: 'Source / tool'})).toHaveValue('Manual SEO review');
+  await dialog.getByRole('combobox', {name: 'Source / tool'}).fill('PageSpeed Insights');
   await expect(dialog).toContainText('This corrects the 92/100 audit');
   const save = dialog.getByRole('button', {name: 'Save correction'});
   await expect(save).toBeDisabled();
@@ -125,7 +132,7 @@ test('recording a different score for an existing audit asks for a reason', asyn
 test('saving the SEO form re-sends the latest audit unchanged', async ({page}) => {
   await openWorkspace(page, `/workspace/reports?website=${websites[0].id}`);
   await page.getByRole('combobox', {name: /^Google Analytics/}).selectOption('no');
-  await expect(page.getByRole('button', {name: 'Record audit'})).toBeDisabled();
+  await expect(page.getByRole('button', {name: 'Update score manually'})).toBeDisabled();
 
   const request = page.waitForRequest(r => r.method() === 'POST' && r.url().endsWith('/api/seo-health'));
   await page.getByRole('button', {name: 'Save SEO'}).click();

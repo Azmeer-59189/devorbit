@@ -1,6 +1,7 @@
 'use client';
 
 import {FormEvent, useCallback, useEffect, useRef, useState} from 'react';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
 import {usePathname, useRouter, useSearchParams} from 'next/navigation';
@@ -40,10 +41,13 @@ import LiveTeam from '@/components/live-team';
 import LiveNotifications from '@/components/live-notifications';
 import LiveSeoHealth from '@/components/live-seo-health';
 import LiveWebsite from '@/components/live-website';
-import LiveDashboard from '@/components/live-dashboard';
 import DueDate from '@/components/due-date';
 import {workspaceDate} from '@/lib/dates';
 import {adminPages, parseWorkspacePath, workspacePath, type Page} from '@/lib/workspace-routes';
+// The chart library is most of the workspace bundle, so only the dashboard downloads it.
+const LiveDashboard = dynamic(() => import('@/components/live-dashboard'), {
+  loading: () => <p role="status">Loading dashboard…</p>,
+});
 
 const pageLabels: Record<string, string> = {
   Overview: 'Home',
@@ -77,13 +81,16 @@ export default function ConnectedWorkspace() {
   useEffect(() => {
     let cancelled = false;
     const refresh = () =>
-      workspaceFetch('/api/notifications')
+      workspaceFetch('/api/notifications?count=unread')
         .then(r => {
           if (!cancelled) setUnread(r.unread || 0);
         })
         .catch(() => {});
     refresh();
-    const timer = setInterval(refresh, 60000);
+    // Background tabs skip the poll; the focus listener catches up when the tab returns.
+    const timer = setInterval(() => {
+      if (!document.hidden) refresh();
+    }, 60000);
     window.addEventListener('notifications-changed', refresh);
     window.addEventListener('focus', refresh);
     return () => {
@@ -859,10 +866,10 @@ function CreationDialog({
           : taskInput({
               request_id: requestId,
               title: get('title'),
-              description: get('description'),
-              category: get('category'),
+              description: draft?.description || '',
+              category: draft ? 'SEO' : 'general',
               priority: get('priority'),
-              due_date: get('due_date'),
+              due_date: '',
               assignee_id: assignee || null,
               review_required: review,
               reviewer_id: get('reviewer_id') || null,
@@ -933,16 +940,6 @@ function CreationDialog({
                       placeholder="What needs to be done?"
                     />
                   </label>
-                  <label className="field">
-                    Description
-                    <textarea
-                      name="description"
-                      defaultValue={draft?.description}
-                      maxLength={10000}
-                      rows={3}
-                      placeholder="Context, expected outcome, and any useful details…"
-                    />
-                  </label>
                   <div className="form-row">
                     <label className="field">
                       Assign to
@@ -957,10 +954,6 @@ function CreationDialog({
                             </option>
                           ))}
                       </select>
-                    </label>
-                    <label className="field">
-                      Due date
-                      <input name="due_date" type="date" />
                     </label>
                   </div>
                   <p className="form-hint">
@@ -996,19 +989,9 @@ function CreationDialog({
                     )}
                   </fieldset>
                   <details className="simple-task-options">
-                    <summary>More options: category, priority and review</summary>
+                    <summary>More options: priority and review</summary>
                     <div>
                       <div className="form-row">
-                        <label className="field">
-                          Category *
-                          <select name="category" defaultValue={draft ? 'SEO' : 'Development'}>
-                            {['Development', 'Bug fix', 'SEO', 'Content', 'Maintenance', 'Meeting', 'General'].map(
-                              category => (
-                                <option key={category}>{category}</option>
-                              ),
-                            )}
-                          </select>
-                        </label>
                         <label className="field">
                           Priority *
                           <select name="priority" defaultValue="medium">

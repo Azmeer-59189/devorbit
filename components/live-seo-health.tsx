@@ -1,5 +1,6 @@
 'use client';
-import {useEffect, useRef, useState} from 'react';
+import {Fragment, useEffect, useRef, useState} from 'react';
+import dynamic from 'next/dynamic';
 import {useSearchParams} from 'next/navigation';
 import {Workspace, statusName} from '@/lib/live-types';
 import {currentLoadTime} from '@/lib/load-time';
@@ -12,13 +13,14 @@ import {seoTaskDraft, SeoTaskDraft} from '@/lib/seo-task';
 import {displayDate, workspaceDate} from '@/lib/dates';
 import {downloadRows, type ExportFormat} from '@/lib/export';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-import SeoTrend from '@/components/seo-trend';
 import SummaryTiles, {type Tile} from '@/components/seo/summary-tiles';
 import SeoHistory from '@/components/seo/seo-history';
 import SeoImport from '@/components/seo/seo-import';
 import {bandStatus, formValues, scoreBand, type Catalog, type Site} from '@/components/seo/types';
 import AutomaticAuditHistory from '@/components/seo/automatic-audit-history';
 import RecordAuditDialog, {type NewAudit} from '@/components/seo/record-audit-dialog';
+// Loaded on demand so the SEO pages do not download the chart library until a trend is shown.
+const SeoTrend = dynamic(() => import('@/components/seo-trend'));
 const sectionId = (group: string) => 'section-' + group.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 export default function LiveSeoHealth({
   data,
@@ -188,8 +190,8 @@ export default function LiveSeoHealth({
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({website_id: website, request_id: crypto.randomUUID()}),
-        // Google may need 95 seconds; keep waiting through the server's 120-second window.
-        signal: AbortSignal.timeout(125000),
+        // Keep the browser waiting through the server's 240-second window.
+        signal: AbortSignal.timeout(245000),
       });
       const updated: Catalog = await workspaceFetch('/api/seo-health' + (site ? `?website=${site.id}` : ''));
       show(updated, site?.id || null);
@@ -386,7 +388,7 @@ export default function LiveSeoHealth({
       if (mode === 'seo') {
         row['Mobile performance /100'] = w.lighthouse?.performance_score ?? '';
         row['Load time source'] = currentLoadTime(w).automatic
-          ? 'Google mobile / observed load event'
+          ? 'Google observed load event (unthrottled)'
           : 'Manual historical input';
         row['Load time measured at'] = currentLoadTime(w).measuredAt || '';
         row['Previous manual load time (seconds)'] = w.fields.page_seconds ?? '';
@@ -433,12 +435,12 @@ export default function LiveSeoHealth({
       {mode === 'seo' && (
         <p className="form-hint">
           Automatic audits use Google PageSpeed Insights mobile Lighthouse. Performance /100 and LCP seconds are
-          separate measurements. Load time uses the Google observed page-load event when available, otherwise the
-          previous manual value. Limit: 20 audits/workspace/hour, five minutes between website attempts.
+          simulated for a throttled phone. Load time is Google&apos;s unthrottled page-load event when available,
+          otherwise the previous manual value. Limit: 20 audits/workspace/hour, five minutes between website attempts.
         </p>
       )}
       {auditing && (
-        <p role="status">Running Google mobile audit... This can take up to two minutes. Keep this page open.</p>
+        <p role="status">Running Google mobile audit... This can take up to four minutes. Keep this page open.</p>
       )}
       <div className="section-toolbar">
         {/* The page heading already names the list, so the title only appears for one website. */}
@@ -494,7 +496,7 @@ export default function LiveSeoHealth({
               title={dirty ? 'Save or discard your changes first' : undefined}
               onClick={() => setRecording(true)}
             >
-              Record audit
+              Update score manually
             </button>
           )}
           {!site && catalog && (
@@ -562,8 +564,8 @@ export default function LiveSeoHealth({
             )}
           </div>
           {groups.length > 1 && (
-            <div className="simple-task-tabs matrix-tabs" role="group" aria-label="Field group">
-              {['all', ...groups].map(g => {
+            <div className="simple-task-tabs matrix-tabs" role="group" aria-label="Filter by feature section">
+              {['all', ...groups, ...(mode === 'seo' ? ['Automatic audit measurements'] : [])].map(g => {
                 const gaps = groupGaps(g);
                 return (
                   <button
@@ -572,7 +574,7 @@ export default function LiveSeoHealth({
                     aria-pressed={fieldGroup === g}
                     onClick={() => setFieldGroup(g)}
                   >
-                    {g === 'all' ? 'All fields' : g}
+                    {g === 'all' ? 'All sections' : g}
                     {gaps > 0 && (
                       <span className="tab-count">
                         {gaps}
@@ -585,44 +587,21 @@ export default function LiveSeoHealth({
             </div>
           )}
           <p className="form-hint">
-            {visibleSites.length} of {catalog.websites.length} websites · {matrixFields.length} fields. Select a column
-            heading to sort, or a website to edit it.
+            {visibleSites.length} of {catalog.websites.length} websites · {matrixFields.length} fields. Select a feature
+            label to sort websites by its value, or a website heading to edit it.
           </p>
           <section className="card comparison-wrap" tabIndex={0} role="region" aria-label="Website field comparison">
             <table className="website-comparison">
               <thead>
                 <tr>
-                  {[{key: 'name', label: 'Website', type: 'text'}, ...matrixFields].map(f => {
-                    const sorted = sort.key === f.key;
-                    const Icon = !sorted ? ArrowUpDown : sort.direction === 1 ? ArrowUp : ArrowDown;
-                    return (
-                      <th
-                        scope="col"
-                        key={f.key}
-                        aria-sort={sorted ? (sort.direction === 1 ? 'ascending' : 'descending') : undefined}
-                      >
-                        <button className="sort-button" onClick={() => toggleSort(f.key)}>
-                          {f.label}
-                          {f.type === 'duration' ? ' (seconds)' : ''}
-                          {['qa', 'plugin_updated', 'backup_date'].includes(f.key) ? ' (reference)' : ''}
-                          <Icon size={13} aria-hidden="true" />
-                        </button>
-                      </th>
-                    );
-                  })}
-                  {mode === 'seo' && (
-                    <>
-                      <th scope="col">Mobile performance /100</th>
-                      <th scope="col">LCP (seconds)</th>
-                      <th scope="col">Automatic audit</th>
-                    </>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {visibleSites.map(w => (
-                  <tr key={w.id}>
-                    <th scope="row">
+                  <th scope="col">
+                    <button className="sort-button" onClick={() => toggleSort('name')}>
+                      Feature / section{' '}
+                      {sort.key === 'name' && sort.direction === -1 ? <ArrowDown size={13} /> : <ArrowUp size={13} />}
+                    </button>
+                  </th>
+                  {visibleSites.map(w => (
+                    <th scope="col" key={w.id}>
                       <button
                         className="matrix-site"
                         disabled={busy}
@@ -637,65 +616,113 @@ export default function LiveSeoHealth({
                         {w.archived_at || w.status === 'archived' ? ' - Archived' : ''}
                       </small>
                     </th>
-                    {matrixFields.map(f => {
-                      const value = cellValue(w, f.key);
-                      const missing = value == null || value === '' || value === 'unknown';
-                      const text =
-                        f.type === 'status'
-                          ? statusName(String(value))
-                          : f.type === 'date'
-                            ? displayDate(String(value), today)
-                            : String(value);
-                      return (
-                        <td key={f.key}>
-                          {missing ? (
-                            // A faint dash keeps recorded values prominent; screen readers still hear the state.
-                            <span className="matrix-empty" title="Not recorded">
-                              <span aria-hidden="true">—</span>
-                              <span className="sr-only">Not recorded</span>
-                            </span>
-                          ) : f.key === 'seo_score' ? (
-                            <span className="matrix-score" data-band={scoreBand(Number(value))}>
-                              {String(value)}/100
-                            </span>
-                          ) : (
-                            <span
-                              className={f.type === 'status' ? 'matrix-status' : 'matrix-value'}
-                              data-value={String(value)}
-                              title={f.type === 'date' ? String(value) : undefined}
-                            >
-                              {f.type === 'long_text' && text.length > 120 ? (
-                                <details>
-                                  <summary>{text.slice(0, 100)}...</summary>
-                                  <p>{text}</p>
-                                </details>
-                              ) : (
-                                text
-                              )}
-                              {f.type === 'duration' ? ' s' : ''}
-                            </span>
-                          )}
-                          {f.key === 'page_seconds' && (
-                            <small className="block form-hint">
-                              {currentLoadTime(w).automatic
-                                ? 'Google mobile / load event'
-                                : 'Manual / historical input'}
-                            </small>
-                          )}
-                          {w.notes[f.key] && (
-                            <details className="matrix-note">
-                              <summary>Note</summary>
-                              <p>{w.notes[f.key]}</p>
-                            </details>
-                          )}
-                        </td>
-                      );
-                    })}
-                    {mode === 'seo' && (
-                      <>
-                        <td>{w.lighthouse?.performance_score ?? 'Not recorded'}</td>
-                        <td>{w.lighthouse?.lcp_seconds ?? 'Not recorded'}</td>
-                        <td>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {groups
+                  .filter(group => matrixFields.some(f => f.group === group))
+                  .map(group => (
+                    <Fragment key={group}>
+                      <tr className="matrix-section">
+                        <th scope="rowgroup" colSpan={visibleSites.length + 1}>
+                          {group}
+                        </th>
+                      </tr>
+                      {matrixFields
+                        .filter(f => f.group === group)
+                        .map(f => (
+                          <tr key={f.key}>
+                            <th scope="row">
+                              <button className="sort-button" onClick={() => toggleSort(f.key)}>
+                                {f.label}
+                                {f.type === 'duration' ? ' (seconds)' : ''}
+                                {['qa', 'plugin_updated', 'backup_date'].includes(f.key) ? ' (reference)' : ''}
+                                <ArrowUpDown size={13} aria-hidden="true" />
+                              </button>
+                            </th>
+                            {visibleSites.map(w => {
+                              const value = cellValue(w, f.key);
+                              const missing = value == null || value === '' || value === 'unknown';
+                              const text =
+                                f.type === 'status'
+                                  ? statusName(String(value))
+                                  : f.type === 'date'
+                                    ? displayDate(String(value), today)
+                                    : String(value);
+                              return (
+                                <td key={w.id}>
+                                  {missing ? (
+                                    // A faint dash keeps recorded values prominent; screen readers still hear the state.
+                                    <span className="matrix-empty" title="Not recorded">
+                                      <span aria-hidden="true">—</span>
+                                      <span className="sr-only">Not recorded</span>
+                                    </span>
+                                  ) : f.key === 'seo_score' ? (
+                                    <span className="matrix-score" data-band={scoreBand(Number(value))}>
+                                      {String(value)}/100
+                                    </span>
+                                  ) : (
+                                    <span
+                                      className={f.type === 'status' ? 'matrix-status' : 'matrix-value'}
+                                      data-value={String(value)}
+                                      title={f.type === 'date' ? String(value) : undefined}
+                                    >
+                                      {f.type === 'long_text' && text.length > 120 ? (
+                                        <details>
+                                          <summary>{text.slice(0, 100)}...</summary>
+                                          <p>{text}</p>
+                                        </details>
+                                      ) : (
+                                        text
+                                      )}
+                                      {f.type === 'duration' ? ' s' : ''}
+                                    </span>
+                                  )}
+                                  {f.key === 'page_seconds' && (
+                                    <small className="block form-hint">
+                                      {currentLoadTime(w).automatic
+                                        ? 'Google / unthrottled load event'
+                                        : 'Manual / historical input'}
+                                    </small>
+                                  )}
+                                  {w.notes[f.key] && (
+                                    <details className="matrix-note">
+                                      <summary>Note</summary>
+                                      <p>{w.notes[f.key]}</p>
+                                    </details>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                    </Fragment>
+                  ))}
+                {mode === 'seo' && (fieldGroup === 'all' || fieldGroup === 'Automatic audit measurements') && (
+                  <>
+                    <tr className="matrix-section">
+                      <th scope="rowgroup" colSpan={visibleSites.length + 1}>
+                        Automatic audit measurements
+                      </th>
+                    </tr>
+                    <tr>
+                      <th scope="row">Mobile performance /100</th>
+                      {visibleSites.map(w => (
+                        <td key={w.id}>{w.lighthouse?.performance_score ?? 'Not recorded'}</td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <th scope="row">LCP (seconds)</th>
+                      {visibleSites.map(w => (
+                        <td key={w.id}>{w.lighthouse?.lcp_seconds ?? 'Not recorded'}</td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <th scope="row">Automatic audit</th>
+                      {visibleSites.map(w => (
+                        <td key={w.id}>
+                          {' '}
                           {w.lighthouse && (
                             <small className="block">
                               {new Date(w.lighthouse.finished_at || w.lighthouse.measured_at).toLocaleString('en-GB', {
@@ -711,10 +738,10 @@ export default function LiveSeoHealth({
                             {auditing === w.id ? 'Auditing...' : 'Run audit'}
                           </button>
                         </td>
-                      </>
-                    )}
-                  </tr>
-                ))}
+                      ))}
+                    </tr>
+                  </>
+                )}
               </tbody>
             </table>
             {!visibleSites.length && (
@@ -775,7 +802,7 @@ export default function LiveSeoHealth({
           websiteName={site.name}
           audits={catalog.audits}
           today={today}
-          defaultSource={site.latest_audit?.source ?? site.source ?? ''}
+          defaultSource="Manual SEO review"
           onSubmit={recordAudit}
           onClose={() => setRecording(false)}
         />
@@ -930,7 +957,7 @@ export default function LiveSeoHealth({
                               {f.key === 'page_seconds' && (
                                 <p className="form-hint">
                                   {currentLoadTime(site).automatic
-                                    ? 'Updated by Run audit from Google mobile load-event timing. This is not LCP or Pingdom.'
+                                    ? "Updated by Run audit from Google's unthrottled load-event timing. This is not LCP or Pingdom."
                                     : 'Manual historical value. Run audit to collect an automatic load-event measurement.'}
                                 </p>
                               )}
@@ -948,7 +975,7 @@ export default function LiveSeoHealth({
                                 <>
                                   {['seo_score', 'audit_date'].includes(f.key) && (
                                     <small className="form-hint">
-                                      From the latest audit. Use Record audit to add one.
+                                      From the latest audit. Use Update score manually to record a score.
                                     </small>
                                   )}
                                   <details className="seo-field-note" open={!!notes[f.key] || undefined}>

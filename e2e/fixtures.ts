@@ -183,6 +183,8 @@ export function apiResponse(url: URL): unknown {
   if (path.startsWith('/api/tasks/'))
     return {
       task: tasks.find(t => path.endsWith(t.id)) || tasks[0],
+      website_ids: taskWebsites.filter(link => path.endsWith(link.task_id)).map(link => link.website_id),
+      collaborators: [],
       comments: [],
       reviews: [],
       activity: [],

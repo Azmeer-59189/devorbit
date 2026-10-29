@@ -5,7 +5,7 @@ import {recordId} from '@/lib/reporting';
 import {mutationFailure, rpcFailure} from '@/lib/live-mutations';
 import {publicAuditUrl, runPageSpeed} from '@/lib/pagespeed';
 
-export const maxDuration = 120;
+export const maxDuration = 240;
 export async function POST(request: Request) {
   try {
     const {supabase} = await requireWorkspaceUser(request);
@@ -31,7 +31,8 @@ export async function POST(request: Request) {
       const finished = await server.rpc('finish_website_lighthouse', {p_run: started.id, p_result: result});
       if (finished.error)
         throw new AccessError(503, 'Google completed the audit, but saving failed. Reload before retrying.');
-      const {data: saved, error: readError} = await supabase
+      // The user's token can expire during a four-minute audit, so confirm with the server client.
+      const {data: saved, error: readError} = await server
         .from('website_lighthouse_runs')
         .select('state')
         .eq('id', started.id)

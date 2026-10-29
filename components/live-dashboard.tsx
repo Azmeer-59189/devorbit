@@ -1,6 +1,6 @@
 'use client';
-import {useEffect, useState} from 'react';
-import {Check, ClipboardList, Clock3, Ban, CircleAlert, ScanEye} from 'lucide-react';
+import {useCallback, useEffect, useState} from 'react';
+import {Check, ClipboardList, Clock3} from 'lucide-react';
 import {
   Bar,
   BarChart,
@@ -18,6 +18,7 @@ import {
 import {Workspace} from '@/lib/live-types';
 import {shiftDate, workspaceDate} from '@/lib/dates';
 import {workspaceFetch} from '@/lib/workspace-client';
+import TaskSheetStatus from '@/components/task-sheet-status';
 import {useChartAnimation} from '@/lib/motion';
 import {taskFiltersToSearch, type TaskFilters} from '@/lib/task-list';
 type Dashboard = {
@@ -68,11 +69,8 @@ type Dashboard = {
 const statusColor = (status: string) => `var(--chart-${status}, var(--chart-cancelled))`;
 const completionRows = [
   {status: 'completed', label: 'Completed', Icon: Check},
-  {status: 'in_review', label: 'In review', Icon: ScanEye},
-  {status: 'blocked', label: 'Blocked', Icon: CircleAlert},
   {status: 'in_progress', label: 'In progress', Icon: Clock3},
-  {status: 'to_do', label: 'Not started', Icon: ClipboardList},
-  {status: 'cancelled', label: 'Cancelled', Icon: Ban},
+  {status: 'to_do', label: 'To do', Icon: ClipboardList},
 ];
 // Open tasks by urgency. Each slice opens the task list filter that returns the same count.
 const deadlineSlices = [
@@ -102,6 +100,7 @@ export default function LiveDashboard({
   const [user, setUser] = useState('');
   const [source, setSource] = useState('');
   const [refresh, setRefresh] = useState(0);
+  const refreshSheet = useCallback(() => setRefresh(n => n + 1), []);
   const [result, setResult] = useState<{key: string; value: Dashboard} | null>(null);
   const [failure, setFailure] = useState<{key: string; message: string} | null>(null);
   const params = new URLSearchParams({start, end, website, user, source});
@@ -125,6 +124,10 @@ export default function LiveDashboard({
     // refetch too. The key is unchanged, so the current charts stay visible until the new numbers arrive.
   }, [key, data]);
   const dashboard = result?.key === key ? result.value : null;
+  const completionTotal = completionRows.reduce(
+    (total, row) => total + (dashboard?.statuses.find(s => s.progress === row.status)?.count || 0),
+    0,
+  );
   const error = failure?.key === key ? failure.message : '';
   const chartStyle = {fontSize: 12, color: 'var(--muted)'};
   const animation = useChartAnimation();
@@ -178,6 +181,7 @@ export default function LiveDashboard({
   ];
   return (
     <section className="live-analytics">
+      <TaskSheetStatus timezone={data.workspace.timezone} onSynced={refreshSheet} />
       <div className="analytics-filters">
         <label className="field">
           From
@@ -400,13 +404,13 @@ export default function LiveDashboard({
             </article>
             <article className="card analytics-chart task-completion">
               <h3>Task Completion</h3>
-              <p>Share of {dashboard.task_count} matching tasks in each current status.</p>
-              {dashboard.task_count > 0 ? (
+              <p>Share of {completionTotal} matching tasks in these three statuses.</p>
+              {completionTotal > 0 ? (
                 <>
                   <div className="completion-rows">
                     {completionRows.map(({status, label, Icon}) => {
                       const count = dashboard.statuses.find(s => s.progress === status)?.count || 0;
-                      const percentage = (count / dashboard.task_count) * 100;
+                      const percentage = (count / completionTotal) * 100;
                       const displayPercentage = new Intl.NumberFormat('en', {maximumFractionDigits: 1}).format(
                         percentage,
                       );
@@ -416,7 +420,7 @@ export default function LiveDashboard({
                           className="completion-row"
                           data-status={status}
                           onClick={() => drill({status})}
-                          aria-label={`${label}: ${count} of ${dashboard.task_count} tasks (${displayPercentage}%). View tasks`}
+                          aria-label={`${label}: ${count} of ${completionTotal} tasks (${displayPercentage}%). View tasks`}
                         >
                           <span className="completion-icon" aria-hidden="true">
                             <Icon size={17} />

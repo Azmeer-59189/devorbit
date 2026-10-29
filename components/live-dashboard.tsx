@@ -1,5 +1,5 @@
 'use client';
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {Check, ClipboardList, Clock3, Ban, CircleAlert, ScanEye} from 'lucide-react';
 import {
   Bar,
@@ -18,6 +18,7 @@ import {
 import {Workspace} from '@/lib/live-types';
 import {shiftDate, workspaceDate} from '@/lib/dates';
 import {workspaceFetch} from '@/lib/workspace-client';
+import TaskSheetStatus from '@/components/task-sheet-status';
 import {useChartAnimation} from '@/lib/motion';
 import {taskFiltersToSearch, type TaskFilters} from '@/lib/task-list';
 type Dashboard = {
@@ -102,6 +103,7 @@ export default function LiveDashboard({
   const [user, setUser] = useState('');
   const [source, setSource] = useState('');
   const [refresh, setRefresh] = useState(0);
+  const refreshSheet = useCallback(() => setRefresh(n => n + 1), []);
   const [result, setResult] = useState<{key: string; value: Dashboard} | null>(null);
   const [failure, setFailure] = useState<{key: string; message: string} | null>(null);
   const params = new URLSearchParams({start, end, website, user, source});
@@ -178,6 +180,7 @@ export default function LiveDashboard({
   ];
   return (
     <section className="live-analytics">
+      <TaskSheetStatus timezone={data.workspace.timezone} onSynced={refreshSheet} />
       <div className="analytics-filters">
         <label className="field">
           From

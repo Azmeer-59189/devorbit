@@ -37,10 +37,10 @@ export default function TaskEditor({
           task_id: task.id,
           expected_revision: task.revision,
           title: form.get('title'),
-          description: form.get('description'),
-          category: form.get('category'),
+          description: task.description || '',
+          category: task.category,
           priority: form.get('priority'),
-          due_date: form.get('due_date'),
+          due_date: task.due_date || '',
           website_ids: sites,
         };
         try {
@@ -75,10 +75,6 @@ export default function TaskEditor({
         <label className="field">
           Title *<input name="title" required maxLength={200} defaultValue={task.title} />
         </label>
-        <label className="field">
-          Description
-          <textarea name="description" maxLength={10000} rows={4} defaultValue={task.description} />
-        </label>
         <div className="form-row">
           <label className="field">
             Priority
@@ -88,14 +84,8 @@ export default function TaskEditor({
               ))}
             </select>
           </label>
-          <label className="field">
-            Due date
-            <input type="date" name="due_date" defaultValue={task.due_date || ''} />
-          </label>
         </div>
-        <label className="field">
-          Category *<input name="category" required maxLength={100} defaultValue={task.category} />
-        </label>
+
         <fieldset className="site-choices">
           <legend>Related websites</legend>
           {data.websites

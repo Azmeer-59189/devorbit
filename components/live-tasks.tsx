@@ -158,14 +158,16 @@ export default function LiveTasks({
       return;
     }
     let reason = '';
-    if (target === 'blocked' || ['completed', 'cancelled'].includes(task.progress)) {
-      const answer = await promptText(
-        target === 'blocked'
-          ? {title: 'Why is this task blocked?', label: 'Blocker', confirmLabel: 'Mark blocked'}
-          : {title: 'Why are you reopening this task?', label: 'Reason', confirmLabel: 'Reopen'},
-      );
+    if (['completed', 'cancelled'].includes(task.progress)) {
+      const answer = await promptText({
+        title: 'Why are you reopening this task?',
+        label: 'Reason',
+        confirmLabel: 'Reopen',
+      });
       if (!answer) return;
       reason = answer;
+    } else if (target === 'blocked') {
+      reason = 'Blocked in dashboard; no reason recorded.';
     }
     if (
       target === 'cancelled' &&

@@ -1,6 +1,6 @@
 import {expect, test} from '@playwright/test';
 import {openWorkspace} from './workspace';
-import {websites} from './fixtures';
+import {tasks, websites} from './fixtures';
 
 test('dashboard summary tiles open the matching task list', async ({page}) => {
   await openWorkspace(page, '/workspace');
@@ -70,23 +70,15 @@ test('edit view counts unsaved changes and discards them', async ({page}) => {
   await expect(page.getByRole('combobox', {name: /^Blogs/})).toHaveValue('unknown');
 });
 
-test('moving a card to Blocked asks for a reason in an in-app dialog', async ({page}) => {
+test('moving a card to Blocked saves without a blocker field', async ({page}) => {
   await openWorkspace(page, '/workspace/tasks');
-  const posts: string[] = [];
-  page.on('request', request => {
-    if (request.method() === 'POST') posts.push(request.url());
-  });
   await page.getByRole('button', {name: 'Kanban', exact: true}).click();
+  const request = page.waitForRequest(r => r.method() === 'POST' && r.url().endsWith('/api/task-actions'));
   await page.getByRole('combobox', {name: 'Move Fix broken hreflang tags'}).selectOption('blocked');
-
-  const dialog = page.getByRole('alertdialog', {name: 'Why is this task blocked?'});
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole('button', {name: 'Mark blocked'})).toBeDisabled();
-  await dialog.getByRole('textbox', {name: 'Blocker'}).fill('Waiting on DNS access');
-  await expect(dialog.getByRole('button', {name: 'Mark blocked'})).toBeEnabled();
-  await dialog.getByRole('button', {name: 'Cancel'}).click();
-  await expect(dialog).toBeHidden();
-  expect(posts).toEqual([]);
+  const body = (await request).postDataJSON();
+  expect(body.status).toBe('blocked');
+  expect(body.reason).toBe('Blocked in dashboard; no reason recorded.');
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
 });
 
 test('Escape closes only the newest dialog', async ({page}) => {
@@ -141,4 +133,37 @@ test('saving the SEO form re-sends the latest audit unchanged', async ({page}) =
   expect(body.fields.seo_score).toBe(92);
   expect(body.source).toBe('PageSpeed Insights');
   expect(body.reason).toBe('');
+});
+
+test('task creation uses the simplified fields', async ({page}) => {
+  await openWorkspace(page, '/workspace/tasks');
+  await page.locator('main').getByRole('button', {name: 'Create task'}).click();
+  const form = page.getByRole('dialog', {name: 'Create a task'});
+  for (const name of ['description', 'category', 'due_date'])
+    await expect(form.locator(`[name="${name}"]`)).toHaveCount(0);
+  await form.locator('input[name="title"]').fill('New simple task');
+  const request = page.waitForRequest(r => r.method() === 'POST' && r.url().endsWith('/api/tasks'));
+  await form.getByRole('button', {name: 'Create task', exact: true}).click();
+  const body = (await request).postDataJSON();
+  expect(body.title).toBe('New simple task');
+  expect(body.category).toBe('general');
+  expect(body.due_date).toBeNull();
+});
+
+test('editing a task preserves the fields removed from the form', async ({page}) => {
+  await openWorkspace(page, '/workspace/tasks');
+  const original = tasks.find(t => t.title === 'Fix broken hreflang tags')!;
+  await page.getByRole('button', {name: original.title, exact: true}).click();
+  await page.getByRole('button', {name: 'Edit task details', exact: true}).click();
+  const form = page.locator('.task-edit-form');
+  for (const name of ['description', 'category', 'due_date'])
+    await expect(form.locator(`[name="${name}"]`)).toHaveCount(0);
+  await form.locator('[name="title"]').fill('Updated task title');
+  const request = page.waitForRequest(r => r.method() === 'PATCH' && r.url().endsWith('/api/tasks/' + original.id));
+  await form.getByRole('button', {name: 'Save details'}).click();
+  const body = (await request).postDataJSON();
+  expect(body.title).toBe('Updated task title');
+  expect(body.description).toBe(original.description);
+  expect(body.category).toBe(original.category);
+  expect(body.due_date).toBe(original.due_date);
 });

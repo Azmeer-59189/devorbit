@@ -4237,6 +4237,15 @@ summary {
 .website-comparison tbody tr:nth-child(even) td {
   background: #f8faff;
 }
+.website-comparison .matrix-section > th {
+  background: #dfe9fa;
+  color: #16366b;
+  font-weight: 700;
+  border-top: 2px solid #b9ccef;
+}
+.website-comparison thead .matrix-site {
+  white-space: normal;
+}
 .matrix-status {
   display: inline-block;
   padding: 4px 8px;

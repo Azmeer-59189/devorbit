@@ -1,12 +1,49 @@
 import {expect, test} from '@playwright/test';
 import {openWorkspace} from './workspace';
-import {websites} from './fixtures';
+import {apiResponse, tasks, websites} from './fixtures';
 
 test('dashboard summary tiles open the matching task list', async ({page}) => {
   await openWorkspace(page, '/workspace');
+  const summary = page.getByRole('region', {name: 'Summary', exact: true});
+  await expect(summary.locator('.attention-item')).toHaveCount(4);
+  await expect(summary).not.toContainText('Blocked');
+  await expect(summary).not.toContainText('Awaiting acceptance');
   await page.getByRole('button', {name: /^Overdue: 2/}).click();
   await expect(page).toHaveURL(/\/workspace\/tasks\?.*overdue=true/);
   await expect(page.locator('main h1')).toHaveText('Tasks');
+});
+
+test('dashboard explains historical work without a completion-only progress bar', async ({page}) => {
+  await openWorkspace(page, '/workspace');
+  await page.route('**/api/dashboard?**', route =>
+    route.fulfill({
+      json: {
+        ...(apiResponse(new URL(route.request().url())) as object),
+        active_tasks: 0,
+        overdue_tasks: 0,
+        workload: [],
+        deadlines: {on_time: 0, overdue: 0, no_deadline: 0},
+        statuses: [{progress: 'completed', count: 2}],
+      },
+    }),
+  );
+  await page.getByRole('button', {name: 'Refresh charts', exact: true}).click();
+  await expect(page.locator('.completion-row')).toHaveCount(0);
+  for (const title of [
+    'Task status',
+    'Completed work by team member',
+    'Tasks by website',
+    'Recorded completions by day',
+  ]) {
+    const chart = page.locator('article').filter({has: page.getByRole('heading', {name: title, exact: true})});
+    await expect(chart.getByRole('region', {name: title, exact: true})).toBeVisible();
+    await chart.getByText('View chart data', {exact: true}).click();
+    await expect(chart.getByRole('table')).toBeVisible();
+  }
+  const request = page.waitForRequest(r => r.url().includes('/api/dashboard?') && r.url().includes('start='));
+  await page.getByRole('button', {name: 'Last 12 months', exact: true}).click();
+  const url = new URL((await request).url());
+  expect((Date.parse(url.searchParams.get('end')!) - Date.parse(url.searchParams.get('start')!)) / 86400000).toBe(364);
 });
 
 test('task list shows due-date hints and switches to the board', async ({page}) => {
@@ -25,22 +62,22 @@ test('task list shows due-date hints and switches to the board', async ({page}) 
 
 test('SEO list filters from a summary tile and sorts by score', async ({page}) => {
   await openWorkspace(page, '/workspace/reports');
-  const rows = page.locator('.website-comparison tbody tr');
-  await expect(rows).toHaveCount(6);
+  const headers = page.locator('.website-comparison thead th').filter({has: page.locator('.matrix-site')});
+  await expect(headers).toHaveCount(6);
 
   const unaudited = page.getByRole('button', {name: /Not yet audited/});
   await unaudited.click();
   await expect(unaudited).toHaveAttribute('aria-pressed', 'true');
-  await expect(rows).toHaveCount(3);
+  await expect(headers).toHaveCount(3);
   await unaudited.click();
-  await expect(rows).toHaveCount(6);
+  await expect(headers).toHaveCount(6);
 
   const score = page.getByRole('button', {name: /^SEO Rating/});
   await score.click();
   await score.click();
-  await expect(page.getByRole('columnheader', {name: /SEO Rating/})).toHaveAttribute('aria-sort', 'descending');
-  await expect(rows.first()).toContainText('CRD United Kingdom');
-  await expect(rows.first()).toContainText('92/100');
+  await expect(headers.first()).toContainText('CRD United Kingdom');
+  const rating = page.getByRole('row', {name: /^SEO Rating/});
+  await expect(rating.locator('td').first()).toHaveText('92/100');
 });
 
 test('Website features groups narrow the table to one section', async ({page}) => {
@@ -48,7 +85,12 @@ test('Website features groups narrow the table to one section', async ({page}) =
   const social = page.getByRole('button', {name: /^Social media/});
   await social.click();
   await expect(social).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('.website-comparison thead th')).toHaveCount(6);
+  await expect(page.locator('.website-comparison thead th')).toHaveCount(websites.length + 1);
+  await expect(page.locator('.matrix-section')).toHaveCount(1);
+  await expect(page.locator('.matrix-section')).toHaveText('Social media');
+  await expect(page.locator('.website-comparison tbody tr:not(.matrix-section)')).toHaveCount(5);
+  await page.getByRole('button', {name: /^All sections/}).click();
+  await expect(page.locator('.matrix-section')).not.toHaveCount(1);
 });
 
 test('edit view counts unsaved changes and discards them', async ({page}) => {
@@ -65,23 +107,15 @@ test('edit view counts unsaved changes and discards them', async ({page}) => {
   await expect(page.getByRole('combobox', {name: /^Blogs/})).toHaveValue('unknown');
 });
 
-test('moving a card to Blocked asks for a reason in an in-app dialog', async ({page}) => {
+test('moving a card to Blocked saves without a blocker field', async ({page}) => {
   await openWorkspace(page, '/workspace/tasks');
-  const posts: string[] = [];
-  page.on('request', request => {
-    if (request.method() === 'POST') posts.push(request.url());
-  });
   await page.getByRole('button', {name: 'Kanban', exact: true}).click();
+  const request = page.waitForRequest(r => r.method() === 'POST' && r.url().endsWith('/api/task-actions'));
   await page.getByRole('combobox', {name: 'Move Fix broken hreflang tags'}).selectOption('blocked');
-
-  const dialog = page.getByRole('alertdialog', {name: 'Why is this task blocked?'});
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole('button', {name: 'Mark blocked'})).toBeDisabled();
-  await dialog.getByRole('textbox', {name: 'Blocker'}).fill('Waiting on DNS access');
-  await expect(dialog.getByRole('button', {name: 'Mark blocked'})).toBeEnabled();
-  await dialog.getByRole('button', {name: 'Cancel'}).click();
-  await expect(dialog).toBeHidden();
-  expect(posts).toEqual([]);
+  const body = (await request).postDataJSON();
+  expect(body.status).toBe('blocked');
+  expect(body.reason).toBe('Blocked in dashboard; no reason recorded.');
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
 });
 
 test('Escape closes only the newest dialog', async ({page}) => {
@@ -104,9 +138,11 @@ test('recording a different score for an existing audit asks for a reason', asyn
   await expect(page.getByRole('spinbutton', {name: /SEO Rating/})).toHaveValue('92');
   await expect(page.getByRole('spinbutton', {name: /SEO Rating/})).toHaveAttribute('readonly', '');
 
-  await page.getByRole('button', {name: 'Record audit'}).click();
-  const dialog = page.getByRole('dialog', {name: 'Record an SEO audit'});
+  await page.getByRole('button', {name: 'Update score manually'}).click();
+  const dialog = page.getByRole('dialog', {name: 'Update SEO score manually'});
   await dialog.getByRole('spinbutton', {name: 'Score (0–100)'}).fill('88');
+  await expect(dialog.getByRole('combobox', {name: 'Source / tool'})).toHaveValue('Manual SEO review');
+  await dialog.getByRole('combobox', {name: 'Source / tool'}).fill('PageSpeed Insights');
   await expect(dialog).toContainText('This corrects the 92/100 audit');
   const save = dialog.getByRole('button', {name: 'Save correction'});
   await expect(save).toBeDisabled();
@@ -125,7 +161,7 @@ test('recording a different score for an existing audit asks for a reason', asyn
 test('saving the SEO form re-sends the latest audit unchanged', async ({page}) => {
   await openWorkspace(page, `/workspace/reports?website=${websites[0].id}`);
   await page.getByRole('combobox', {name: /^Google Analytics/}).selectOption('no');
-  await expect(page.getByRole('button', {name: 'Record audit'})).toBeDisabled();
+  await expect(page.getByRole('button', {name: 'Update score manually'})).toBeDisabled();
 
   const request = page.waitForRequest(r => r.method() === 'POST' && r.url().endsWith('/api/seo-health'));
   await page.getByRole('button', {name: 'Save SEO'}).click();
@@ -134,4 +170,59 @@ test('saving the SEO form re-sends the latest audit unchanged', async ({page}) =
   expect(body.fields.seo_score).toBe(92);
   expect(body.source).toBe('PageSpeed Insights');
   expect(body.reason).toBe('');
+});
+
+test('task creation uses the simplified fields', async ({page}) => {
+  await openWorkspace(page, '/workspace/tasks');
+  await page.locator('main').getByRole('button', {name: 'Create task'}).click();
+  const form = page.getByRole('dialog', {name: 'Create a task'});
+  for (const name of ['description', 'category', 'due_date'])
+    await expect(form.locator(`[name="${name}"]`)).toHaveCount(0);
+  await form.locator('input[name="title"]').fill('New simple task');
+  const request = page.waitForRequest(r => r.method() === 'POST' && r.url().endsWith('/api/tasks'));
+  await form.getByRole('button', {name: 'Create task', exact: true}).click();
+  const body = (await request).postDataJSON();
+  expect(body.title).toBe('New simple task');
+  expect(body.category).toBe('general');
+  expect(body.due_date).toBeNull();
+});
+
+test('editing a task preserves the fields removed from the form', async ({page}) => {
+  await openWorkspace(page, '/workspace/tasks');
+  const original = tasks.find(t => t.title === 'Fix broken hreflang tags')!;
+  await page.getByRole('button', {name: original.title, exact: true}).click();
+  await page.getByRole('button', {name: 'Edit task details', exact: true}).click();
+  const form = page.locator('.task-edit-form');
+  for (const name of ['description', 'category', 'due_date'])
+    await expect(form.locator(`[name="${name}"]`)).toHaveCount(0);
+  await form.locator('[name="title"]').fill('Updated task title');
+  const request = page.waitForRequest(r => r.method() === 'PATCH' && r.url().endsWith('/api/tasks/' + original.id));
+  await form.getByRole('button', {name: 'Save details'}).click();
+  const body = (await request).postDataJSON();
+  expect(body.title).toBe('Updated task title');
+  expect(body.description).toBe(original.description);
+  expect(body.category).toBe(original.category);
+  expect(body.due_date).toBe(original.due_date);
+});
+
+test('dashboard exposes the connected Google task sheet as a direct shortcut', async ({page}) => {
+  await openWorkspace(page, '/workspace');
+  const url = 'https://docs.google.com/spreadsheets/d/TEST-sheet/edit';
+  await page.route('**/api/integrations/task-sheet', route =>
+    route.fulfill({
+      json: {
+        connected: true,
+        url,
+        last_synced_at: null,
+        setup_pending: false,
+      },
+    }),
+  );
+  await page.reload();
+  const shortcut = page
+    .getByRole('region', {name: 'Google task spreadsheet'})
+    .getByRole('link', {name: 'Open Google Sheet'});
+  await expect(shortcut).toBeVisible();
+  await expect(shortcut).toHaveAttribute('href', url);
+  await expect(shortcut).toHaveAttribute('target', '_blank');
 });

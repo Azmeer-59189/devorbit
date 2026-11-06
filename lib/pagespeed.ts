@@ -84,29 +84,69 @@ export function parsePageSpeed(raw: unknown): PageSpeedResult {
   };
 }
 
+/** A safe explanation for Lighthouse page-load errors; empty when Google gives no recognisable cause. */
+async function pageFailureReason(response: Response) {
+  try {
+    const body = (await response.json()) as {error?: {message?: string}};
+    const message = body.error?.message || '';
+    if (/NO_FCP|NO_LCP/.test(message)) return 'Google could not render the page content.';
+    if (/FAILED_DOCUMENT_REQUEST|ERRORED_DOCUMENT_REQUEST/.test(message))
+      return 'Google could not load the website page. Check its redirects, TLS certificate and bot/firewall rules.';
+    if (/PAGE_HUNG|PROTOCOL_TIMEOUT|TIMED_OUT/.test(message))
+      return "The website did not finish loading inside Google's browser.";
+  } catch {
+    /* Never expose raw Google response bodies or credentials. */
+  }
+  return '';
+}
+
 export async function runPageSpeed(url: string, key: string, fetcher: typeof fetch = fetch) {
   const endpoint = new URL('https://www.googleapis.com/pagespeedonline/v5/runPagespeed');
   endpoint.searchParams.set('url', publicAuditUrl(url));
   endpoint.searchParams.set('strategy', 'mobile');
   endpoint.searchParams.append('category', 'seo');
   endpoint.searchParams.append('category', 'performance');
-  let response: Response;
-  try {
-    response = await fetcher(endpoint, {
-      headers: {'X-Goog-Api-Key': key},
-      cache: 'no-store',
-      signal: AbortSignal.timeout(95000),
-    });
-  } catch {
-    throw new AccessError(504, 'Google audit timed out or could not be reached. Previous results were kept.');
+  const signal = AbortSignal.timeout(180000);
+  let response: Response | undefined;
+  let reason = '';
+  let retried = false;
+  // One retry for transient transport/gateway failures, sharing the same total budget.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      response = await fetcher(endpoint, {headers: {'X-Goog-Api-Key': key}, cache: 'no-store', signal});
+      if (response.status < 500) break;
+      reason = await pageFailureReason(response);
+      // A page that Google could not load fails the same way again, so only unexplained errors retry.
+      if (attempt === 0 && !reason && [500, 502, 503, 504].includes(response.status)) {
+        retried = true;
+        continue;
+      }
+      break;
+    } catch (error) {
+      if (signal.aborted || (error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name)))
+        throw new AccessError(
+          504,
+          'Google did not finish this website audit within three minutes. Previous results were kept. Try again later; a slow or blocked page can prevent Google from completing it.',
+        );
+      if (attempt === 1)
+        throw new AccessError(
+          502,
+          'Could not connect to Google PageSpeed after retrying. Previous results were kept. This is a connection failure, not a saved audit.',
+        );
+    }
   }
+  if (!response) throw new AccessError(502, 'Google audit is unavailable. Previous results were kept.');
   if (response.status === 429) throw new AccessError(429, 'Google audit quota is busy. Wait a few minutes and retry.');
   if ([400, 401, 403].includes(response.status))
     throw new AccessError(
       502,
       'Google could not audit this URL. Check the PageSpeed API key, API enablement, and public website accessibility.',
     );
-  if (!response.ok) throw new AccessError(502, 'Google audit is unavailable. Previous results were kept.');
+  if (!response.ok)
+    throw new AccessError(
+      502,
+      `Google PageSpeed returned HTTP ${response.status}${retried ? ' after retrying' : ''}. ${reason || 'Its audit service could not complete this website test; try again later.'} Previous results were kept.`,
+    );
   try {
     return parsePageSpeed(await response.json());
   } catch (error) {

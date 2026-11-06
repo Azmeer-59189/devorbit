@@ -7,8 +7,6 @@ import {confirmAction} from '@/components/confirm-dialog';
 import {taskActionInput} from '@/lib/live-validation';
 import TaskEditor from '@/components/live-task-editor';
 import {useDialog} from '@/components/live-dialog';
-import DueDate from '@/components/due-date';
-import {workspaceDate} from '@/lib/dates';
 
 type Detail = {
   task: Task;
@@ -97,6 +95,8 @@ export default function LiveTaskPanel({
   const linkedSites = linkedIds.map(id => data.websites.find(s => s.id === id)?.name).filter(Boolean);
   async function act(action: string, extra: Record<string, unknown> = {}) {
     if (busy || !detail) return;
+    if (action === 'status' && extra.status === 'blocked' && !extra.reason)
+      extra = {...extra, reason: 'Blocked in dashboard; no reason recorded.'};
     setBusy(true);
     setError('');
     try {
@@ -187,24 +187,13 @@ export default function LiveTaskPanel({
             {pending && <span className="badge pending">Assignment awaiting acceptance</span>}
           </div>
           <h2 id="live-task-title">{current.title}</h2>
-          <p className="task-description live-description">{current.description || 'No description added.'}</p>
           <div className="task-metadata">
             <span>Owner</span>
             <strong>{name(current.assignee_id)}</strong>
             <span>Created by</span>
             <strong>{name(current.creator_id)}</strong>
-            <span>Priority / category</span>
-            <strong>
-              {statusName(current.priority)} · {current.category}
-            </strong>
-            <span>Due date</span>
-            <strong>
-              <DueDate
-                date={current.due_date}
-                today={workspaceDate(data.workspace.timezone)}
-                open={!['completed', 'cancelled'].includes(current.progress)}
-              />
-            </strong>
+            <span>Priority</span>
+            <strong>{statusName(current.priority)}</strong>
             <span>Websites</span>
             <strong>{linkedSites.join(', ') || 'General work'}</strong>
             <span>Review</span>
@@ -219,7 +208,6 @@ export default function LiveTaskPanel({
               </>
             )}
           </div>
-          {current.blocker_reason && <div className="form-error">Blocked: {current.blocker_reason}</div>}
           {error && (
             <div className="form-error" role="alert">
               {error}
@@ -271,7 +259,7 @@ export default function LiveTaskPanel({
                       className="workflow-section"
                       onSubmit={event => {
                         event.preventDefault();
-                        act('status', {status: status || statuses[0], reason});
+                        act('status', {status: status || statuses[0], reason: terminal ? reason : ''});
                       }}
                     >
                       <h3>{terminal ? 'Reopen task' : 'Update progress'}</h3>
@@ -312,20 +300,18 @@ export default function LiveTaskPanel({
                             ))}
                         </select>
                       </label>
-                      <label className="field">
-                        {terminal
-                          ? 'Reason for reopening *'
-                          : status === 'blocked'
-                            ? 'Blocker reason *'
-                            : 'Notes / completion notes'}
-                        <textarea
-                          value={reason}
-                          onChange={event => setReason(event.target.value)}
-                          maxLength={2000}
-                          required={terminal || status === 'blocked'}
-                          placeholder={terminal ? 'Why does this need more work?' : 'Add context for this change…'}
-                        />
-                      </label>
+                      {terminal && (
+                        <label className="field">
+                          Reason for reopening *
+                          <textarea
+                            value={reason}
+                            onChange={event => setReason(event.target.value)}
+                            maxLength={2000}
+                            required
+                            placeholder="Why does this need more work?"
+                          />
+                        </label>
+                      )}
                       <button className="button primary" type="submit">
                         <Check size={14} />
                         Save progress

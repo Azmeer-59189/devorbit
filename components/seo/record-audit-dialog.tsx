@@ -62,7 +62,7 @@ export default function RecordAuditDialog({
         <header>
           <div>
             <span className="eyebrow">{websiteName}</span>
-            <h2 id="record-audit-title">Record an SEO audit</h2>
+            <h2 id="record-audit-title">Update SEO score manually</h2>
           </div>
           <button className="icon-button" aria-label="Close" disabled={busy} onClick={close}>
             <X size={20} />
@@ -71,6 +71,10 @@ export default function RecordAuditDialog({
         <form onSubmit={submit}>
           <fieldset className="live-form-fieldset" disabled={busy}>
             <div className="modal-fields">
+              <p className="form-hint">
+                Record a score from your review or another tool. The overview displays the latest audit by date; older
+                entries stay in the history. This does not run a Google audit.
+              </p>
               <label className="field">
                 Score (0–100)
                 <input
@@ -138,7 +142,7 @@ export default function RecordAuditDialog({
               Cancel
             </button>
             <button className="button primary" disabled={busy || !valid || (correcting && !reason.trim())}>
-              {busy ? 'Saving…' : correcting ? 'Save correction' : 'Record audit'}
+              {busy ? 'Saving…' : correcting ? 'Save correction' : 'Save SEO score'}
             </button>
           </footer>
         </form>

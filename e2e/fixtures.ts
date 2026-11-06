@@ -76,6 +76,22 @@ export const workspace = {
 };
 
 const dashboard = {
+  activity: {
+    completed: 2,
+    owners: [
+      {id: members[2].id, count: 1},
+      {id: members[4].id, count: 1},
+    ],
+    websites: websites.map(w => ({id: w.id, count: 2})),
+    trend: {
+      unit: 'day',
+      points: [1, 0, 2, 3, 1, 0, 0, 2, 4, 3, 1, 2, 0, 1, 3, 5, 4, 2, 1, 0, 1, 3, 4, 6, 3, 2, 1, 2].map((count, i) => ({
+        date: day(i - 27),
+        count,
+        previous: [0, 1, 1, 2, 2, 3, 2, 1, 1, 0, 1, 2, 3, 3, 2, 1, 2, 3, 4, 3, 2, 1, 1, 2, 3, 2, 1, 1][i],
+      })),
+    },
+  },
   today: day(0),
   active_tasks: 9,
   overdue_tasks: 2,
@@ -183,6 +199,8 @@ export function apiResponse(url: URL): unknown {
   if (path.startsWith('/api/tasks/'))
     return {
       task: tasks.find(t => path.endsWith(t.id)) || tasks[0],
+      website_ids: taskWebsites.filter(link => path.endsWith(link.task_id)).map(link => link.website_id),
+      collaborators: [],
       comments: [],
       reviews: [],
       activity: [],

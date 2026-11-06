@@ -3,8 +3,8 @@ import {useEffect, useRef, useState} from 'react';
 import {Workspace, Task, statusName} from '@/lib/live-types';
 import {workspaceFetch} from '@/lib/workspace-client';
 import {confirmAction} from '@/components/confirm-dialog';
-import {reviewSeo} from '@/lib/seo-review';
-import {SeoValues} from '@/lib/seo-health';
+import {reviewSavedHealth} from '@/lib/seo-review';
+import type {Site as HealthSite} from '@/components/seo/types';
 import {websiteConfig, websiteManagementInput} from '@/lib/website-management';
 type Site = {
   id: string;
@@ -44,10 +44,7 @@ export default function LiveWebsite({
   onTask: (task: Task) => void;
   onReports: () => void;
 }) {
-  const [health, setHealth] = useState<{
-    fields: SeoValues;
-    latest_audit: {score: number; measurement_date: string; source: string} | null;
-  } | null>(null);
+  const [health, setHealth] = useState<HealthSite | null>(null);
   const [healthError, setHealthError] = useState('');
   const [healthRetry, setHealthRetry] = useState(0);
   useEffect(() => {
@@ -65,7 +62,7 @@ export default function LiveWebsite({
     return () => {
       cancelled = true;
     };
-  }, [id, healthRetry]);
+  }, [id, healthRetry, data]);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [form, setForm] = useState<Site | null>(null);
   const [tab, setTab] = useState('Overview');
@@ -115,6 +112,7 @@ export default function LiveWebsite({
       const d = await workspaceFetch(`/api/websites/${id}`);
       setDetail(d);
       setForm(d.website);
+      setHealthRetry(n => n + 1);
       setDirty(false);
       setError('');
     } catch (e) {
@@ -256,16 +254,16 @@ export default function LiveWebsite({
                       </p>
                       {health.latest_audit && (
                         <p>
-                          Last audit: {health.latest_audit.measurement_date} ? {health.latest_audit.source}
+                          Last audit: {health.latest_audit.measurement_date} &middot; {health.latest_audit.source}
                         </p>
                       )}
                       <p>
-                        {reviewSeo(health.fields).issues.length} checklist issues ?{' '}
-                        {reviewSeo(health.fields).missing.length} missing fields
+                        SEO &amp; performance: {reviewSavedHealth(health).issues.length} checklist issues &middot;{' '}
+                        {reviewSavedHealth(health).missing.length} fields not recorded
                       </p>
                     </>
                   ) : (
-                    <p role="status">Loading SEO summary?</p>
+                    <p role="status">Loading SEO summary&hellip;</p>
                   )}
                   <button className="button secondary" onClick={onReports}>
                     Open SEO form & history

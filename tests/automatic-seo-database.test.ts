@@ -116,7 +116,22 @@ test('automatic SEO audits enforce caller scope, server-only results, cooldown a
       )
     ).rows[0].r;
     assert.equal(fallback.websites[0].automatic_load_time.load_seconds, 5.8);
+    assert.equal('actor_id' in fallback.websites[0].automatic_load_time, false);
+    // A run the server never finished expires when the next audit starts.
+    await db.exec(`reset role;update public.website_lighthouse_runs set created_at=now()-interval '6 minutes';`);
+    await user(actor);
+    const abandoned = await start();
+    await db.exec(`reset role;update public.website_lighthouse_runs set created_at=now()-interval '6 minutes';`);
+    await user(actor);
+    await start();
     await db.exec('reset role');
+    const expired = (
+      await db.query<{state: string; error_code: string}>(
+        'select state,error_code from public.website_lighthouse_runs where id=$1',
+        [abandoned.id],
+      )
+    ).rows[0];
+    assert.deepEqual(expired, {state: 'failed', error_code: 'timed_out'});
     assert.equal((await db.query('select * from public.website_seo_audits')).rows.length, 2);
   } finally {
     await db.close();

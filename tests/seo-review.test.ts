@@ -1,6 +1,14 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {auditToCorrect, fieldsForPage, compareCells, compareSeo, reviewSeo, seoExportRows} from '../lib/seo-review';
+import {
+  reviewSavedHealth,
+  auditToCorrect,
+  fieldsForPage,
+  compareCells,
+  compareSeo,
+  reviewSeo,
+  seoExportRows,
+} from '../lib/seo-review';
 import {seoFields} from '../lib/seo-health';
 
 test('SEO review distinguishes unknown, missing, negative, and not-applicable statuses', () => {
@@ -80,4 +88,35 @@ test('a new score corrects only the current audit with the same date and source'
   assert.equal(auditToCorrect(audits, '2026-10-23', 'PageSpeed')?.id, 'b');
   assert.equal(auditToCorrect(audits, '2026-10-23', 'Rank Math'), undefined);
   assert.equal(auditToCorrect(audits, '2026-10-02', 'Rank Math'), undefined);
+});
+
+test('saved SEO summary shares the five-field scope, dated audit and automatic load-time values', () => {
+  const site = {
+    fields: {seo_implementation: 'yes', google_analytics: 'unknown', page_seconds: 0, ssl: 'no', seo_score: 99},
+    canonical_url: 'https://example.com',
+    cms: 'TEST',
+    latest_audit: {score: 0, measurement_date: '2026-11-02'},
+  };
+  assert.deepEqual(
+    reviewSavedHealth(site).missing.map(f => f.key),
+    ['google_analytics'],
+  );
+  assert.equal(reviewSavedHealth(site).issues.length, 0);
+  assert.ok(reviewSavedHealth(site, 'features').issues.some(f => f.key === 'ssl'));
+  assert.ok(reviewSavedHealth({...site, latest_audit: null}).missing.some(f => f.key === 'seo_score'));
+  assert.ok(
+    !reviewSavedHealth({
+      ...site,
+      fields: {},
+      automatic_load_time: {
+        id: 'run',
+        load_seconds: 1.25,
+        measured_at: '',
+        finished_at: '',
+        lighthouse_version: '',
+      },
+    }).missing.some(f => f.key === 'page_seconds'),
+  );
+  // Valid negative answers and zero measurements are recorded, not absent.
+  assert.equal(reviewSavedHealth({...site, fields: {...site.fields, google_analytics: 'no'}}).missing.length, 0);
 });

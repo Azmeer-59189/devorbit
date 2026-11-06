@@ -3,9 +3,7 @@
 const TASK_HEADERS = [
   'Task ID',
   'Title',
-  'Website',
-  'Website 2',
-  'Website 3',
+  'Websites',
   'Priority',
   'Status',
   'Created date',
@@ -85,42 +83,43 @@ function syncDevDeskTasks() {
     for (const member of members) {
       const sheet = book.getSheetByName(member);
       if (!sheet) throw new Error('Missing task tab for ' + member + '. Restore it before syncing.');
-      const headers = sheet.getRange(1, 1, 1, TASK_HEADERS.length).getDisplayValues()[0];
-      if (headers.some((v, i) => v !== TASK_HEADERS[i]))
-        throw new Error(member + ': restore the original task column headers before syncing.');
+      const width = sheet.getLastColumn();
+      const headers = sheet
+        .getRange(1, 1, 1, width)
+        .getDisplayValues()[0]
+        .map(v => v.trim());
+      const columns = taskSheetColumns(headers, member);
       if (sheet.getLastRow() > 5001) throw new Error(member + ': at most 5,000 rows per tab.');
-      const values =
-        sheet.getLastRow() > 1 ? sheet.getRange(2, 1, sheet.getLastRow() - 1, TASK_HEADERS.length).getValues() : [];
+      const values = sheet.getLastRow() > 1 ? sheet.getRange(2, 1, sheet.getLastRow() - 1, width).getValues() : [];
       values.forEach((cells, index) => {
         if (cells.every(v => v === '')) return;
         const location = member + ' row ' + (index + 2) + ': ';
-        if (!String(cells[1]).trim()) throw new Error(location + 'enter a title, or clear the whole row.');
-        const websites = [cells[2], cells[3], cells[4]].map(v => String(v).trim()).filter(Boolean);
-        if (websites.some(w => !websiteOptions.has(w)))
-          throw new Error(location + 'choose websites from the dropdown; typed names must match the registry.');
-        if (!cells[0]) {
-          const current = sheet.getRange(index + 2, 1, 1, 2).getValues()[0];
-          if (current[0] || current[1] !== cells[1]) throw new Error('Tasks changed while syncing. Please sync again.');
-          cells[0] = Utilities.getUuid();
-          sheet.getRange(index + 2, 1).setValue(cells[0]);
+        if (!String(cells[columns.title]).trim()) throw new Error(location + 'enter a title, or clear the whole row.');
+        const websites = taskSheetWebsites(columns.websites.map(i => cells[i]).join('; '), websiteOptions, location);
+        if (!cells[columns.id]) {
+          const current = sheet.getRange(index + 2, 1, 1, width).getValues()[0];
+          if (current[columns.id] || current[columns.title] !== cells[columns.title])
+            throw new Error('Tasks changed while syncing. Please sync again.');
+          cells[columns.id] = Utilities.getUuid();
+          sheet.getRange(index + 2, columns.id + 1).setValue(cells[columns.id]);
         }
-        if (ids.has(String(cells[0])))
+        if (ids.has(String(cells[columns.id])))
           throw new Error(location + 'duplicate Task ID. Move the whole row between tabs instead of copying it.');
-        ids.add(String(cells[0]));
+        ids.add(String(cells[columns.id]));
         const cell = i =>
           cells[i] instanceof Date
             ? Utilities.formatDate(cells[i], book.getSpreadsheetTimeZone(), 'yyyy-MM-dd')
             : String(cells[i]).trim();
         rows.push({
-          id: cell(0),
-          title: cell(1),
+          id: cell(columns.id),
+          title: cell(columns.title),
           assignee: member,
           websites: [...new Set(websites)].join('; '),
-          priority: cell(5),
-          status: cell(6),
-          created_date: cell(7),
-          completed_date: cell(8),
-          archived: cell(9),
+          priority: cell(columns.priority),
+          status: cell(columns.status),
+          created_date: cell(columns.created),
+          completed_date: cell(columns.completed),
+          archived: cell(columns.archived),
         });
       });
     }
@@ -157,4 +156,37 @@ function syncDevDeskTasks() {
   } finally {
     lock.releaseLock();
   }
+}
+
+// Google Sheets serializes multiple dropdown chips with commas. Legacy columns use semicolons.
+function taskSheetWebsites(value, websiteOptions, location) {
+  const selected = String(value)
+    .split(/[;,]/)
+    .map(v => v.trim())
+    .filter(Boolean);
+  if (selected.some(w => w !== 'All websites' && !websiteOptions.has(w)))
+    throw new Error(location + 'choose websites from the dropdown; typed names must match the registry.');
+  return selected.includes('All websites') ? [...websiteOptions] : [...new Set(selected)];
+}
+function taskSheetColumns(headers, member) {
+  const keys = {
+    id: 'Task ID',
+    title: 'Title',
+    priority: 'Priority',
+    status: 'Status',
+    created: 'Created date',
+    completed: 'Completed date',
+    archived: 'Archived',
+  };
+  const columns = {};
+  for (const key of Object.keys(keys)) {
+    if (headers.filter(h => h === keys[key]).length !== 1)
+      throw new Error(member + ': expected one "' + keys[key] + '" column.');
+    columns[key] = headers.indexOf(keys[key]);
+  }
+  columns.websites = headers
+    .map((h, i) => (['Websites', 'Website', 'Website 2', 'Website 3'].includes(h) ? i : -1))
+    .filter(i => i >= 0);
+  if (!columns.websites.length) throw new Error(member + ': add the Websites column.');
+  return columns;
 }

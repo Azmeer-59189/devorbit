@@ -1,5 +1,6 @@
 'use client';
 import {useEffect, useRef, useState} from 'react';
+import {createPortal} from 'react-dom';
 import {useDialog} from '@/components/live-dialog';
 
 type Request = {
@@ -68,10 +69,30 @@ export function ConfirmHost() {
 function ConfirmDialog({request, done}: {request: Request; done: (value: string | boolean) => void}) {
   const [text, setText] = useState('');
   const cancel = () => done(false);
-  useDialog(cancel);
-  return (
-    <div className="overlay" onMouseDown={event => event.target === event.currentTarget && cancel()}>
+  const layer = useRef<HTMLDialogElement>(null);
+  const content = useRef<HTMLElement>(null);
+  useDialog(cancel, content);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const dialog = layer.current!;
+    dialog.showModal();
+    return () => {
+      dialog.close();
+      previous?.focus();
+    };
+  }, []);
+  return createPortal(
+    <dialog
+      ref={layer}
+      className="connected-app overlay confirmation-layer"
+      onCancel={event => {
+        event.preventDefault();
+        cancel();
+      }}
+      onMouseDown={event => event.target === event.currentTarget && cancel()}
+    >
       <section
+        ref={content}
         className="modal confirm-modal"
         role="alertdialog"
         aria-modal="true"
@@ -109,6 +130,7 @@ function ConfirmDialog({request, done}: {request: Request; done: (value: string 
           </footer>
         </form>
       </section>
-    </div>
+    </dialog>,
+    document.body,
   );
 }

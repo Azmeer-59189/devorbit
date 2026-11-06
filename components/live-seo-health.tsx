@@ -8,7 +8,7 @@ import {workspaceFetch} from '@/lib/workspace-client';
 import {confirmAction} from '@/components/confirm-dialog';
 import {seoStatuses, SeoValues, seoInput} from '@/lib/seo-health';
 import {ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Pencil} from 'lucide-react';
-import {compareCells, fieldsForPage, recordableFields, reviewSeo} from '@/lib/seo-review';
+import {compareCells, fieldsForPage, recordableFields, reviewSeo, reviewSavedHealth} from '@/lib/seo-review';
 import {seoTaskDraft, SeoTaskDraft} from '@/lib/seo-task';
 import {displayDate, workspaceDate} from '@/lib/dates';
 import {downloadRows, type ExportFormat} from '@/lib/export';
@@ -228,13 +228,7 @@ export default function LiveSeoHealth({
               ? w.cms
               : w.fields[key];
   // Reviews count what the table shows, so profile and audit values are not reported as gaps.
-  const reviewSite = (w: Site) =>
-    reviewPage({
-      ...w.fields,
-      ...Object.fromEntries(
-        ['page_seconds', 'seo_score', 'audit_date', 'website_url', 'cms'].map(k => [k, cellValue(w, k) ?? null]),
-      ),
-    });
+  const reviewSite = (w: Site) => reviewSavedHealth(w, mode);
   const sortField = pageFields.find(f => f.key === sort.key);
   const visibleSites = (catalog?.websites || [])
     .filter(w => {

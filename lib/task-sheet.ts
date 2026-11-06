@@ -4,9 +4,7 @@ import {InputError} from './live-validation';
 export const taskSheetHeaders = [
   'Task ID',
   'Title',
-  'Website',
-  'Website 2',
-  'Website 3',
+  'Websites',
   'Priority',
   'Status',
   'Created date',

@@ -1,4 +1,5 @@
 import {seoFields, SeoValues} from './seo-health';
+import {currentLoadTime, type AutomaticLoadTime} from './load-time';
 
 // Generated reference dates and summaries are not evidence of checklist completion.
 const generated = new Set(['qa', 'plugin_updated', 'backup_date', 'remarks']);
@@ -21,6 +22,30 @@ export function reviewSeo(fields: SeoValues, selectedFields = seoFields) {
     f => f.type === 'status' && ['no', 'not_yet', 'in_progress'].includes(String(fields[f.key])),
   );
   return {missing, issues};
+}
+
+/** The saved catalog values displayed by SEO, also used by the website's SEO summary. */
+export function reviewSavedHealth(
+  site: {
+    fields: SeoValues;
+    canonical_url: string;
+    cms: string;
+    latest_audit: {score: number; measurement_date: string} | null;
+    automatic_load_time?: AutomaticLoadTime | null;
+  },
+  mode: 'seo' | 'features' = 'seo',
+) {
+  return reviewSeo(
+    {
+      ...site.fields,
+      website_url: site.canonical_url,
+      cms: site.cms,
+      seo_score: site.latest_audit?.score ?? null,
+      audit_date: site.latest_audit?.measurement_date ?? null,
+      page_seconds: currentLoadTime(site).seconds,
+    },
+    fieldsForPage(mode),
+  );
 }
 
 export function compareSeo(

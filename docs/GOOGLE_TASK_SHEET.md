@@ -23,14 +23,20 @@ Google's [time-driven triggers](https://developers.google.com/apps-script/refere
 
 ## Everyday use
 
-- Add a task on your **named member tab**. Fill Title, Website, Priority, Status and relevant dates. The tab name determines the assignee. New task IDs are generated automatically when syncing; existing IDs must stay unchanged. The ID column is hidden to keep editing simple.
-- The visible columns are Title, Website, Website 2, Website 3, Priority, Status, Created date, Completed date, and Archived. Category, description, due date, blocker and completion notes are omitted; existing dashboard values for them are preserved.
-- Choose websites from the dropdowns. Use the optional Website 2 and Website 3 dropdowns for tasks covering multiple sites. Leave them all blank for a general team task. Invalid names are rejected before sync and checked again against the dashboard registry.
+- Add a task on your **named member tab**. Fill Title, Websites, Priority, Status and relevant dates. The tab name determines the assignee. New task IDs are generated automatically when syncing; existing IDs must stay unchanged. The ID column is hidden to keep editing simple.
+- The visible columns are Title, Websites, Priority, Status, Created date, Completed date, and Archived. Category, description, due date, blocker and completion notes are omitted; existing dashboard values for them are preserved.
+- Choose one or several options in the Websites dropdown. Select **All websites** for work across the full registry; it expands to the current reference list each time the script syncs. Leave Websites blank for a general team task. Invalid names are rejected before sync and checked again against the dashboard registry.
 - When adding a member, update the reference tab and create a task tab with exactly that active member's display name and the same headers/dropdowns. Duplicate member names are rejected. To reassign a task, move its full row to the other tab, retaining its ID; do not leave a duplicate in the original tab.
 - Mark **completed** and enter **Completed date** when finished. Clear that date if reopening. The completed date drives period-based dashboard reporting. For blocked tasks, an existing blocker is retained; a new task records that no blocker reason was supplied in Sheets.
 - Use **DevDesk → Sync now** before a presentation, then refresh the dashboard. While the dashboard stays open, it checks sync status each minute and refreshes charts after a new successful sync.
 - Set **Archived** to **Yes** to remove a task from active reports. Removing a sheet row never deletes or archives dashboard data. Duplicating a task row requires clearing its copied Task ID first (unhide column A).
 - Make task changes in the sheet. Existing dashboard task controls remain available, but they do not write back to Sheets. A later changed sheet row takes precedence.
+
+## Multiple website selections
+
+Use Google Sheets on a computer. For each member tab, open the Websites dropdown column menu, choose **Edit column type > Dropdown**, and enable **Allow multiple selections**, then save. Google exposes this checkbox in the Sheets interface, not the public Sheets API. The prepared dropdown contains all registered names plus **All websites**. If the column uses a range dropdown instead of a table column, open **Data > Data validation**, select the Websites rule, use chip display, and enable the same checkbox.
+
+Replace the bound Apps Script with the latest `scripts/google-task-sheet.gs` after changing the sheet layout. It accepts both the single Websites column and the legacy three website columns, recognizes native comma-separated selections, and expands All websites before posting. This script change does not require a Vercel redeployment.
 
 ## Errors and recovery
 

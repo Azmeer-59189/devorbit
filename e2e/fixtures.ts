@@ -76,6 +76,15 @@ export const workspace = {
 };
 
 const dashboard = {
+  activity: {
+    completed: 2,
+    owners: [
+      {id: members[2].id, count: 1},
+      {id: members[4].id, count: 1},
+    ],
+    websites: websites.map(w => ({id: w.id, count: 2})),
+    months: [{name: day(0).slice(0, 7), count: 2}],
+  },
   today: day(0),
   active_tasks: 9,
   overdue_tasks: 2,

@@ -1,6 +1,6 @@
 import {expect, test} from '@playwright/test';
 import {openWorkspace} from './workspace';
-import {tasks, websites} from './fixtures';
+import {apiResponse, tasks, websites} from './fixtures';
 
 test('dashboard summary tiles open the matching task list', async ({page}) => {
   await openWorkspace(page, '/workspace');
@@ -13,20 +13,32 @@ test('dashboard summary tiles open the matching task list', async ({page}) => {
   await expect(page.locator('main h1')).toHaveText('Tasks');
 });
 
-test('task completion shows only three statuses and uses their total', async ({page}) => {
+test('dashboard explains historical work without a completion-only progress bar', async ({page}) => {
   await openWorkspace(page, '/workspace');
-  const chart = page.locator('.task-completion');
-  await expect(chart.locator('.completion-row')).toHaveCount(3);
-  const statuses = ['to_do', 'in_progress', 'completed'];
-  const total = tasks.filter(t => statuses.includes(t.progress)).length;
-  for (const status of statuses) {
-    const count = tasks.filter(t => t.progress === status).length;
-    await expect(chart.locator(`[data-status="${status}"]`)).toHaveAttribute(
-      'aria-label',
-      new RegExp(`${count} of ${total} tasks`),
-    );
+  await page.route('**/api/dashboard?**', route =>
+    route.fulfill({
+      json: {
+        ...(apiResponse(new URL(route.request().url())) as object),
+        active_tasks: 0,
+        overdue_tasks: 0,
+        workload: [],
+        deadlines: {on_time: 0, overdue: 0, no_deadline: 0},
+        statuses: [{progress: 'completed', count: 2}],
+      },
+    }),
+  );
+  await page.getByRole('button', {name: 'Refresh charts', exact: true}).click();
+  await expect(page.locator('.completion-row')).toHaveCount(0);
+  for (const title of ['Completed work by team member', 'Tasks by website', 'Recorded completions by month']) {
+    const chart = page.locator('article').filter({has: page.getByRole('heading', {name: title, exact: true})});
+    await expect(chart.getByRole('region', {name: title, exact: true})).toBeVisible();
+    await chart.getByText('View chart data', {exact: true}).click();
+    await expect(chart.getByRole('table')).toBeVisible();
   }
-  await expect(chart.getByRole('button', {name: /Blocked|In review|Cancelled/})).toHaveCount(0);
+  const request = page.waitForRequest(r => r.url().includes('/api/dashboard?') && r.url().includes('start='));
+  await page.getByRole('button', {name: 'Last 12 months', exact: true}).click();
+  const url = new URL((await request).url());
+  expect((Date.parse(url.searchParams.get('end')!) - Date.parse(url.searchParams.get('start')!)) / 86400000).toBe(364);
 });
 
 test('task list shows due-date hints and switches to the board', async ({page}) => {

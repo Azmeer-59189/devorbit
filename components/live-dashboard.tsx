@@ -1,27 +1,15 @@
 'use client';
 import {useCallback, useEffect, useState} from 'react';
-import {Check, ClipboardList, Clock3} from 'lucide-react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import {Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
 import {Workspace} from '@/lib/live-types';
+import type {dashboardActivity} from '@/lib/dashboard-activity';
 import {shiftDate, workspaceDate} from '@/lib/dates';
 import {workspaceFetch} from '@/lib/workspace-client';
 import TaskSheetStatus from '@/components/task-sheet-status';
 import {useChartAnimation} from '@/lib/motion';
 import {taskFiltersToSearch, type TaskFilters} from '@/lib/task-list';
 type Dashboard = {
+  activity?: ReturnType<typeof dashboardActivity>;
   today: string;
   active_tasks: number;
   overdue_tasks: number;
@@ -65,19 +53,6 @@ type Dashboard = {
     audit_interval_days: number;
   };
 };
-// Brighter chart fills retain the status hues; text uses darker status tokens.
-const statusColor = (status: string) => `var(--chart-${status}, var(--chart-cancelled))`;
-const completionRows = [
-  {status: 'completed', label: 'Completed', Icon: Check},
-  {status: 'in_progress', label: 'In progress', Icon: Clock3},
-  {status: 'to_do', label: 'To do', Icon: ClipboardList},
-];
-// Open tasks by urgency. Each slice opens the task list filter that returns the same count.
-const deadlineSlices = [
-  {key: 'overdue', label: 'Overdue', color: statusColor('blocked'), open: {overdue: true}},
-  {key: 'on_time', label: 'On time', color: statusColor('completed'), open: {status: 'open', deadline: 'on_time'}},
-  {key: 'no_deadline', label: 'No deadline', color: statusColor('cancelled'), open: {status: 'open', deadline: 'none'}},
-] as const;
 function Empty() {
   return <div className="analytics-empty">No records match these filters yet.</div>;
 }
@@ -124,10 +99,6 @@ export default function LiveDashboard({
     // refetch too. The key is unchanged, so the current charts stay visible until the new numbers arrive.
   }, [key, data]);
   const dashboard = result?.key === key ? result.value : null;
-  const completionTotal = completionRows.reduce(
-    (total, row) => total + (dashboard?.statuses.find(s => s.progress === row.status)?.count || 0),
-    0,
-  );
   const error = failure?.key === key ? failure.message : '';
   const chartStyle = {fontSize: 12, color: 'var(--muted)'};
   const animation = useChartAnimation();
@@ -229,11 +200,30 @@ export default function LiveDashboard({
           Refresh charts
         </button>
       </div>
+      <div className="analytics-legend" aria-label="Date shortcuts">
+        <button
+          onClick={() => {
+            setStart(shiftDate(workspaceDate(data.workspace.timezone), -27));
+            setEnd(workspaceDate(data.workspace.timezone));
+          }}
+        >
+          Last 28 days
+        </button>
+        <button
+          onClick={() => {
+            setStart(shiftDate(workspaceDate(data.workspace.timezone), -364));
+            setEnd(workspaceDate(data.workspace.timezone));
+          }}
+        >
+          Last 12 months
+        </button>
+      </div>
       <details className="analytics-scope">
         <summary>About these numbers</summary>
         <p>
-          Tasks show their current status and current owner across all dates. The selected dates apply to completion
-          dates and SEO measurement dates. Team member means task owner or report submitter.
+          Team and website charts include all dates with the selected website and owner filters. The monthly chart,
+          Completed card, and SEO use the selected dates, based on recorded completion and SEO measurement dates. Team
+          member means task owner or report submitter. Archived tasks are excluded.
         </p>
       </details>
       {error ? (
@@ -272,165 +262,103 @@ export default function LiveDashboard({
             </div>
           </section>
           <div className="analytics-grid">
-            <article className="card analytics-chart">
-              <h3>Open task deadlines</h3>
-              <p>Open tasks by urgency · {dashboard.active_tasks} open</p>
-              {dashboard.deadlines && dashboard.active_tasks > 0 ? (
-                <>
-                  <div className="donut-wrap">
-                    <div className="donut-total" aria-hidden="true">
-                      <strong>{dashboard.active_tasks}</strong>
-                      <span>open</span>
+            {dashboard.activity ? (
+              [
+                {
+                  title: 'Completed work by team member',
+                  description: `All dates | ${dashboard.activity.completed} completed tasks | current owner`,
+                  rows: dashboard.activity.owners.map(r => ({
+                    ...r,
+                    name:
+                      data.members.find(m => m.id === r.id)?.display_name ||
+                      (r.id === 'unassigned' ? 'Unassigned' : 'Unknown member'),
+                  })),
+                },
+                {
+                  title: 'Tasks by website',
+                  description: 'All dates and statuses | multi-site tasks count once per linked website.',
+                  rows: dashboard.activity.websites.map(r => ({
+                    ...r,
+                    name:
+                      data.websites.find(w => w.id === r.id)?.name ||
+                      (r.id === 'unlinked' ? 'No website linked' : 'Unknown website'),
+                  })),
+                },
+                {
+                  title: 'Recorded completions by month',
+                  description: `${start} to ${end} | imported work dates and assumed completion dates are included.`,
+                  rows: dashboard.activity.months.map(r => ({...r, id: r.name})),
+                },
+              ].map(chart => (
+                <article className="card analytics-chart" key={chart.title}>
+                  <h3>{chart.title}</h3>
+                  <p>{chart.description}</p>
+                  {chart.rows.some(r => r.count > 0) ? (
+                    <>
+                      <div className="workload-chart-scroll" tabIndex={0} role="region" aria-label={chart.title}>
+                        <ResponsiveContainer width="100%" height={Math.max(240, chart.rows.length * 38 + 32)}>
+                          <BarChart
+                            data={chart.rows}
+                            layout="vertical"
+                            accessibilityLayer
+                            style={chartStyle}
+                            margin={{right: 24}}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
+                            <XAxis type="number" allowDecimals={false} tick={{fill: 'var(--text)'}} />
+                            <YAxis
+                              type="category"
+                              dataKey="name"
+                              width={115}
+                              interval={0}
+                              tick={{fontSize: 12, fill: 'var(--text)'}}
+                            />
+                            <Tooltip />
+                            <Bar
+                              dataKey="count"
+                              name="Tasks"
+                              fill="var(--palette-teal)"
+                              radius={[0, 4, 4, 0]}
+                              maxBarSize={24}
+                              {...animation}
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <details>
+                        <summary>View chart data</summary>
+                        <div className="table-wrap">
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Group</th>
+                                <th>Tasks</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {chart.rows.map(r => (
+                                <tr key={r.id}>
+                                  <td>{r.name}</td>
+                                  <td>{r.count}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </details>
+                    </>
+                  ) : (
+                    <div className="analytics-empty">
+                      No recorded completions in this date range. Choose an earlier From date to explore history.
                     </div>
-                    <ResponsiveContainer width="100%" height={240}>
-                      <PieChart accessibilityLayer>
-                        <Pie
-                          data={deadlineSlices.map(s => ({label: s.label, count: dashboard.deadlines![s.key]}))}
-                          dataKey="count"
-                          nameKey="label"
-                          innerRadius={60}
-                          outerRadius={90}
-                          {...animation}
-                          cursor="pointer"
-                          onClick={(_, index) => drill(deadlineSlices[index].open)}
-                        >
-                          {deadlineSlices.map(s => (
-                            <Cell key={s.key} fill={s.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="analytics-legend">
-                    {deadlineSlices.map(s => (
-                      <button key={s.key} onClick={() => drill(s.open)}>
-                        <i style={{background: s.color}} />
-                        {s.label} <strong>{dashboard.deadlines![s.key]}</strong>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="form-hint">Select a slice or label to see those tasks.</p>
-                </>
-              ) : dashboard.deadlines ? (
-                <Empty />
-              ) : (
-                <div className="analytics-empty">
-                  Apply the latest database migration (016) to see deadlines and attention counts.
-                </div>
-              )}
-            </article>
-            <article className="card analytics-chart">
-              <h3>Current workload</h3>
-              <p>Open tasks by owner, including unassigned work.</p>
-              {dashboard.workload.length ? (
-                <>
-                  <div
-                    className="workload-chart-scroll"
-                    tabIndex={0}
-                    role="region"
-                    aria-label="Workload chart; scroll for more team members"
-                  >
-                    <ResponsiveContainer width="100%" height={Math.max(240, dashboard.workload.length * 44 + 32)}>
-                      <BarChart
-                        data={dashboard.workload}
-                        layout="vertical"
-                        accessibilityLayer
-                        style={chartStyle}
-                        margin={{top: 8, right: 20, bottom: 0, left: 0}}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
-                        <XAxis
-                          type="number"
-                          allowDecimals={false}
-                          tick={{fontSize: 12, fill: 'var(--muted)'}}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <YAxis
-                          type="category"
-                          dataKey="name"
-                          tick={{fontSize: 12, fill: 'var(--muted)'}}
-                          interval={0}
-                          width={112}
-                          axisLine={false}
-                          tickLine={false}
-                          tickFormatter={(value: string) => (value.length > 17 ? `${value.slice(0, 16)}…` : value)}
-                        />
-                        <Tooltip />
-                        <Bar
-                          dataKey="count"
-                          name="Active tasks"
-                          fill="var(--primary)"
-                          radius={[0, 4, 4, 0]}
-                          maxBarSize={26}
-                          {...animation}
-                          cursor="pointer"
-                          onClick={(_, index) =>
-                            drill({status: 'open', owner: dashboard.workload[index].assignee_id || 'unassigned'})
-                          }
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="analytics-legend">
-                    {dashboard.workload.map(w => (
-                      <button
-                        key={w.assignee_id || 'unassigned'}
-                        onClick={() => drill({status: 'open', owner: w.assignee_id || 'unassigned'})}
-                      >
-                        {w.name} <strong>{w.count}</strong>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <Empty />
-              )}
-            </article>
-            <article className="card analytics-chart task-completion">
-              <h3>Task Completion</h3>
-              <p>Share of {completionTotal} matching tasks in these three statuses.</p>
-              {completionTotal > 0 ? (
-                <>
-                  <div className="completion-rows">
-                    {completionRows.map(({status, label, Icon}) => {
-                      const count = dashboard.statuses.find(s => s.progress === status)?.count || 0;
-                      const percentage = (count / completionTotal) * 100;
-                      const displayPercentage = new Intl.NumberFormat('en', {maximumFractionDigits: 1}).format(
-                        percentage,
-                      );
-                      return (
-                        <button
-                          key={status}
-                          className="completion-row"
-                          data-status={status}
-                          onClick={() => drill({status})}
-                          aria-label={`${label}: ${count} of ${completionTotal} tasks (${displayPercentage}%). View tasks`}
-                        >
-                          <span className="completion-icon" aria-hidden="true">
-                            <Icon size={17} />
-                          </span>
-                          <span className="completion-content">
-                            <span className="completion-label">
-                              <span>{label}</span>
-                              <span>{displayPercentage}%</span>
-                            </span>
-                            {/* Visual only: the button's label already reads the count and share. */}
-                            <span className="completion-bar" aria-hidden="true">
-                              <i style={{width: `${percentage}%`}} />
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="form-hint">Select a status to view its tasks.</p>
-                </>
-              ) : (
-                <Empty />
-              )}
-            </article>
+                  )}
+                </article>
+              ))
+            ) : (
+              <div role="status" className="card analytics-empty">
+                Refresh charts to load task history.
+              </div>
+            )}
           </div>
           <details className="dashboard-seo-details">
             <summary>SEO trend</summary>

@@ -1,6 +1,8 @@
 import {expect, test} from '@playwright/test';
 import {openWorkspace} from './workspace';
 import {apiResponse, tasks, websites} from './fixtures';
+import {dashboardActivity} from '../lib/dashboard-activity';
+import {shiftDate} from '../lib/dates';
 
 test('dashboard summary tiles open the matching task list', async ({page}) => {
   await openWorkspace(page, '/workspace');
@@ -44,6 +46,47 @@ test('dashboard explains historical work without a completion-only progress bar'
   await page.getByRole('button', {name: 'Last 12 months', exact: true}).click();
   const url = new URL((await request).url());
   expect((Date.parse(url.searchParams.get('end')!) - Date.parse(url.searchParams.get('start')!)) / 86400000).toBe(364);
+});
+
+test('dashboard trend renders and hovers at every bucket size', async ({page}) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const completed = [3, 20, 45, 80, 120, 150, 260, 300].map((days, i) => ({
+    id: String(i),
+    progress: 'completed',
+    assignee_id: null,
+    completed_at: `${shiftDate(today, -days)}T12:00:00Z`,
+    task_websites: [],
+  }));
+  await openWorkspace(page, '/workspace');
+  // The real bucketing, so the chart receives what the server sends for each range.
+  await page.route('**/api/dashboard?**', route => {
+    const url = new URL(route.request().url());
+    const dates = {start: url.searchParams.get('start')!, end: url.searchParams.get('end')!};
+    return route.fulfill({
+      json: {
+        ...(apiResponse(url) as object),
+        activity: dashboardActivity(completed, {...dates, user_id: null, website_id: null}, 'UTC'),
+      },
+    });
+  });
+  const from = page.getByLabel('From', {exact: true});
+  const check = async (unit: string, tooltip: RegExp) => {
+    const title = `Recorded completions by ${unit}`;
+    const chart = page.locator('article').filter({has: page.getByRole('heading', {name: title, exact: true})});
+    await expect(chart).toBeVisible();
+    await chart.locator('.recharts-surface').first().hover();
+    await expect(chart.locator('.chart-tooltip strong')).toHaveText(tooltip);
+  };
+  await from.fill(shiftDate(today, -27));
+  await check('day', /^[A-Z][a-z]{2} \d+/);
+  await from.fill(shiftDate(today, -90));
+  await check('week', /^Week of /);
+  await from.fill(shiftDate(today, -200));
+  await check('month', /^[A-Z][a-z]+ \d{4}$/);
+  await page.getByRole('button', {name: 'Last 28 days', exact: true}).click();
+  await check('day', /^[A-Z][a-z]{2} \d+/);
+  await page.getByRole('button', {name: 'Last 12 months', exact: true}).click();
+  await check('month', /^[A-Z][a-z]+ \d{4}$/);
 });
 
 test('task list shows due-date hints and switches to the board', async ({page}) => {

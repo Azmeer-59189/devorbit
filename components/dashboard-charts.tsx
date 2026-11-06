@@ -104,7 +104,8 @@ export function TrendChart({trend, today}: {trend: Trend; today: string}) {
           content={({active, label, payload}) => (
             <ChartTooltip
               active={active}
-              label={trendLabel(String(label), trend.unit, today)}
+              // Recharts renders this with no label until the chart is hovered.
+              label={label ? trendLabel(String(label), trend.unit, today) : undefined}
               payload={payload as readonly TooltipEntry[]}
             />
           )}

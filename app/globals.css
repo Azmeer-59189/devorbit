@@ -2,36 +2,35 @@
 Edit the owning component rule here; do not add override/theme stylesheets.
 Responsive rules keep their cascade order. See docs/STYLING.md. */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Manrope:wght@400;500;600;650;700;750;800&display=swap');
-/* Theme source: Color Hunt, https://colorhunt.co/palette/1b262c0f4c753282b8bbe1fa
-   Published colors are used directly; light surfaces mix the palette blue with white.
-   Black/white text and semantic warning/success states retain their accessibility roles. */
+/* User-selected theme: slate #40514E, teal #11999E, mint #30E3CA, pale mint #E4F9F5.
+   Slate text and pale surfaces provide readable contrast; mint is reserved for highlights. */
 /* Design tokens — shared surfaces, actions, typography and radii */
 :root {
-  --palette-charcoal: #1b262c;
-  --palette-navy: #0f4c75;
-  --palette-blue: #3282b8;
-  --palette-ice: #bbe1fa;
-  --ink: #000;
+  --palette-slate: #40514e;
+  --palette-teal: #11999e;
+  --palette-mint: #30e3ca;
+  --palette-pale: #e4f9f5;
+  --ink: var(--palette-slate);
   --teal: #116d65;
   --amber: #865013;
-  --bg: color-mix(in srgb, var(--palette-ice) 22%, white);
+  --bg: color-mix(in srgb, var(--palette-pale) 22%, white);
   --surface: #fff;
-  --text: #000;
-  --border: color-mix(in srgb, var(--palette-blue) 25%, white);
+  --text: var(--palette-slate);
+  --border: color-mix(in srgb, var(--palette-slate) 20%, white);
   --sidebar: 224px;
-  --border-control: color-mix(in srgb, var(--palette-blue) 40%, white);
-  --surface-sidebar: color-mix(in srgb, var(--palette-ice) 40%, white);
-  --surface-subtle: color-mix(in srgb, var(--palette-ice) 25%, white);
+  --border-control: color-mix(in srgb, var(--palette-slate) 35%, white);
+  --surface-sidebar: color-mix(in srgb, var(--palette-pale) 40%, white);
+  --surface-subtle: color-mix(in srgb, var(--palette-pale) 25%, white);
   /* Sky blue, kept apart from the navy --primary so In progress never reads as a button. */
-  --chart-blue: var(--palette-blue);
-  --chart-teal: #10b9a2;
+  --chart-blue: var(--palette-teal);
+  --chart-teal: var(--palette-mint);
   --chart-completed: var(--chart-teal);
   --chart-in_progress: var(--chart-blue);
   --chart-in_review: #9561f5;
   --chart-blocked: #ff5964;
   --chart-to_do: #ffbf24;
   --chart-cancelled: #91a3c2;
-  --nav-active-bg: var(--primary-surface);
+  --nav-active-bg: var(--palette-mint);
   --auth-accent: var(--primary);
   --auth-accent-hover: var(--primary-hover);
   --radius-sm: 5px;
@@ -41,24 +40,24 @@ Responsive rules keep their cascade order. See docs/STYLING.md. */
   --radius-lg: 12px;
   --font-body: 'DM Sans', Arial, sans-serif;
   --font-display: 'Manrope', Arial, sans-serif;
-  --muted: #000;
+  --muted: var(--palette-slate);
   /* Approximate palette from the supplied Indus logo; the artwork is not used. */
   --brand-red: #ed1b24;
   --brand-red-strong: #c41620;
-  --primary: var(--palette-navy);
-  --primary-hover: var(--palette-charcoal);
-  --primary-surface: var(--palette-ice);
-  --primary-border: var(--palette-blue);
-  /* Blue surfaces distinguish navigation, headers and interactive rows. */
-  --surface-hover: color-mix(in srgb, var(--palette-ice) 60%, white);
-  --focus-ring: var(--palette-blue);
+  --primary: var(--palette-slate);
+  --primary-hover: color-mix(in srgb, var(--palette-slate) 85%, black);
+  --primary-surface: var(--palette-pale);
+  --primary-border: var(--palette-teal);
+  /* Mint surfaces distinguish navigation, headers and interactive rows. */
+  --surface-hover: color-mix(in srgb, var(--palette-pale) 60%, white);
+  --focus-ring: var(--palette-teal);
   --nav-active-text: var(--primary);
   --font-size-body: 14px;
   --font-size-label: 13px;
   --font-size-caption: 12px;
   --font-size-title: 16px;
   --status-completed: #08796d;
-  --status-in_progress: #0369a1;
+  --status-in_progress: var(--palette-slate);
   --status-in_review: #7951b0;
   --status-blocked: #bf4252;
   --status-to_do: #7c681a;
@@ -667,6 +666,36 @@ tbody tr:last-child td {
   font-size: 13.5px;
   line-height: 1.9;
   margin-top: 9px;
+}
+.task-sheet-card {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px;
+  margin-bottom: 22px;
+  border: 1px solid var(--palette-teal);
+  border-left: 5px solid var(--palette-teal);
+  border-radius: var(--radius-card);
+  background: var(--palette-pale);
+}
+.task-sheet-card > svg {
+  color: var(--palette-teal);
+  flex-shrink: 0;
+}
+.task-sheet-card > div {
+  flex: 1 1 220px;
+}
+.task-sheet-card h2 {
+  font-size: var(--font-size-title);
+  margin: 0 0 5px;
+}
+.task-sheet-card p {
+  margin: 0;
+}
+.task-sheet-card .button {
+  background: var(--palette-slate);
+  color: white;
 }
 .info-callout {
   display: flex;
@@ -3231,8 +3260,13 @@ h4 {
 }
 /* Workspace shell appearance */
 .connected-app .sidebar {
-  background: var(--surface-sidebar);
-  border-right: 1px solid var(--border);
+  background: var(--palette-slate);
+  --text: #fff;
+  --ink: #fff;
+  --muted: var(--palette-pale);
+  --surface-sidebar: var(--palette-slate);
+  --surface-hover: color-mix(in srgb, var(--palette-slate) 70%, var(--palette-teal));
+  border-right: 1px solid var(--palette-slate);
   box-shadow: none;
   padding: 25px 14px 0;
   color: var(--text);
@@ -3254,7 +3288,7 @@ h4 {
   color: var(--brand-red);
 }
 .sidebar .workspace-switch {
-  background: var(--surface);
+  background: color-mix(in srgb, var(--palette-slate) 85%, white);
   border: 1px solid var(--border);
   border-radius: 7px;
   padding: 10px;
@@ -3271,7 +3305,7 @@ h4 {
   font-size: var(--font-size-caption);
 }
 .sidebar .workspace-icon {
-  background: var(--primary-surface);
+  background: var(--palette-mint);
   color: var(--primary);
   border-radius: var(--radius-control);
 }
@@ -3279,6 +3313,9 @@ h4 {
   color: var(--muted);
 }
 .connected-app .sidebar-create {
+  --text: var(--palette-slate);
+  --surface-hover: var(--palette-pale);
+  color: var(--palette-slate);
   width: 100%;
   justify-content: flex-start;
   margin-bottom: 26px;
@@ -3303,7 +3340,7 @@ h4 {
   font-size: var(--font-size-body);
 }
 .connected-app .sidebar .nav-item:hover {
-  background: #f0f2f6;
+  background: color-mix(in srgb, var(--palette-slate) 70%, var(--palette-teal));
   color: var(--text);
 }
 .connected-app .sidebar .nav-item.active,
@@ -3334,7 +3371,7 @@ h4 {
   padding: 10px 11px;
 }
 .simple-more > summary:hover {
-  background: #f0f2f6;
+  background: var(--surface-hover);
   color: var(--text);
 }
 .simple-more > summary::after {
@@ -3357,6 +3394,7 @@ h4 {
   background: #63b69d;
 }
 .sidebar .user-profile {
+  --text: #fff;
   width: calc(100% + 28px);
   margin: 0 -14px;
   padding: 17px 20px;
@@ -3628,32 +3666,33 @@ h4 {
     transform: scaleX(0);
   }
 }
-/* Summary cards use the published blue palette; semantic badge/chart colors stay separate. */
+/* Summary cards use pale mint with teal accents; semantic badge/chart colors stay separate. */
 .attention-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
 }
 .attention-item {
+  box-shadow: inset 0 -3px 0 var(--palette-mint);
   display: grid;
   gap: 5px;
   padding: 20px 22px;
   min-height: 136px;
   text-align: left;
-  background: var(--palette-ice);
-  border: 1px solid var(--palette-blue);
-  border-top: 5px solid var(--palette-navy);
+  background: var(--palette-pale);
+  border: 1px solid var(--palette-mint);
+  border-top: 5px solid var(--palette-teal);
   border-radius: var(--radius-card);
 }
 /* A tile that is filtering the table below. */
 button.attention-item[aria-pressed='true'] {
-  background: color-mix(in srgb, var(--palette-ice) 75%, white);
-  border-color: var(--palette-navy);
-  box-shadow: inset 0 0 0 2px var(--palette-navy);
+  background: color-mix(in srgb, var(--palette-pale) 75%, white);
+  border-color: var(--palette-teal);
+  box-shadow: inset 0 0 0 2px var(--palette-teal);
 }
 button.attention-item:hover {
-  background: color-mix(in srgb, var(--palette-ice) 65%, white);
-  border-color: var(--palette-navy);
+  background: color-mix(in srgb, var(--palette-pale) 65%, white);
+  border-color: var(--palette-teal);
   box-shadow: 0 4px 12px #1b262c18;
 }
 .attention-item strong {

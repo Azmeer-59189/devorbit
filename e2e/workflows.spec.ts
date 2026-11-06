@@ -187,3 +187,25 @@ test('editing a task preserves the fields removed from the form', async ({page})
   expect(body.category).toBe(original.category);
   expect(body.due_date).toBe(original.due_date);
 });
+
+test('dashboard exposes the connected Google task sheet as a direct shortcut', async ({page}) => {
+  await openWorkspace(page, '/workspace');
+  const url = 'https://docs.google.com/spreadsheets/d/TEST-sheet/edit';
+  await page.route('**/api/integrations/task-sheet', route =>
+    route.fulfill({
+      json: {
+        connected: true,
+        url,
+        last_synced_at: null,
+        setup_pending: false,
+      },
+    }),
+  );
+  await page.reload();
+  const shortcut = page
+    .getByRole('region', {name: 'Google task spreadsheet'})
+    .getByRole('link', {name: 'Open Google Sheet'});
+  await expect(shortcut).toBeVisible();
+  await expect(shortcut).toHaveAttribute('href', url);
+  await expect(shortcut).toHaveAttribute('target', '_blank');
+});

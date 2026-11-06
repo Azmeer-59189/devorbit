@@ -1,5 +1,5 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
-import {workspaceDate} from './dates';
+import {shiftDate, shiftMonths, workspaceDate} from './dates';
 
 export type ActivityTask = {
   id: string;
@@ -26,6 +26,37 @@ export async function readActivityTasks(client: SupabaseClient, workspace: strin
   }
 }
 
+const dayNumber = (date: string) => Date.parse(date) / 86400000;
+const monthNumber = (date: string) => Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7));
+
+/**
+ * Buckets for the completion trend: days up to a month, weeks up to six months, then calendar
+ * months, so every range has enough points to show a shape. The previous window is the same
+ * length immediately before, and shares bucket positions with the selected one.
+ */
+function trendBuckets(start: string, end: string) {
+  const days = dayNumber(end) - dayNumber(start) + 1;
+  const unit = days <= 31 ? ('day' as const) : days <= 183 ? ('week' as const) : ('month' as const);
+  const size = unit === 'week' ? 7 : 1;
+  const position = (date: string, from: string) =>
+    unit === 'month' ? monthNumber(date) - monthNumber(from) : Math.floor((dayNumber(date) - dayNumber(from)) / size);
+  const count = position(end, start) + 1;
+  return {
+    unit,
+    position,
+    previous:
+      unit === 'month'
+        ? {start: shiftMonths(start, -count), end: shiftMonths(end, -count)}
+        : {start: shiftDate(start, -days), end: shiftDate(start, -1)},
+    // Zero-filled so gaps remain visible.
+    points: Array.from({length: count}, (_, i) => ({
+      date: unit === 'month' ? shiftMonths(start.slice(0, 8) + '01', i) : shiftDate(start, i * size),
+      count: 0,
+      previous: 0,
+    })),
+  };
+}
+
 export function dashboardActivity(
   tasks: ActivityTask[],
   filters: {
@@ -43,13 +74,7 @@ export function dashboardActivity(
   );
   const owners = new Map<string, number>();
   const websites = new Map<string, number>();
-  const months = new Map<string, number>();
-  // Zero-fill months within the selected range so gaps remain visible.
-  const cursor = new Date(filters.start.slice(0, 7) + '-01T12:00:00Z');
-  while (cursor.toISOString().slice(0, 7) <= filters.end.slice(0, 7)) {
-    months.set(cursor.toISOString().slice(0, 7), 0);
-    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
-  }
+  const {unit, position, previous, points} = trendBuckets(filters.start, filters.end);
   let completed = 0;
   for (const task of scoped) {
     for (const id of new Set(task.task_websites.length ? task.task_websites.map(w => w.website_id) : ['unlinked']))
@@ -60,8 +85,8 @@ export function dashboardActivity(
     owners.set(owner, (owners.get(owner) || 0) + 1);
     if (task.completed_at) {
       const date = workspaceDate(timezone, new Date(task.completed_at));
-      if (date >= filters.start && date <= filters.end)
-        months.set(date.slice(0, 7), (months.get(date.slice(0, 7)) || 0) + 1);
+      if (date >= filters.start && date <= filters.end) points[position(date, filters.start)].count++;
+      else if (date >= previous.start && date <= previous.end) points[position(date, previous.start)].previous++;
     }
   }
   const ranked = (values: Map<string, number>) =>
@@ -70,6 +95,6 @@ export function dashboardActivity(
     completed,
     owners: ranked(owners),
     websites: ranked(websites),
-    months: [...months].map(([name, count]) => ({name, count})),
+    trend: {unit, points},
   };
 }

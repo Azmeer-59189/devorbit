@@ -57,6 +57,15 @@ export function shiftDate(date: string, days: number) {
   return value.toISOString().slice(0, 10);
 }
 
+/** Same day of another month, clamped to that month's last day (Mar 31 minus one month is Feb 28). */
+export function shiftMonths(date: string, months: number) {
+  const [year, month, day] = calendarDate(date).split('-').map(Number);
+  const target = new Date(Date.UTC(year, month - 1 + months, 1, 12));
+  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0, 12)).getUTCDate();
+  target.setUTCDate(Math.min(day, last));
+  return target.toISOString().slice(0, 10);
+}
+
 /** Monday–Sunday week containing the given date. */
 export function weekRange(date: string) {
   const day = new Date(calendarDate(date) + 'T12:00:00Z').getUTCDay();

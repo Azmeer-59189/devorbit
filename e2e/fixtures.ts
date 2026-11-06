@@ -83,7 +83,14 @@ const dashboard = {
       {id: members[4].id, count: 1},
     ],
     websites: websites.map(w => ({id: w.id, count: 2})),
-    months: [{name: day(0).slice(0, 7), count: 2}],
+    trend: {
+      unit: 'day',
+      points: [1, 0, 2, 3, 1, 0, 0, 2, 4, 3, 1, 2, 0, 1, 3, 5, 4, 2, 1, 0, 1, 3, 4, 6, 3, 2, 1, 2].map((count, i) => ({
+        date: day(i - 27),
+        count,
+        previous: [0, 1, 1, 2, 2, 3, 2, 1, 1, 0, 1, 2, 3, 3, 2, 1, 2, 3, 4, 3, 2, 1, 1, 2, 3, 2, 1, 1][i],
+      })),
+    },
   },
   today: day(0),
   active_tasks: 9,

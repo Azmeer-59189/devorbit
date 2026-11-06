@@ -6,7 +6,7 @@ sign-in/invitation pages, responsive rules, and interaction states.
 
 ## Theme palette
 
-The theme uses the user-selected slate `#40514E`, teal `#11999E`, mint `#30E3CA`, and pale mint `#E4F9F5`. Slate owns the sidebar, headings, body text, and filled buttons. Teal provides navigation/chart accents, mint marks active items and small highlights, and pale mint fills quiet sections. The dark sidebar uses white labels; colored action buttons use white text on slate for readable contrast.
+The user-selected palette uses blue-gray `#DBE2EF` for the main background, off-white `#F9F7F7` for cards, tables, drawers and sidebar, blue `#3F72AF` for actions and links, and navy `#112D4E` for headings and text. Active navigation uses blue with white text. Semantic task states retain distinct colors.
 The dashboard summary shows Active tasks, Overdue, Due for SEO audit, and Completed. Blocked and Awaiting acceptance remain in task filters but have no summary cards.
 
 ## Making changes
@@ -33,22 +33,28 @@ The light workspace uses 14px navigation, table content, and form inputs;
 13px labels; 12px supporting captions; and 16px card headings. Shared muted
 text and primary actions use the contrast-adjusted tokens at the top of the
 stylesheet. Task statuses have permanent colors through `--status-*` tokens:
-teal for completed, sky blue for in progress (kept distinct from the navy
-primary), purple for review, red for blocked,
+teal for completed, sky blue for in progress, purple for review, red for blocked,
 ochre for not started, and slate for cancelled. Bind board/chart elements with
 `data-status`; task badges use the corresponding status class. Do not assign
 status colors by array index.
 
 The dashboard opens with one row of summary tiles that link to filtered task
-lists, and the explanation of date/filter scope is available in the “About these
-numbers” disclosure. Workload charts use horizontal
-bars and scroll vertically for larger teams; full owner names remain available
-in the clickable list below the chart.
+lists, each with a status-coloured icon chip and a small figure, and the explanation
+of date/filter scope is available in the “About these numbers” disclosure. Cards are
+soft: `--radius-card` corners with `--shadow-card`, lifting to `--shadow-card-hover`.
+
+Chart components live in `components/dashboard-charts.tsx` and share one tooltip. The
+completion trend layers the selected period over the previous one with monotone curves,
+in day, week or month buckets by range length (`lib/dashboard-activity.ts`). A status
+donut, ranked member and website bars, and open-work columns sit below it. Status
+colours come from the `--chart-*` tokens and were checked for colour-blind separation;
+keep every figure beside a label or data table, since amber and slate are below 3:1 on
+the card surface. Data tables preserve exact values; larger rankings scroll vertically.
 
 - Up to 700px: collapsed navigation, mobile spacing, single-column content.
 - Up to 800–850px: stacked analytics and reporting layouts.
 - Up to 1000–1250px: compact sidebar, tables, and forms.
-- From 1450px: three dashboard chart columns.
+- Activity charts: an 8/4 row then three columns on desktop, full-width trend and two columns up to 1200px, and one column below 850px.
 - Short desktop windows have compact navigation spacing.
 - Reduced-motion preferences disable animation and transitions.
 

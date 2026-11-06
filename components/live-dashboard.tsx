@@ -1,12 +1,21 @@
 'use client';
-import {useCallback, useEffect, useState} from 'react';
-import {Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from 'recharts';
-import {Workspace} from '@/lib/live-types';
+import {useCallback, useEffect, useState, type ReactNode} from 'react';
+import {AlarmClock, CircleCheckBig, ListTodo, SearchCheck} from 'lucide-react';
+import {Workspace, statusName} from '@/lib/live-types';
 import type {dashboardActivity} from '@/lib/dashboard-activity';
-import {shiftDate, workspaceDate} from '@/lib/dates';
+import {displayDate, shiftDate, workspaceDate} from '@/lib/dates';
 import {workspaceFetch} from '@/lib/workspace-client';
 import TaskSheetStatus from '@/components/task-sheet-status';
-import {useChartAnimation} from '@/lib/motion';
+import {
+  Meter,
+  SegmentBar,
+  SeoTrendChart,
+  Sparkline,
+  StatusDonut,
+  TrendChart,
+  WorkloadChart,
+  trendLabel,
+} from '@/components/dashboard-charts';
 import {taskFiltersToSearch, type TaskFilters} from '@/lib/task-list';
 type Dashboard = {
   activity?: ReturnType<typeof dashboardActivity>;
@@ -56,6 +65,106 @@ type Dashboard = {
 function Empty() {
   return <div className="analytics-empty">No records match these filters yet.</div>;
 }
+/** Title, plot and exact-values table shared by every dashboard chart. */
+function ChartCard({
+  eyebrow,
+  title,
+  description,
+  span,
+  aside,
+  table,
+  empty,
+  scroll,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  span: 4 | 8;
+  aside?: ReactNode;
+  table: {head: string[]; rows: (string | number)[][]};
+  /** Shown instead of the plot when there is nothing to draw. */
+  empty: string | null;
+  scroll?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <article className={`card analytics-chart activity-card span-${span}`}>
+      <div className="activity-card-head">
+        <div>
+          <span className="activity-eyebrow">{eyebrow}</span>
+          <h3>{title}</h3>
+          <p>{description}</p>
+        </div>
+        {aside}
+      </div>
+      {empty ? (
+        <div className="analytics-empty">{empty}</div>
+      ) : (
+        <>
+          <div
+            className={scroll ? 'activity-ranking-scroll' : 'activity-plot'}
+            tabIndex={0}
+            role="region"
+            aria-label={title}
+          >
+            {children}
+          </div>
+          <details>
+            <summary>View chart data</summary>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    {table.head.map(h => (
+                      <th key={h}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {table.rows.map((row, i) => (
+                    <tr key={i}>
+                      {row.map((cell, j) => (
+                        <td key={j}>{cell}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        </>
+      )}
+    </article>
+  );
+}
+function Ranking({rows}: {rows: {id: string; name: string; count: number}[]}) {
+  const most = Math.max(...rows.map(r => r.count));
+  return (
+    <ol className="activity-ranking">
+      {rows.map((row, index) => (
+        <li key={row.id}>
+          <span className="activity-rank-index" aria-hidden="true">
+            {String(index + 1).padStart(2, '0')}
+          </span>
+          <div className="activity-rank-content">
+            <div className="activity-rank-label">
+              <span>{row.name}</span>
+              <strong>{row.count.toLocaleString()}</strong>
+            </div>
+            <div className="activity-rank-track" aria-hidden="true">
+              <span style={{width: `${(row.count / most) * 100}%`}} />
+            </div>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+const rankedTable = (rows: {name: string; count: number}[]) => ({
+  head: ['Group', 'Tasks'],
+  rows: rows.map(r => [r.name, r.count]),
+});
 export default function LiveDashboard({
   data,
   onTasks,
@@ -100,42 +209,67 @@ export default function LiveDashboard({
   }, [key, data]);
   const dashboard = result?.key === key ? result.value : null;
   const error = failure?.key === key ? failure.message : '';
-  const chartStyle = {fontSize: 12, color: 'var(--muted)'};
-  const animation = useChartAnimation();
+  const today = workspaceDate(data.workspace.timezone);
+  const presets = [
+    {label: 'Last 28 days', days: 27},
+    {label: 'Last 12 months', days: 364},
+  ];
   // Task charts ignore the date range and filter by website and current owner, exactly
   // like the task list, so the list opened from a chart shows the count that was clicked.
   const drill = (filters: Partial<TaskFilters>) =>
     onTasks(taskFiltersToSearch({website, owner: user, ...filters}).toString());
   // One row of counts, most urgent first. The attention counts need migration 016; overdue
   // comes from the same open-task query either way. Completed has no task-list filter.
-  const summaryTiles = (d: Dashboard) => [
-    {
-      label: 'Active tasks',
-      hint: 'Open right now',
-      value: d.active_tasks,
-      status: 'in_progress',
-      open: () => drill({status: 'open'}),
-    },
-    {
-      label: 'Overdue',
-      hint: 'Past their due date',
-      value: d.overdue_tasks,
-      status: 'blocked',
-      open: () => drill({overdue: true}),
-    },
-    ...(d.attention
-      ? [
-          {
-            label: 'Due for SEO audit',
-            hint: `No audit in ${d.attention.audit_interval_days} days`,
-            value: d.attention.audits_due,
-            status: 'in_review',
-            open: () => (website ? onSeo(website) : onAudits()),
-          },
-        ]
-      : []),
-    {label: 'Completed', hint: 'In the selected dates', value: d.completed_tasks, status: 'completed', open: null},
-  ];
+  const summaryTiles = (d: Dashboard) => {
+    const count = (status: string) => d.statuses.find(s => s.progress === status)?.count || 0;
+    const websites = data.websites.filter(w => !w.archived_at).length;
+    return [
+      {
+        label: 'Active tasks',
+        hint: 'Open right now',
+        value: d.active_tasks,
+        status: 'in_progress',
+        icon: <ListTodo size={18} aria-hidden="true" />,
+        figure: (
+          <SegmentBar
+            parts={['to_do', 'in_progress', 'in_review', 'blocked'].map(status => ({status, value: count(status)}))}
+          />
+        ),
+        open: () => drill({status: 'open'}),
+      },
+      {
+        label: 'Overdue',
+        hint: 'Past their due date',
+        value: d.overdue_tasks,
+        status: 'blocked',
+        icon: <AlarmClock size={18} aria-hidden="true" />,
+        figure: <Meter share={d.active_tasks ? d.overdue_tasks / d.active_tasks : 0} />,
+        open: () => drill({overdue: true}),
+      },
+      ...(d.attention
+        ? [
+            {
+              label: 'Due for SEO audit',
+              hint: `No audit in ${d.attention.audit_interval_days} days`,
+              value: d.attention.audits_due,
+              status: 'in_review',
+              icon: <SearchCheck size={18} aria-hidden="true" />,
+              figure: <Meter share={websites ? d.attention.audits_due / websites : 0} />,
+              open: () => (website ? onSeo(website) : onAudits()),
+            },
+          ]
+        : []),
+      {
+        label: 'Completed',
+        hint: 'In the selected dates',
+        value: d.completed_tasks,
+        status: 'completed',
+        icon: <CircleCheckBig size={18} aria-hidden="true" />,
+        figure: d.activity ? <Sparkline points={d.activity.trend.points} /> : null,
+        open: null,
+      },
+    ];
+  };
   return (
     <section className="live-analytics">
       <TaskSheetStatus timezone={data.workspace.timezone} onSynced={refreshSheet} />
@@ -200,32 +334,31 @@ export default function LiveDashboard({
           Refresh charts
         </button>
       </div>
-      <div className="analytics-legend" aria-label="Date shortcuts">
-        <button
-          onClick={() => {
-            setStart(shiftDate(workspaceDate(data.workspace.timezone), -27));
-            setEnd(workspaceDate(data.workspace.timezone));
-          }}
-        >
-          Last 28 days
-        </button>
-        <button
-          onClick={() => {
-            setStart(shiftDate(workspaceDate(data.workspace.timezone), -364));
-            setEnd(workspaceDate(data.workspace.timezone));
-          }}
-        >
-          Last 12 months
-        </button>
+      <div className="analytics-toolbar">
+        <div className="analytics-legend" aria-label="Date shortcuts">
+          {presets.map(preset => (
+            <button
+              key={preset.label}
+              aria-pressed={end === today && start === shiftDate(today, -preset.days)}
+              onClick={() => {
+                setStart(shiftDate(workspaceDate(data.workspace.timezone), -preset.days));
+                setEnd(workspaceDate(data.workspace.timezone));
+              }}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <details className="analytics-scope">
+          <summary>About these numbers</summary>
+          <p>
+            Status, workload, team and website charts include all dates with the selected website and owner filters. The
+            completion trend, Completed card, and SEO use the selected dates, based on recorded completion and SEO
+            measurement dates. Previous period is the same length immediately before the selected dates. Team member
+            means task owner or report submitter. Archived tasks are excluded.
+          </p>
+        </details>
       </div>
-      <details className="analytics-scope">
-        <summary>About these numbers</summary>
-        <p>
-          Team and website charts include all dates with the selected website and owner filters. The monthly chart,
-          Completed card, and SEO use the selected dates, based on recorded completion and SEO measurement dates. Team
-          member means task owner or report submitter. Archived tasks are excluded.
-        </p>
-      </details>
       {error ? (
         <div role="alert" className="form-error">
           {error}
@@ -238,8 +371,17 @@ export default function LiveDashboard({
         <>
           <section className="attention" aria-label="Summary">
             <div className="attention-grid">
-              {summaryTiles(dashboard).map(item =>
-                item.open ? (
+              {summaryTiles(dashboard).map(item => {
+                const content = (
+                  <>
+                    <i className="tile-icon">{item.icon}</i>
+                    <strong>{item.value}</strong>
+                    <span>{item.label}</span>
+                    <small>{item.hint}</small>
+                    {item.figure}
+                  </>
+                );
+                return item.open ? (
                   <button
                     key={item.label}
                     className="attention-item"
@@ -247,113 +389,27 @@ export default function LiveDashboard({
                     onClick={item.open}
                     aria-label={`${item.label}: ${item.value}. View them`}
                   >
-                    <strong>{item.value}</strong>
-                    <span>{item.label}</span>
-                    <small>{item.hint}</small>
+                    {content}
                   </button>
                 ) : (
                   <div key={item.label} className="attention-item" data-status={item.status}>
-                    <strong>{item.value}</strong>
-                    <span>{item.label}</span>
-                    <small>{item.hint}</small>
+                    {content}
                   </div>
-                ),
-              )}
+                );
+              })}
             </div>
           </section>
-          <div className="analytics-grid">
+          <div className="analytics-grid activity-grid">
             {dashboard.activity ? (
-              [
-                {
-                  title: 'Completed work by team member',
-                  description: `All dates | ${dashboard.activity.completed} completed tasks | current owner`,
-                  rows: dashboard.activity.owners.map(r => ({
-                    ...r,
-                    name:
-                      data.members.find(m => m.id === r.id)?.display_name ||
-                      (r.id === 'unassigned' ? 'Unassigned' : 'Unknown member'),
-                  })),
-                },
-                {
-                  title: 'Tasks by website',
-                  description: 'All dates and statuses | multi-site tasks count once per linked website.',
-                  rows: dashboard.activity.websites.map(r => ({
-                    ...r,
-                    name:
-                      data.websites.find(w => w.id === r.id)?.name ||
-                      (r.id === 'unlinked' ? 'No website linked' : 'Unknown website'),
-                  })),
-                },
-                {
-                  title: 'Recorded completions by month',
-                  description: `${start} to ${end} | imported work dates and assumed completion dates are included.`,
-                  rows: dashboard.activity.months.map(r => ({...r, id: r.name})),
-                },
-              ].map(chart => (
-                <article className="card analytics-chart" key={chart.title}>
-                  <h3>{chart.title}</h3>
-                  <p>{chart.description}</p>
-                  {chart.rows.some(r => r.count > 0) ? (
-                    <>
-                      <div className="workload-chart-scroll" tabIndex={0} role="region" aria-label={chart.title}>
-                        <ResponsiveContainer width="100%" height={Math.max(240, chart.rows.length * 38 + 32)}>
-                          <BarChart
-                            data={chart.rows}
-                            layout="vertical"
-                            accessibilityLayer
-                            style={chartStyle}
-                            margin={{right: 24}}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
-                            <XAxis type="number" allowDecimals={false} tick={{fill: 'var(--text)'}} />
-                            <YAxis
-                              type="category"
-                              dataKey="name"
-                              width={115}
-                              interval={0}
-                              tick={{fontSize: 12, fill: 'var(--text)'}}
-                            />
-                            <Tooltip />
-                            <Bar
-                              dataKey="count"
-                              name="Tasks"
-                              fill="var(--palette-teal)"
-                              radius={[0, 4, 4, 0]}
-                              maxBarSize={24}
-                              {...animation}
-                            />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                      <details>
-                        <summary>View chart data</summary>
-                        <div className="table-wrap">
-                          <table>
-                            <thead>
-                              <tr>
-                                <th>Group</th>
-                                <th>Tasks</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {chart.rows.map(r => (
-                                <tr key={r.id}>
-                                  <td>{r.name}</td>
-                                  <td>{r.count}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </details>
-                    </>
-                  ) : (
-                    <div className="analytics-empty">
-                      No recorded completions in this date range. Choose an earlier From date to explore history.
-                    </div>
-                  )}
-                </article>
-              ))
+              <ActivityCharts
+                dashboard={dashboard}
+                activity={dashboard.activity}
+                data={data}
+                start={start}
+                end={end}
+                today={today}
+                onStatus={status => drill({status})}
+              />
             ) : (
               <div role="status" className="card analytics-empty">
                 Refresh charts to load task history.
@@ -390,23 +446,7 @@ export default function LiveDashboard({
                 </div>
               ) : dashboard.seo.length ? (
                 <>
-                  <ResponsiveContainer width="100%" height={280}>
-                    <LineChart data={dashboard.seo} accessibilityLayer style={chartStyle}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e6dfeb" />
-                      <XAxis dataKey="measured_at" />
-                      <YAxis domain={[0, 100]} />
-                      <Tooltip />
-                      <Line
-                        dataKey="value"
-                        name="SEO score (0–100)"
-                        stroke="var(--chart-completed)"
-                        strokeWidth={2}
-                        dot={{r: 4}}
-                        {...animation}
-                        connectNulls={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <SeoTrendChart points={dashboard.seo} />
                   <details>
                     <summary>
                       View measurements ({dashboard.seo.length} of {dashboard.seo_count}; latest 500 maximum)
@@ -456,5 +496,151 @@ export default function LiveDashboard({
         </>
       )}
     </section>
+  );
+}
+function ActivityCharts({
+  dashboard,
+  activity,
+  data,
+  start,
+  end,
+  today,
+  onStatus,
+}: {
+  dashboard: Dashboard;
+  activity: NonNullable<Dashboard['activity']>;
+  data: Workspace;
+  start: string;
+  end: string;
+  today: string;
+  onStatus: (status: string) => void;
+}) {
+  const {trend} = activity;
+  const total = trend.points.reduce((n, p) => n + p.count, 0);
+  const change = total - trend.points.reduce((n, p) => n + p.previous, 0);
+  const owners = activity.owners.map(r => ({
+    ...r,
+    name:
+      data.members.find(m => m.id === r.id)?.display_name || (r.id === 'unassigned' ? 'Unassigned' : 'Unknown member'),
+  }));
+  const websites = activity.websites.map(r => ({
+    ...r,
+    name:
+      data.websites.find(w => w.id === r.id)?.name || (r.id === 'unlinked' ? 'No website linked' : 'Unknown website'),
+  }));
+  const workload = dashboard.workload.filter(r => r.count > 0);
+  const deadlines = dashboard.deadlines;
+  return (
+    <>
+      <ChartCard
+        eyebrow="Recorded history"
+        title={`Recorded completions by ${trend.unit}`}
+        description={`${displayDate(start, today)} to ${displayDate(end, today)} · includes imported work dates and assumed completion dates`}
+        span={8}
+        aside={
+          <div className="trend-total">
+            <strong>{total.toLocaleString()}</strong>
+            <span data-direction={change > 0 ? 'up' : change < 0 ? 'down' : undefined}>
+              {change > 0 ? '▲ ' : change < 0 ? '▼ ' : ''}
+              {change ? Math.abs(change).toLocaleString() : 'No change'} vs previous period
+            </span>
+          </div>
+        }
+        table={{
+          head: ['Period', 'Tasks', 'Previous period'],
+          rows: trend.points.map(p => [trendLabel(p.date, trend.unit, today), p.count, p.previous]),
+        }}
+        empty={
+          trend.points.some(p => p.count || p.previous)
+            ? null
+            : 'No recorded completions in this date range. Choose an earlier From date to explore history.'
+        }
+      >
+        <div className="trend-legend">
+          <span>
+            <i data-series="current" />
+            Selected period
+          </span>
+          <span>
+            <i data-series="previous" />
+            Previous period
+          </span>
+        </div>
+        <TrendChart trend={trend} today={today} />
+      </ChartCard>
+      <ChartCard
+        eyebrow="Current workload"
+        title="Task status"
+        description="All time · every task with the selected filters"
+        span={4}
+        table={{
+          head: ['Status', 'Tasks'],
+          rows: dashboard.statuses.map(s => [statusName(s.progress), s.count]),
+        }}
+        empty={
+          dashboard.statuses.some(s => s.count > 0) ? null : 'No tasks match the selected website and team member.'
+        }
+      >
+        <StatusDonut statuses={dashboard.statuses} onStatus={onStatus} />
+        {deadlines && deadlines.on_time + deadlines.overdue + deadlines.no_deadline > 0 ? (
+          <div className="deadline-health">
+            <span>Open task deadlines</span>
+            <SegmentBar
+              parts={[
+                {status: 'completed', value: deadlines.on_time},
+                {status: 'blocked', value: deadlines.overdue},
+                {status: 'cancelled', value: deadlines.no_deadline},
+              ]}
+            />
+            <ul>
+              <li data-status="completed">
+                <i />
+                {deadlines.on_time} on time
+              </li>
+              <li data-status="blocked">
+                <i />
+                {deadlines.overdue} overdue
+              </li>
+              <li data-status="cancelled">
+                <i />
+                {deadlines.no_deadline} none
+              </li>
+            </ul>
+          </div>
+        ) : null}
+      </ChartCard>
+      <ChartCard
+        eyebrow="Work distribution"
+        title="Completed work by team member"
+        description={`All time · ${activity.completed} completed tasks, grouped by current owner`}
+        span={4}
+        scroll
+        table={rankedTable(owners)}
+        empty={owners.length ? null : 'No tasks match the selected website and team member.'}
+      >
+        <Ranking rows={owners} />
+      </ChartCard>
+      <ChartCard
+        eyebrow="Work distribution"
+        title="Tasks by website"
+        description="All time · each linked website receives one count per task"
+        span={4}
+        scroll
+        table={rankedTable(websites)}
+        empty={websites.length ? null : 'No tasks match the selected website and team member.'}
+      >
+        <Ranking rows={websites} />
+      </ChartCard>
+      <ChartCard
+        eyebrow="Current workload"
+        title="Open tasks by team member"
+        description="Tasks not yet completed or cancelled, by current owner"
+        span={4}
+        table={rankedTable(workload)}
+        empty={workload.length ? null : 'No open tasks match the selected website and team member.'}
+      >
+        <WorkloadChart rows={workload} />
+      </ChartCard>
+    </>
   );
 }

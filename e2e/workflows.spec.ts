@@ -29,7 +29,12 @@ test('dashboard explains historical work without a completion-only progress bar'
   );
   await page.getByRole('button', {name: 'Refresh charts', exact: true}).click();
   await expect(page.locator('.completion-row')).toHaveCount(0);
-  for (const title of ['Completed work by team member', 'Tasks by website', 'Recorded completions by month']) {
+  for (const title of [
+    'Task status',
+    'Completed work by team member',
+    'Tasks by website',
+    'Recorded completions by day',
+  ]) {
     const chart = page.locator('article').filter({has: page.getByRole('heading', {name: title, exact: true})});
     await expect(chart.getByRole('region', {name: title, exact: true})).toBeVisible();
     await chart.getByText('View chart data', {exact: true}).click();

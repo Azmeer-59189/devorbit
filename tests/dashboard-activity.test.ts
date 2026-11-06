@@ -23,10 +23,13 @@ test('historical charts include completed-only history, unlinked work and unique
     'Asia/Karachi',
   );
   assert.equal(result.completed, 2);
-  assert.deepEqual(result.months, [
-    {name: '2026-10', count: 0},
-    {name: '2026-11', count: 1},
-  ]);
+  assert.equal(result.trend.unit, 'week');
+  assert.equal(result.trend.points.length, 9);
+  // Oct 31 20:00 UTC is Nov 1 in Karachi, which falls in the week starting Oct 29.
+  assert.deepEqual(
+    result.trend.points.filter(p => p.count),
+    [{date: '2026-10-29', count: 1, previous: 0}],
+  );
   assert.equal(
     result.owners.reduce((n, r) => n + r.count, 0),
     2,
@@ -42,8 +45,43 @@ test('owner and website filters apply to every activity series', () => {
   );
   assert.equal(result.completed, 1);
   assert.equal(
-    result.months.reduce((n, r) => n + r.count, 0),
+    result.trend.points.reduce((n, r) => n + r.count, 0),
     1,
+  );
+});
+test('trend buckets follow the range length and line up with the period before it', () => {
+  const done = (id: string, date: string) => task(id, {completed_at: `${date}T12:00:00Z`});
+  const trend = (start: string, end: string, tasks: ActivityTask[]) =>
+    dashboardActivity(tasks, {...filters, start, end}, 'UTC').trend;
+
+  // Oct 6 is the third day of the 28 days before Nov 1 (Oct 4 to Oct 31), so it lines up with Nov 3.
+  const days = trend('2026-11-01', '2026-11-28', [done('1', '2026-11-03'), done('2', '2026-10-06')]);
+  assert.equal(days.unit, 'day');
+  assert.equal(days.points.length, 28);
+  assert.deepEqual(days.points[2], {date: '2026-11-03', count: 1, previous: 1});
+
+  const weeks = trend('2026-09-01', '2026-11-30', [done('1', '2026-09-08'), done('2', '2026-06-02')]);
+  assert.equal(weeks.unit, 'week');
+  assert.equal(weeks.points.length, 13);
+  assert.deepEqual(weeks.points[1], {date: '2026-09-08', count: 1, previous: 0});
+  assert.equal(
+    weeks.points.reduce((n, p) => n + p.previous, 0),
+    1,
+  );
+
+  // Thirteen calendar months, so the previous window is Oct 7 2024 to Oct 6 2025.
+  const months = trend('2025-11-07', '2026-11-06', [done('1', '2026-02-10'), done('2', '2025-01-15')]);
+  assert.equal(months.unit, 'month');
+  assert.equal(months.points.length, 13);
+  assert.equal(months.points[0].date, '2025-11-01');
+  // Jan 2025 is the fourth month after Oct 2024, so it lines up with Feb 2026.
+  assert.deepEqual(months.points[3], {date: '2026-02-01', count: 1, previous: 1});
+
+  // Work outside both windows is not counted.
+  const outside = trend('2026-11-01', '2026-11-28', [done('1', '2026-10-03'), done('2', '2026-11-29')]);
+  assert.equal(
+    outside.points.reduce((n, p) => n + p.count + p.previous, 0),
+    0,
   );
 });
 test('activity reader goes beyond preview and provider page limits, and fails on read errors', async () => {

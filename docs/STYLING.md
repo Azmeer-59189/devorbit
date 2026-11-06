@@ -6,7 +6,7 @@ sign-in/invitation pages, responsive rules, and interaction states.
 
 ## Theme palette
 
-The theme is the [Color Hunt palette](https://colorhunt.co/palette/0915401b2cc17692ffabd2fa) `#091540`, `#1B2CC1`, `#7692FF`, `#ABD2FA`: navy for headings and text, indigo for actions, links and active navigation, periwinkle for the second chart series and In Progress, and sky mixed with white for the page background and tints. Cards, tables, drawers and the sidebar are white. Semantic task states retain distinct colors.
+The theme is the [Color Hunt palette](https://colorhunt.co/palette/3368a066a3bfc8dfdbf2efe7) `#3368A0`, `#66A3BF`, `#C8DFDB`, `#F2EFE7`: blue for actions, links and active navigation, soft blue for the second chart series and In Progress, sage for tints, and cream for the page background. The palette has no dark shade, so headings and text use `#16304A`, a darkened version of its blue. Cards, tables, drawers and the sidebar are white. Semantic task states retain distinct colors.
 The dashboard summary shows Active tasks, Overdue, Due for SEO audit, and Completed. Blocked and Awaiting acceptance remain in task filters but have no summary cards.
 
 ## Making changes

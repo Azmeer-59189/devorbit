@@ -2,15 +2,16 @@
 Edit the owning component rule here; do not add override/theme stylesheets.
 Responsive rules keep their cascade order. See docs/STYLING.md. */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Manrope:wght@400;500;600;650;700;750;800&display=swap');
-/* Color Hunt palette 091540 1B2CC1 7692FF ABD2FA: navy text, indigo actions, periwinkle accents, sky tints, white cards. */
+/* Color Hunt palette 3368A0 66A3BF C8DFDB F2EFE7: blue actions, soft blue accents, sage tints, cream page, white cards.
+The palette has no dark shade, so text uses a darkened version of its blue. */
 /* Design tokens — shared surfaces, actions, typography and radii */
 :root {
-  --palette-ink: #091540;
-  --palette-blue: #1b2cc1;
-  --palette-periwinkle: #7692ff;
-  --palette-sky: #abd2fa;
-  --palette-highlight: color-mix(in srgb, var(--palette-sky) 55%, white);
-  --palette-background: color-mix(in srgb, var(--palette-sky) 26%, white);
+  --palette-ink: #16304a;
+  --palette-blue: #3368a0;
+  --palette-accent: #66a3bf;
+  --palette-tint: #c8dfdb;
+  --palette-highlight: var(--palette-tint);
+  --palette-background: #f2efe7;
   --palette-surface: #fff;
   --ink: var(--palette-ink);
   --teal: #116d65;
@@ -26,12 +27,12 @@ Responsive rules keep their cascade order. See docs/STYLING.md. */
   --chart-blue: var(--palette-blue);
   --chart-teal: #1b9e8f;
   --chart-completed: var(--chart-teal);
-  --chart-in_progress: var(--palette-periwinkle);
+  --chart-in_progress: var(--palette-accent);
   --chart-in_review: #a855c9;
   --chart-blocked: #e5484d;
   --chart-to_do: #e8a317;
   --chart-cancelled: #a9afbd;
-  --chart-previous: var(--palette-periwinkle);
+  --chart-previous: var(--palette-accent);
   --chart-grid: color-mix(in srgb, var(--palette-ink) 9%, white);
   --nav-active-bg: var(--palette-blue);
   --auth-accent: var(--primary);
@@ -41,8 +42,8 @@ Responsive rules keep their cascade order. See docs/STYLING.md. */
   --radius-card: 14px;
   --radius-panel: 16px;
   --radius-lg: 18px;
-  --shadow-card: 0 1px 2px #0915400a, 0 8px 24px #0915400f;
-  --shadow-card-hover: 0 2px 4px #0915400f, 0 14px 32px #0915401f;
+  --shadow-card: 0 1px 2px #16304a0a, 0 8px 24px #16304a0f;
+  --shadow-card-hover: 0 2px 4px #16304a0f, 0 14px 32px #16304a1f;
   --font-body: 'DM Sans', Arial, sans-serif;
   --font-display: 'Manrope', Arial, sans-serif;
   --muted: var(--palette-ink);
@@ -1318,7 +1319,7 @@ input[type='checkbox'] {
   position: absolute;
   width: 340px;
   height: 200px;
-  border: 1px solid color-mix(in srgb, var(--palette-periwinkle) 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--palette-accent) 45%, transparent);
   border-radius: 50%;
   bottom: -40px;
   right: -80px;
@@ -1327,7 +1328,7 @@ input[type='checkbox'] {
 .auth-orbit > div {
   position: absolute;
   inset: 0;
-  border: 1px solid color-mix(in srgb, var(--palette-periwinkle) 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--palette-accent) 45%, transparent);
   border-radius: 50%;
   transform: rotate(65deg);
 }
@@ -1335,7 +1336,7 @@ input[type='checkbox'] {
   position: absolute;
   width: 17px;
   height: 17px;
-  background: var(--palette-periwinkle);
+  background: var(--palette-accent);
   border-radius: 50%;
   top: 10px;
   left: 65px;
@@ -2135,7 +2136,7 @@ td strong {
 }
 .live-welcome {
   background: linear-gradient(120deg, var(--palette-highlight), var(--palette-background));
-  border-color: var(--palette-sky);
+  border-color: var(--palette-tint);
 }
 .live-welcome h2 {
   color: var(--text);
@@ -2144,18 +2145,8 @@ td strong {
   color: var(--text);
 }
 .welcome-orbit {
-  background: var(--palette-sky);
+  background: var(--palette-tint);
   color: var(--palette-blue);
-}
-.website-card {
-  border-top: 3px solid var(--palette-blue);
-  background: var(--surface);
-}
-.website-card:nth-child(3n + 2) {
-  border-top-color: var(--palette-periwinkle);
-}
-.website-card:nth-child(3n + 3) {
-  border-top-color: var(--palette-sky);
 }
 .website-card h2 {
   color: var(--text);
@@ -2165,19 +2156,11 @@ td strong {
   color: var(--text);
 }
 .live-site-url {
-  color: #4f3b87;
+  color: var(--primary);
 }
 .live-site-icon {
-  background: #e6dbf6;
-  color: #63428b;
-}
-.website-card:nth-child(3n + 2) .live-site-icon {
-  background: #d5ebe4;
-  color: #2b6f63;
-}
-.website-card:nth-child(3n + 3) .live-site-icon {
-  background: #f4e3c7;
-  color: #815820;
+  background: var(--palette-highlight);
+  color: var(--primary);
 }
 .website-metrics small {
   color: var(--text);
@@ -2197,8 +2180,8 @@ td strong {
 .field input,
 .field select,
 .field textarea {
-  background: #faf9fd;
-  border-color: #bdb6ce;
+  background: var(--surface);
+  border-color: var(--border-control);
   color: var(--text);
   font-size: 14px;
 }
@@ -2323,7 +2306,7 @@ td strong {
   background: var(--bg);
 }
 .auth-story {
-  background: linear-gradient(155deg, var(--palette-sky), var(--palette-background));
+  background: linear-gradient(155deg, var(--palette-tint), var(--palette-background));
 }
 .auth-story h1 {
   color: var(--palette-ink);
@@ -3694,7 +3677,7 @@ h4 {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--palette-periwinkle), var(--primary));
+  background: linear-gradient(90deg, var(--palette-accent), var(--primary));
   transform-origin: left;
   animation: rank-grow 700ms ease-out;
 }

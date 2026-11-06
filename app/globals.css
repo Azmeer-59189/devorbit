@@ -2,21 +2,28 @@
 Edit the owning component rule here; do not add override/theme stylesheets.
 Responsive rules keep their cascade order. See docs/STYLING.md. */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Manrope:wght@400;500;600;650;700;750;800&display=swap');
+/* Theme source: Color Hunt, https://colorhunt.co/palette/1b262c0f4c753282b8bbe1fa
+   Published colors are used directly; light surfaces mix the palette blue with white.
+   Black/white text and semantic warning/success states retain their accessibility roles. */
 /* Design tokens — shared surfaces, actions, typography and radii */
 :root {
+  --palette-charcoal: #1b262c;
+  --palette-navy: #0f4c75;
+  --palette-blue: #3282b8;
+  --palette-ice: #bbe1fa;
   --ink: #000;
   --teal: #116d65;
   --amber: #865013;
-  --bg: #f0f5ff;
+  --bg: color-mix(in srgb, var(--palette-ice) 22%, white);
   --surface: #fff;
   --text: #000;
-  --border: #cfdcf0;
+  --border: color-mix(in srgb, var(--palette-blue) 25%, white);
   --sidebar: 224px;
-  --border-control: #e1e5ec;
-  --surface-sidebar: #edf4ff;
-  --surface-subtle: #f0f6ff;
+  --border-control: color-mix(in srgb, var(--palette-blue) 40%, white);
+  --surface-sidebar: color-mix(in srgb, var(--palette-ice) 40%, white);
+  --surface-subtle: color-mix(in srgb, var(--palette-ice) 25%, white);
   /* Sky blue, kept apart from the navy --primary so In progress never reads as a button. */
-  --chart-blue: #0ea5e9;
+  --chart-blue: var(--palette-blue);
   --chart-teal: #10b9a2;
   --chart-completed: var(--chart-teal);
   --chart-in_progress: var(--chart-blue);
@@ -38,13 +45,13 @@ Responsive rules keep their cascade order. See docs/STYLING.md. */
   /* Approximate palette from the supplied Indus logo; the artwork is not used. */
   --brand-red: #ed1b24;
   --brand-red-strong: #c41620;
-  --primary: #214b98;
-  --primary-hover: #193b79;
-  --primary-surface: #dceaff;
-  --primary-border: #cad9f3;
+  --primary: var(--palette-navy);
+  --primary-hover: var(--palette-charcoal);
+  --primary-surface: var(--palette-ice);
+  --primary-border: var(--palette-blue);
   /* Blue surfaces distinguish navigation, headers and interactive rows. */
-  --surface-hover: #e6f0ff;
-  --focus-ring: #214b98;
+  --surface-hover: color-mix(in srgb, var(--palette-ice) 60%, white);
+  --focus-ring: var(--palette-blue);
   --nav-active-text: var(--primary);
   --font-size-body: 14px;
   --font-size-label: 13px;
@@ -3621,7 +3628,7 @@ h4 {
     transform: scaleX(0);
   }
 }
-/* Dashboard summary: one row of counts that open their task lists; zero counts use the muted cancelled tone. */
+/* Summary cards use the published blue palette; semantic badge/chart colors stay separate. */
 .attention-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -3629,29 +3636,30 @@ h4 {
 }
 .attention-item {
   display: grid;
-  gap: 2px;
-  padding: 14px 16px;
+  gap: 5px;
+  padding: 20px 22px;
+  min-height: 136px;
   text-align: left;
-  background: var(--status-surface, var(--primary-surface));
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--status-color);
+  background: var(--palette-ice);
+  border: 1px solid var(--palette-blue);
+  border-top: 5px solid var(--palette-navy);
   border-radius: var(--radius-card);
 }
 /* A tile that is filtering the table below. */
 button.attention-item[aria-pressed='true'] {
-  background: var(--status-surface, var(--primary-surface));
-  border-color: var(--status-color);
-  box-shadow: inset 0 0 0 1px var(--status-color);
+  background: color-mix(in srgb, var(--palette-ice) 75%, white);
+  border-color: var(--palette-navy);
+  box-shadow: inset 0 0 0 2px var(--palette-navy);
 }
 button.attention-item:hover {
-  border-color: var(--primary-border);
-  border-left-color: var(--status-color);
-  box-shadow: 0 4px 12px #2632470f;
+  background: color-mix(in srgb, var(--palette-ice) 65%, white);
+  border-color: var(--palette-navy);
+  box-shadow: 0 4px 12px #1b262c18;
 }
 .attention-item strong {
-  color: var(--status-color);
+  color: var(--text);
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;

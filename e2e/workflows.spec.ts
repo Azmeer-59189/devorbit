@@ -4,6 +4,10 @@ import {tasks, websites} from './fixtures';
 
 test('dashboard summary tiles open the matching task list', async ({page}) => {
   await openWorkspace(page, '/workspace');
+  const summary = page.getByRole('region', {name: 'Summary', exact: true});
+  await expect(summary.locator('.attention-item')).toHaveCount(4);
+  await expect(summary).not.toContainText('Blocked');
+  await expect(summary).not.toContainText('Awaiting acceptance');
   await page.getByRole('button', {name: /^Overdue: 2/}).click();
   await expect(page).toHaveURL(/\/workspace\/tasks\?.*overdue=true/);
   await expect(page.locator('main h1')).toHaveText('Tasks');

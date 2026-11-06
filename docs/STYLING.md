@@ -4,6 +4,12 @@
 It owns the shared design tokens, reusable controls, workspace component styles,
 sign-in/invitation pages, responsive rules, and interaction states.
 
+## Theme palette
+
+The theme uses [Color Hunt palette 1B262C / 0F4C75 / 3282B8 / BBE1FA](https://colorhunt.co/palette/1b262c0f4c753282b8bbe1fa).
+These published colors supply charcoal, navy, blue, and ice-blue tokens. Pale surfaces use white mixes of the same colors. Text stays black, with white on dark buttons. Badges and charts retain semantic success/warning/error colors.
+The dashboard summary shows Active tasks, Overdue, Due for SEO audit, and Completed. Blocked and Awaiting acceptance remain in task filters but have no summary cards.
+
 ## Making changes
 
 - Start with the `:root` design tokens for shared surfaces, text, borders, actions,

@@ -155,20 +155,6 @@ export default function LiveDashboard({
     ...(d.attention
       ? [
           {
-            label: 'Blocked',
-            hint: 'Waiting on something',
-            value: d.attention.blocked,
-            status: 'blocked',
-            open: () => drill({status: 'blocked'}),
-          },
-          {
-            label: 'Awaiting acceptance',
-            hint: 'Assigned, not yet accepted',
-            value: d.attention.pending_assignments,
-            status: 'to_do',
-            open: () => drill({pending: true}),
-          },
-          {
             label: 'Due for SEO audit',
             hint: `No audit in ${d.attention.audit_interval_days} days`,
             value: d.attention.audits_due,
@@ -267,7 +253,7 @@ export default function LiveDashboard({
                   <button
                     key={item.label}
                     className="attention-item"
-                    data-status={item.value ? item.status : 'cancelled'}
+                    data-status={item.status}
                     onClick={item.open}
                     aria-label={`${item.label}: ${item.value}. View them`}
                   >
@@ -276,7 +262,7 @@ export default function LiveDashboard({
                     <small>{item.hint}</small>
                   </button>
                 ) : (
-                  <div key={item.label} className="attention-item" data-status={item.value ? item.status : 'cancelled'}>
+                  <div key={item.label} className="attention-item" data-status={item.status}>
                     <strong>{item.value}</strong>
                     <span>{item.label}</span>
                     <small>{item.hint}</small>
